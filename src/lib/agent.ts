@@ -16,7 +16,7 @@ export function spawnAgent(
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
-  const child = spawn(opencodebin, ["run", "--format", "json", task.prompt], {
+  const child = spawn(opencodebin, ["run", "--format", "json", "--model", task.model, task.prompt], {
     cwd: worktreePath,
     stdio: ["ignore", "pipe", "pipe"],
     detached: false,

@@ -8,20 +8,23 @@ import { generateSlug } from "./lib/slug.js"
 import { createWorktree } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import type { Task } from "./types.js"
+import { DEFAULT_MODEL } from "./types.js"
 
 async function main() {
   const args = process.argv.slice(2)
 
-  // faber dispatch "prompt" [--dir /path/to/repo]
+  // faber dispatch "prompt" [--dir /path/to/repo] [--model provider/model]
   if (args[0] === "dispatch") {
     const prompt = args[1]
     if (!prompt) {
-      console.error("Usage: faber dispatch \"<prompt>\" [--dir <repo>]")
+      console.error("Usage: faber dispatch \"<prompt>\" [--dir <repo>] [--model <provider/model>]")
       process.exit(1)
     }
     const dirFlag = args.indexOf("--dir")
     const repoRoot = resolve(dirFlag !== -1 && args[dirFlag + 1] ? args[dirFlag + 1]! : process.cwd())
-    await dispatchHeadless(repoRoot, prompt)
+    const modelFlag = args.indexOf("--model")
+    const model = (modelFlag !== -1 && args[modelFlag + 1] ? args[modelFlag + 1]! : DEFAULT_MODEL) as Task["model"]
+    await dispatchHeadless(repoRoot, prompt, model)
     return
   }
 
@@ -59,7 +62,7 @@ async function main() {
       onExit={async () => {
         root.unmount()
         await releaseLock?.()
-        renderer.stop()
+        renderer.destroy()
         process.exit(0)
       }}
     />
@@ -68,7 +71,7 @@ async function main() {
   renderer.start()
 }
 
-async function dispatchHeadless(repoRoot: string, prompt: string) {
+async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     process.exit(1)
@@ -81,6 +84,7 @@ async function dispatchHeadless(repoRoot: string, prompt: string) {
   const task: Task = {
     id: slug,
     prompt,
+    model,
     status: "running",
     pid: null,
     worktree,
