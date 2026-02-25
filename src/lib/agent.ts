@@ -30,15 +30,33 @@ export function spawnAgent(
   const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,
     stdio: ["ignore", "pipe", "pipe"],
-    // detached creates a new process group with the shell as leader. This lets
-    // killAgent send SIGTERM to the whole group (shell + opencode) by negating
-    // the pid. unref() allows faber to exit without waiting, but the close
-    // event still fires while faber is running.
+    // detached creates a new process group so the shell and opencode survive
+    // faber exiting. unref() allows faber to exit without waiting, but the
+    // close event still fires while faber is running.
     detached: true,
   })
   child.unref()
 
-  onUpdate({ pid: child.pid ?? null })
+  // Capture opencode's pid (the shell's child) rather than the shell's pid.
+  // The shell needs a moment to exec opencode, so we poll briefly.
+  const shellPid = child.pid
+  if (shellPid) {
+    let attempts = 0
+    const poll = setInterval(() => {
+      attempts++
+      try {
+        const result = execaSync("pgrep", ["-P", String(shellPid)])
+        const opencodePid = parseInt(result.stdout.trim(), 10)
+        if (opencodePid) {
+          clearInterval(poll)
+          onUpdate({ pid: opencodePid })
+        }
+      } catch {
+        // not found yet
+      }
+      if (attempts >= 20) clearInterval(poll)
+    }, 50)
+  }
 
   let sessionIdCaptured = false
   let stdoutBuffer = ""
@@ -91,9 +109,7 @@ export function spawnAgent(
 
 export function killAgent(pid: number): void {
   try {
-    // Negate the pid to signal the whole process group, so SIGTERM reaches
-    // opencode and not just the shell wrapper.
-    process.kill(-pid, "SIGTERM")
+    process.kill(pid, "SIGTERM")
   } catch {
     // already gone
   }
