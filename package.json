@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "bun src/index.tsx",
     "build": "bun build src/index.tsx --outdir dist --target bun",
+    "build:bin": "bun build src/index.tsx --compile --outfile faber",
     "start": "bun dist/index.js"
   },
   "dependencies": {
