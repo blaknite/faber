@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { useKeyboard } from "@opentui/react"
+import { useState, useEffect } from "react"
+import { useKeyboard, useAppContext } from "@opentui/react"
+import type { PasteEvent } from "@opentui/core"
 import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
 
@@ -11,6 +12,16 @@ interface Props {
 export function TaskInput({ onSubmit, onCancel }: Props) {
   const [value, setValue] = useState("")
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
+  const { keyHandler } = useAppContext()
+
+  useEffect(() => {
+    if (!keyHandler) return
+    const handler = (event: PasteEvent) => {
+      setValue((v) => v + event.text)
+    }
+    keyHandler.on("paste", handler)
+    return () => { keyHandler.off("paste", handler) }
+  }, [keyHandler])
 
   useKeyboard((key) => {
     if (key.name === "escape") {
