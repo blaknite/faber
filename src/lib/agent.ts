@@ -1,12 +1,13 @@
 import { spawn } from "node:child_process"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
-import { updateTask } from "./state.js"
+import { readState, updateTask } from "./state.js"
 
 export function spawnAgent(
   task: Task,
   repoRoot: string,
-  onUpdate: (patch: Partial<Task>) => void
+  onUpdate: (patch: Partial<Task>) => void,
+  resumeSessionId?: string
 ): void {
   const opencodebin = (() => {
     try { return execaSync("which", ["opencode"]).stdout.trim() }
@@ -21,9 +22,17 @@ export function spawnAgent(
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
-  const fullPrompt = `Load the skill \`working-in-faber\`\n\n${task.prompt}`
-  const prompt = fullPrompt.replace(/'/g, `'\\''`)
-  const opencodeCmd = `${opencodebin} run --format json --model ${task.model} '${prompt}'`
+  const opencodeCmd = resumeSessionId
+    ? (() => {
+        const resumePrompt = "The task was interrupted. Please continue where you left off."
+        const prompt = resumePrompt.replace(/'/g, `'\\''`)
+        return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} '${prompt}'`
+      })()
+    : (() => {
+        const fullPrompt = `Load the skill \`working-in-faber\`\n\n${task.prompt}`
+        const prompt = fullPrompt.replace(/'/g, `'\\''`)
+        return `${opencodebin} run --format json --model ${task.model} '${prompt}'`
+      })()
   const finishCmd = `; ${faberCmd} --finish ${task.id} $?`
   const shellCmd = `${opencodeCmd}${finishCmd}`
 
@@ -84,6 +93,9 @@ export function spawnAgent(
   child.stderr?.resume()
 
   child.on("close", (code) => {
+    const current = readState(repoRoot).tasks.find((t) => t.id === task.id)
+    if (current?.status !== "running") return
+
     const status = code === 0 ? "done" : "failed"
     const patch: Partial<Task> = {
       status,
