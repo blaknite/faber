@@ -26,7 +26,7 @@ export function spawnAgent(
     ? (() => {
         const resumePrompt = "The task was interrupted. Please continue where you left off."
         const prompt = resumePrompt.replace(/'/g, `'\\''`)
-        return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} '${prompt}'`
+        return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} --fork '${prompt}'`
       })()
     : (() => {
         const fullPrompt = `Load the skill \`working-in-faber\`\n\n${task.prompt}`
