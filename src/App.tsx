@@ -116,6 +116,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     showFlash(`Run \`${cmd}\` (copied to clipboard)`)
   }, [selectedTask, showFlash])
 
+  const handleClone = useCallback(() => {
+    if (!selectedTask) return
+    handleDispatch(selectedTask.prompt, selectedTask.model)
+  }, [selectedTask, handleDispatch])
+
   const handleResume = useCallback(() => {
     if (!selectedTask || selectedTask.status !== "failed" || !selectedTask.sessionId) return
     if (selectedTask.pid) killAgent(selectedTask.pid)
@@ -163,6 +168,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
     if (key.name === "o") { handleSession(); return }
     if (key.name === "r") { handleResume(); return }
+    if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
       if (selectedTask) setMode("delete")
       return
@@ -175,6 +181,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "o", label: "open", disabled: !selectedTask?.sessionId },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || selectedTask.status !== "failed" || !selectedTask.sessionId },
+    { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
   ]
