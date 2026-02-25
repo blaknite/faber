@@ -182,8 +182,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between" }}>
         <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span></text>
+        {tasks.filter(t => t.status === "running").length > 0 && (
+          <text fg="#ff6600">{tasks.filter(t => t.status === "running").length} running</text>
+        )}
       </box>
 
       <box style={{ flexGrow: 1, flexDirection: "column" }}>
