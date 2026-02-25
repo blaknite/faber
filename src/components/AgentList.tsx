@@ -51,14 +51,15 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
 export function AgentList({ tasks, selectedId }: Props) {
   if (tasks.length === 0) {
     return (
-      <box style={{ padding: 1 }}>
-        <text fg="#555555">No tasks yet. Press [n] to dispatch one.</text>
+      <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
+        <text fg="#555555">No tasks yet.</text>
+        <text fg="#333333">Press [n] to dispatch one.</text>
       </box>
     )
   }
 
   return (
-    <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingRight: 1 }}>
+    <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
       {tasks.map((task, i) => {
         const selected = task.id === selectedId
         return (
@@ -71,7 +72,7 @@ export function AgentList({ tasks, selectedId }: Props) {
                 paddingRight: 1,
                 paddingTop: 1,
                 paddingBottom: 1,
-                backgroundColor: selected ? "#333333" : undefined,
+                backgroundColor: selected ? "#222222" : "#111111",
               }}
               border={["left"]}
               borderColor={selected ? "#ff6600" : "#ffffff"}
