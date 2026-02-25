@@ -11,12 +11,14 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
   running: "#00aaff",
   done: "#00cc66",
   failed: "#cc3333",
+  unknown: "#888888",
 }
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   running: "running",
   done: "done",
   failed: "failed",
+  unknown: "unknown",
 }
 
 function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {

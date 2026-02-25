@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { join, dirname } from "node:path"
 import lockfile from "proper-lockfile"
 import type { State, Task } from "../types.js"
 
@@ -81,7 +81,7 @@ export function reconcileRunningTasks(repoRoot: string): void {
     if (task.status === "running" && task.pid !== null) {
       const alive = isPidAlive(task.pid)
       if (!alive) {
-        task.status = "failed"
+        task.status = "unknown"
         task.completedAt = new Date().toISOString()
         task.exitCode = null
         task.pid = null
@@ -90,6 +90,18 @@ export function reconcileRunningTasks(repoRoot: string): void {
     }
   }
   if (changed) writeState(repoRoot, state)
+}
+
+// Walk up from `startDir` until we find a directory containing `.faber/state.json`.
+// Returns the repo root, or null if not found.
+export function findRepoRoot(startDir: string): string | null {
+  let dir = startDir
+  while (true) {
+    if (existsSync(join(dir, FABER_DIR, STATE_FILE))) return dir
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
 }
 
 function isPidAlive(pid: number): boolean {

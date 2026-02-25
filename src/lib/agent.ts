@@ -14,9 +14,20 @@ export function spawnAgent(
   })()
   if (!opencodebin) throw new Error("opencode not found in PATH")
 
+  // Reconstruct the faber invocation so it works in dev (bun src/index.tsx),
+  // via the package bin (bun dist/index.js), or as a compiled binary.
+  const [runtime, script] = process.argv
+  const faberCmd = script ? `${runtime} ${script}` : runtime
+
   const worktreePath = `${repoRoot}/${task.worktree}`
 
-  const child = spawn(opencodebin, ["run", "--format", "json", "--model", task.model, task.prompt], {
+  const fullPrompt = `Load the skill \`working-in-faber\`\n\n${task.prompt}`
+  const prompt = fullPrompt.replace(/'/g, `'\\''`)
+  const opencodeCmd = `${opencodebin} run --format json --model ${task.model} '${prompt}'`
+  const finishCmd = `; ${faberCmd} --finish ${task.id} $?`
+  const shellCmd = `${opencodeCmd}${finishCmd}`
+
+  const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,
     stdio: ["ignore", "pipe", "pipe"],
     detached: false,
