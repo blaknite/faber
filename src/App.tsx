@@ -59,7 +59,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const showFlash = useCallback((msg: string) => {
     setFlashMessage(msg)
-    setTimeout(() => setFlashMessage(null), 4000)
+    setTimeout(() => setFlashMessage(null), 2000)
   }, [])
 
   const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
