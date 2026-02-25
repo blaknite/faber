@@ -1,5 +1,4 @@
-import React from "react"
-import { Box, Text, useInput } from "ink"
+import { useKeyboard } from "@opentui/react"
 import type { Task } from "../types.js"
 import { removeWorktree } from "../lib/worktree.js"
 
@@ -11,12 +10,12 @@ interface Props {
 }
 
 export function CleanupDialog({ task, repoRoot, onDone, onCancel }: Props) {
-  useInput(async (input, key) => {
-    if (key.escape || input === "q") {
+  useKeyboard(async (key) => {
+    if (key.name === "escape" || key.name === "q") {
       onCancel()
       return
     }
-    if (input === "r") {
+    if (key.name === "r") {
       try {
         await removeWorktree(repoRoot, task.id)
       } catch {
@@ -26,31 +25,23 @@ export function CleanupDialog({ task, repoRoot, onDone, onCancel }: Props) {
     }
   })
 
+  const statusColor = task.status === "done" ? "#00cc66" : "#cc3333"
+
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="single"
-      padding={1}
-      marginX={4}
-      marginY={1}
+    <box
+      style={{ flexDirection: "column", padding: 1, marginLeft: 4, marginRight: 4, marginTop: 1, marginBottom: 1 }}
+      border={true}
     >
-      <Box marginBottom={1}>
-        <Text bold>{task.id}</Text>
-        <Text color={task.status === "done" ? "green" : "red"}> [{task.status}]</Text>
-      </Box>
-      <Box marginBottom={1}>
-        <Text dimColor>Worktree: {task.worktree}</Text>
-      </Box>
-      <Box gap={3}>
-        <Box>
-          <Text bold>[r]</Text>
-          <Text> remove worktree</Text>
-        </Box>
-        <Box>
-          <Text bold>[esc]</Text>
-          <Text> cancel</Text>
-        </Box>
-      </Box>
-    </Box>
+      <box style={{ marginBottom: 1 }}>
+        <text><strong>{task.id}</strong><span fg={statusColor}>{` [${task.status}]`}</span></text>
+      </box>
+      <box style={{ marginBottom: 1 }}>
+        <text fg="#555555">{`Worktree: ${task.worktree}`}</text>
+      </box>
+      <box style={{ gap: 3 }}>
+        <text><strong>[r]</strong>{" remove worktree"}</text>
+        <text><strong>[esc]</strong>{" cancel"}</text>
+      </box>
+    </box>
   )
 }

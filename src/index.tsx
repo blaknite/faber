@@ -1,5 +1,5 @@
-import React from "react"
-import { render } from "ink"
+import { createCliRenderer } from "@opentui/core"
+import { createRoot } from "@opentui/react"
 import { resolve, basename } from "node:path"
 import { existsSync } from "node:fs"
 import { App } from "./App.js"
@@ -47,21 +47,25 @@ async function main() {
   const state = readState(repoRoot)
   const repoName = basename(repoRoot)
 
-  const { unmount, waitUntilExit } = render(
+  const renderer = await createCliRenderer({ exitOnCtrlC: false })
+  const root = createRoot(renderer)
+
+  root.render(
     <App
       repoRoot={repoRoot}
       repoName={repoName}
       initialTasks={state.tasks}
-    />,
-    {}
+      renderer={renderer}
+      onExit={async () => {
+        root.unmount()
+        await releaseLock?.()
+        renderer.stop()
+        process.exit(0)
+      }}
+    />
   )
 
-  try {
-    await waitUntilExit()
-  } finally {
-    unmount()
-    await releaseLock?.()
-  }
+  renderer.start()
 }
 
 async function dispatchHeadless(repoRoot: string, prompt: string) {

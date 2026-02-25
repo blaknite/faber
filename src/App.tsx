@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react"
-import { Box, Text, useApp, useInput } from "ink"
+import { useCallback, useEffect, useState } from "react"
+import { useKeyboard } from "@opentui/react"
+import type { CliRenderer } from "@opentui/core"
 import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
 import { CleanupDialog } from "./components/CleanupDialog.js"
@@ -17,10 +18,11 @@ interface Props {
   repoRoot: string
   repoName: string
   initialTasks: Task[]
+  renderer: CliRenderer
+  onExit: () => void
 }
 
-export function App({ repoRoot, repoName, initialTasks }: Props) {
-  const { exit } = useApp()
+export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [mode, setMode] = useState<Mode>("normal")
@@ -84,7 +86,7 @@ export function App({ repoRoot, repoName, initialTasks }: Props) {
 
     try {
       await createWorktree(repoRoot, slug)
-    } catch (err) {
+    } catch {
       updateTaskInState(slug, {
         status: "failed",
         completedAt: new Date().toISOString(),
@@ -107,23 +109,20 @@ export function App({ repoRoot, repoName, initialTasks }: Props) {
     if (!selectedTask) return
     if (!selectedTask.sessionId) { showFlash("No session ID yet -- task may still be starting."); return }
     const cmd = `opencode -s ${selectedTask.sessionId}`
-    execa("pbcopy", { input: cmd }).catch(() => {
-      // pbcopy not available on non-macOS -- flash still shows
-    })
+    execa("pbcopy", { input: cmd }).catch(() => {})
     showFlash(`Copied: ${cmd}`)
   }, [selectedTask, showFlash])
 
-  useInput((input, key) => {
-    if (mode === "cleanup") return
-    if (mode === "input") return
+  useKeyboard((key) => {
+    if (mode === "cleanup" || mode === "input") return
 
-    if (input === "n") { setMode("input"); return }
-    if (input === "q" || (key.ctrl && input === "c")) { exit(); return }
-    if (key.upArrow || input === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
-    if (key.downArrow || input === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
-    if (input === "x") { handleKill(); return }
-    if (input === "s") { handleSession(); return }
-    if (input === "c") {
+    if (key.name === "n") { setMode("input"); return }
+    if (key.name === "q" || (key.ctrl && key.name === "c")) { onExit(); return }
+    if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
+    if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
+    if (key.name === "x") { handleKill(); return }
+    if (key.name === "s") { handleSession(); return }
+    if (key.name === "c") {
       if (selectedTask && selectedTask.status !== "running") setMode("cleanup")
       return
     }
@@ -139,9 +138,9 @@ export function App({ repoRoot, repoName, initialTasks }: Props) {
   ]
 
   const bottomBar = flashMessage ? (
-    <Box paddingX={1}>
-      <Text color="green">{flashMessage}</Text>
-    </Box>
+    <box style={{ paddingLeft: 1 }}>
+      <text fg="#00cc00">{flashMessage}</text>
+    </box>
   ) : mode === "input" ? (
     <TaskInput onSubmit={handleDispatch} onCancel={() => setMode("normal")} />
   ) : mode === "cleanup" && selectedTask ? (
@@ -159,17 +158,16 @@ export function App({ repoRoot, repoName, initialTasks }: Props) {
   )
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Box paddingX={1} paddingY={0}>
-        <Text bold>faber</Text>
-        <Text dimColor>  {repoName}</Text>
-      </Box>
+    <box style={{ flexDirection: "column", height: "100%" }}>
+      <box border={["bottom"]} borderColor="#333333" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1 }}>
+        <text><strong>faber</strong>{"  "}<span fg="#666666">{repoName}</span></text>
+      </box>
 
-      <Box flexGrow={1} flexDirection="column">
+      <box style={{ flexGrow: 1, flexDirection: "column" }}>
         <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} />
-      </Box>
+      </box>
 
       {bottomBar}
-    </Box>
+    </box>
   )
 }

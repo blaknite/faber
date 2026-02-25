@@ -7,23 +7,24 @@
     "faber": "./dist/index.js"
   },
   "scripts": {
-    "dev": "node --import tsx/esm src/index.tsx",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "dev": "bun src/index.tsx",
+    "build": "bun build src/index.tsx --outdir dist --target bun",
+    "start": "bun dist/index.js"
   },
   "dependencies": {
+    "@opentui/core": "^0.1.82",
+    "@opentui/react": "^0.1.82",
     "execa": "^9.5.2",
-    "ink": "^5.1.0",
     "marked": "^15.0.12",
     "marked-terminal": "^7.3.0",
     "proper-lockfile": "^4.1.2",
-    "react": "^18.3.1"
+    "react": "^19"
   },
   "devDependencies": {
     "@types/marked-terminal": "^6.1.1",
     "@types/node": "^22.0.0",
     "@types/proper-lockfile": "^4.1.4",
-    "@types/react": "^18.3.1",
+    "@types/react": "^19",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }

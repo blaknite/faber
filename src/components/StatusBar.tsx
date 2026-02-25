@@ -1,6 +1,3 @@
-import React from "react"
-import { Box, Text } from "ink"
-
 interface Binding {
   key: string
   label: string
@@ -12,13 +9,12 @@ interface Props {
 
 export function StatusBar({ bindings }: Props) {
   return (
-    <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+    <box border={["top"]} style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "row", flexWrap: "no-wrap" }}>
       {bindings.map((b, i) => (
-        <Box key={b.key} marginRight={i < bindings.length - 1 ? 3 : 0}>
-          <Text bold>[{b.key}]</Text>
-          <Text> {b.label}</Text>
-        </Box>
+        <text key={b.key} style={{ marginRight: i < bindings.length - 1 ? 3 : 0 }}>
+          <strong>[{b.key}]</strong>{" "}{b.label}
+        </text>
       ))}
-    </Box>
+    </box>
   )
 }

@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { Box, Text, useInput } from "ink"
+import { useState } from "react"
+import { useKeyboard } from "@opentui/react"
 
 interface Props {
   onSubmit: (prompt: string) => void
@@ -9,30 +9,28 @@ interface Props {
 export function TaskInput({ onSubmit, onCancel }: Props) {
   const [value, setValue] = useState("")
 
-  useInput((input, key) => {
-    if (key.escape) {
+  useKeyboard((key) => {
+    if (key.name === "escape") {
       onCancel()
       return
     }
-    if (key.return) {
+    if (key.name === "return" || key.name === "enter") {
       const trimmed = value.trim()
       if (trimmed) onSubmit(trimmed)
       return
     }
-    if (key.backspace || key.delete) {
+    if (key.name === "backspace" || key.name === "delete") {
       setValue((v) => v.slice(0, -1))
       return
     }
-    if (!key.ctrl && !key.meta && input) {
-      setValue((v) => v + input)
+    if (!key.ctrl && !key.meta && key.sequence) {
+      setValue((v) => v + key.sequence)
     }
   })
 
   return (
-    <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
-      <Text bold>New task: </Text>
-      <Text>{value}</Text>
-      <Text inverse> </Text>
-    </Box>
+    <box border={["top"]} style={{ paddingLeft: 1 }}>
+      <text><strong>New task: </strong>{value}<span bg="#ffffff" fg="#000000">{" "}</span></text>
+    </box>
   )
 }
