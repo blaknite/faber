@@ -30,8 +30,13 @@ export function spawnAgent(
   const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,
     stdio: ["ignore", "pipe", "pipe"],
-    detached: false,
+    // detached creates a new process group with the shell as leader. This lets
+    // killAgent send SIGTERM to the whole group (shell + opencode) by negating
+    // the pid. unref() allows faber to exit without waiting, but the close
+    // event still fires while faber is running.
+    detached: true,
   })
+  child.unref()
 
   onUpdate({ pid: child.pid ?? null })
 
@@ -86,7 +91,9 @@ export function spawnAgent(
 
 export function killAgent(pid: number): void {
   try {
-    process.kill(pid, "SIGTERM")
+    // Negate the pid to signal the whole process group, so SIGTERM reaches
+    // opencode and not just the shell wrapper.
+    process.kill(-pid, "SIGTERM")
   } catch {
     // already gone
   }
