@@ -75,7 +75,6 @@ async function main() {
   const repoName = basename(repoRoot)
 
   const renderer = await createCliRenderer({ exitOnCtrlC: false, useMouse: false })
-  renderer.enableKittyKeyboard()
   const root = createRoot(renderer)
 
   root.render(
