@@ -117,7 +117,7 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
 function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
   const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
   return (
-    <box style={{ paddingTop: 1, paddingBottom: 2, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+    <box style={{ paddingTop: 1, paddingBottom: 2, paddingLeft: 1, paddingRight: 1 }}>
       <box
         border={["left"]}
         borderColor={modelDef.color}
@@ -335,6 +335,7 @@ export function AgentLog({ repoRoot, task }: Props) {
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
             <PromptRow prompt={task.prompt} model={task.model} />
+            <box border={["bottom"]} borderColor="#222222" style={{ marginLeft: 1, marginRight: 1 }} />
             {entries.length === 0 ? (
               <text fg="#333333">No output yet.</text>
             ) : (
