@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createTextAttributes } from "@opentui/core"
+import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus } from "../types.js"
 
 interface Props {
@@ -19,6 +20,16 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: "done",
   failed: "failed",
   unknown: "unknown",
+}
+
+// Each task card is: paddingTop(1) + status line(1) + marginTop(1) + prompt line(1) + paddingBottom(1) = 5 rows
+// Plus a 1-row separator border between cards (for i > 0)
+const CARD_HEIGHT = 5
+const SEPARATOR_HEIGHT = 1
+
+function rowOffset(index: number): number {
+  // outer paddingTop(1) + sum of all preceding cards + their separators
+  return 1 + index * CARD_HEIGHT + Math.max(0, index) * SEPARATOR_HEIGHT
 }
 
 function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {
@@ -51,6 +62,27 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
 }
 
 export function AgentList({ tasks, selectedId }: Props) {
+  const scrollRef = useRef<ScrollBoxRenderable>(null)
+
+  useEffect(() => {
+    if (!scrollRef.current || !selectedId) return
+    const index = tasks.findIndex((t) => t.id === selectedId)
+    if (index === -1) return
+
+    const scrollbox = scrollRef.current
+    const top = rowOffset(index)
+    const bottom = top + CARD_HEIGHT
+
+    const viewportHeight = scrollbox.viewport.height
+    const currentTop = scrollbox.scrollTop
+
+    if (top < currentTop) {
+      scrollbox.scrollTo(top)
+    } else if (bottom > currentTop + viewportHeight) {
+      scrollbox.scrollTo(bottom - viewportHeight)
+    }
+  }, [selectedId, tasks])
+
   if (tasks.length === 0) {
     return (
       <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
@@ -61,36 +93,38 @@ export function AgentList({ tasks, selectedId }: Props) {
   }
 
   return (
-    <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-      {tasks.map((task, i) => {
-        const selected = task.id === selectedId
-        return (
-          <box key={task.id} style={{ flexDirection: "column" }}>
-            {i > 0 && <box border={["top"]} borderColor="#222222" />}
-            <box
-              style={{
-                flexDirection: "column",
-                paddingLeft: 1,
-                paddingRight: 1,
-                paddingTop: 1,
-                paddingBottom: 1,
-                backgroundColor: selected ? "#222222" : "#111111",
-              }}
-              border={["left"]}
-              borderColor={selected ? "#ff6600" : "#ffffff"}
-            >
-              <TaskRow task={task} selected={selected} />
+    <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false}>
+      <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+        {tasks.map((task, i) => {
+          const selected = task.id === selectedId
+          return (
+            <box key={task.id} style={{ flexDirection: "column" }}>
+              {i > 0 && <box border={["top"]} borderColor="#222222" />}
               <box
+                style={{
+                  flexDirection: "column",
+                  paddingLeft: 1,
+                  paddingRight: 1,
+                  paddingTop: 1,
+                  paddingBottom: 1,
+                  backgroundColor: selected ? "#222222" : "#111111",
+                }}
                 border={["left"]}
-                borderColor="#ffffff"
-                style={{ marginTop: 1, paddingLeft: 1 }}
+                borderColor={selected ? "#ff6600" : "#ffffff"}
               >
-                <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt}</text>
+                <TaskRow task={task} selected={selected} />
+                <box
+                  border={["left"]}
+                  borderColor="#ffffff"
+                  style={{ marginTop: 1, paddingLeft: 1 }}
+                >
+                  <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt}</text>
+                </box>
               </box>
             </box>
-          </box>
-        )
-      })}
-    </box>
+          )
+        })}
+      </box>
+    </scrollbox>
   )
 }
