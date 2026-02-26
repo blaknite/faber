@@ -7,6 +7,7 @@ import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask,
 import { generateSlug } from "./lib/slug.js"
 import { createWorktree } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
+import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
@@ -30,6 +31,16 @@ async function main() {
       process.exit(exitCode)
     }
     const status = exitCode === 0 ? "done" : "failed"
+
+    if (status === "failed") {
+      logTaskFailure(repoRoot, {
+        taskId,
+        callSite: "index.tsx:--finish",
+        reason: "Process exited with non-zero exit code",
+        exitCode,
+      })
+    }
+
     try {
       updateTask(repoRoot, taskId, {
         status,
@@ -133,6 +144,13 @@ async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["m
     await createWorktree(repoRoot, slug)
   } catch (err: any) {
     console.error(`Failed to create worktree: ${err.message}`)
+    logTaskFailure(repoRoot, {
+      taskId: slug,
+      callSite: "index.tsx:dispatchHeadless",
+      reason: "Failed to create git worktree",
+      exitCode: -1,
+      error: err.message,
+    })
     updateTask(repoRoot, slug, { status: "failed", completedAt: new Date().toISOString(), exitCode: -1 })
     process.exit(1)
   }
