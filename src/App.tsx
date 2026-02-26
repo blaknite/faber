@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useKeyboard } from "@opentui/react"
-import type { CliRenderer } from "@opentui/core"
+import type { CliRenderer, ScrollBoxRenderable } from "@opentui/core"
 import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
@@ -34,6 +34,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
+  const logScrollRef = useRef<ScrollBoxRenderable>(null)
 
   const selectedTask = tasks[selectedIdx] ?? null
 
@@ -178,8 +179,22 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (key.name === "n") { setMode("input"); return }
     if (key.name === "q" || (key.ctrl && key.name === "c")) { onExit(); return }
-    if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
-    if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
+    if (key.name === "up" || key.name === "k") {
+      if (logPaneTaskId !== null && logScrollRef.current) {
+        logScrollRef.current.scrollBy(-3)
+      } else {
+        setSelectedIdx((i) => Math.max(0, i - 1))
+      }
+      return
+    }
+    if (key.name === "down" || key.name === "j") {
+      if (logPaneTaskId !== null && logScrollRef.current) {
+        logScrollRef.current.scrollBy(3)
+      } else {
+        setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1))
+      }
+      return
+    }
     if (key.name === "x") {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
@@ -241,6 +256,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <AgentLog
               repoRoot={repoRoot}
               taskId={logTask.id}
+              scrollRef={logScrollRef}
             />
           ) : null
         })()}

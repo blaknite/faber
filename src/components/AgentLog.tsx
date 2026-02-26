@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { existsSync, readFileSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes } from "@opentui/core"
+import type { ScrollBoxRenderable } from "@opentui/core"
 import { taskOutputPath } from "../lib/state.js"
 
 interface LogEvent {
@@ -164,9 +165,12 @@ function LogRow({ entry }: { entry: LogEntry }) {
 interface Props {
   repoRoot: string
   taskId: string
+  scrollRef?: React.RefObject<ScrollBoxRenderable | null>
 }
 
-export function AgentLog({ repoRoot, taskId }: Props) {
+export function AgentLog({ repoRoot, taskId, scrollRef }: Props) {
+  const internalScrollRef = useRef<ScrollBoxRenderable>(null)
+  const activeScrollRef = scrollRef ?? internalScrollRef
   const [entries, setEntries] = useState<LogEntry[]>(() => readLogEntries(repoRoot, taskId))
 
   const refresh = useCallback(() => {
@@ -231,7 +235,7 @@ export function AgentLog({ repoRoot, taskId }: Props) {
         </box>
       ) : (
         <box style={{ flexGrow: 1, paddingTop: 1, paddingLeft: 1, paddingRight: 1 }}>
-          <scrollbox style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" viewportOptions={{ maxHeight: "100%" }} contentOptions={{ paddingBottom: 1 }}>
+          <scrollbox ref={activeScrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" viewportOptions={{ maxHeight: "100%" }} contentOptions={{ paddingBottom: 1 }}>
             <box style={{ flexDirection: "column" }}>
               {entries.map((entry, i) => (
                 <LogRow key={i} entry={entry} />
