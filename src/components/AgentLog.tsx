@@ -129,6 +129,7 @@ function TextRow({ entry }: { entry: LogEntry }) {
         {formatTimestamp(entry.timestamp)}
       </text>
       <text fg="#444444" style={{ width: 2, flexShrink: 0 }}>{"  "}</text>
+      <text fg="#555555">{" "}</text>
       <text fg="#999999">{entry.text}</text>
     </box>
   )
