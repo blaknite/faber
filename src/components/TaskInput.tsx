@@ -9,6 +9,26 @@ interface Props {
   onCancel: () => void
 }
 
+// Given a flat string and a cursor position, return the { row, col } in the
+// split-by-newline representation.
+function posToRowCol(text: string, pos: number): { row: number; col: number } {
+  const lines = text.slice(0, pos).split("\n")
+  return { row: lines.length - 1, col: lines[lines.length - 1]!.length }
+}
+
+// Given a split-by-newline line array and a { row, col }, return the flat
+// position. col is clamped to the line length.
+function rowColToPos(lines: string[], row: number, col: number): number {
+  const clampedRow = Math.max(0, Math.min(lines.length - 1, row))
+  const lineLen = lines[clampedRow]!.length
+  const clampedCol = Math.min(col, lineLen)
+  let pos = 0
+  for (let i = 0; i < clampedRow; i++) {
+    pos += lines[i]!.length + 1 // +1 for the \n
+  }
+  return pos + clampedCol
+}
+
 export function TaskInput({ onSubmit, onCancel }: Props) {
   const [value, setValue] = useState("")
   const [cursorPos, setCursorPos] = useState(0)
@@ -34,6 +54,12 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
       return
     }
 
+    if ((key.name === "return" || key.name === "enter") && key.shift) {
+      setValue((v) => v.slice(0, cursorPos) + "\n" + v.slice(cursorPos))
+      setCursorPos((p) => p + 1)
+      return
+    }
+
     if (key.name === "return" || key.name === "enter") {
       const trimmed = value.trim()
       if (trimmed) onSubmit(trimmed, MODELS[modelIdx]!.value)
@@ -42,6 +68,22 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
 
     if (key.name === "tab") {
       setModelIdx((i) => (i + 1) % MODELS.length)
+      return
+    }
+
+    if (key.name === "up") {
+      const lines = value.split("\n")
+      const { row, col } = posToRowCol(value, cursorPos)
+      if (row === 0) return
+      setCursorPos(rowColToPos(lines, row - 1, col))
+      return
+    }
+
+    if (key.name === "down") {
+      const lines = value.split("\n")
+      const { row, col } = posToRowCol(value, cursorPos)
+      if (row === lines.length - 1) return
+      setCursorPos(rowColToPos(lines, row + 1, col))
       return
     }
 
