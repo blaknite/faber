@@ -22,6 +22,15 @@ export async function removeWorktree(repoRoot: string, slug: string): Promise<vo
   }
 }
 
+export async function getDiff(repoRoot: string, slug: string): Promise<string> {
+  const { stdout } = await execa("git", ["diff", `HEAD...${slug}`], { cwd: repoRoot })
+  return stdout
+}
+
+export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
+  await execa("git", ["merge", "--no-ff", slug], { cwd: repoRoot })
+}
+
 export async function listWorktrees(repoRoot: string): Promise<string[]> {
   const { stdout } = await execa("git", ["worktree", "list", "--porcelain"], { cwd: repoRoot })
   return stdout

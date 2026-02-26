@@ -4,9 +4,10 @@ import type { CliRenderer } from "@opentui/core"
 import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
+import { DiffView } from "./components/DiffView.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
 import { createWorktree } from "./lib/worktree.js"
@@ -14,7 +15,7 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
-type Mode = "normal" | "input" | "delete" | "kill"
+type Mode = "normal" | "input" | "delete" | "kill" | "merge"
 
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -34,6 +35,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
+  const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
   const prevSelectedIdx = useRef(0)
   const selectedTask = tasks[selectedIdx] ?? null
 
@@ -156,11 +158,28 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setLogPaneTaskId(selectedTask.id)
   }, [selectedTask])
 
+  const handleOpenDiff = useCallback(() => {
+    if (!selectedTask) return
+    setDiffPaneTaskId(selectedTask.id)
+  }, [selectedTask])
+
+  const handleMerge = useCallback(async () => {
+    if (!selectedTask) { setMode("normal"); return }
+    setMode("normal")
+    try {
+      await mergeBranch(repoRoot, selectedTask.id)
+      showFlash(`Merged ${selectedTask.id} into HEAD`)
+    } catch (err) {
+      showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [selectedTask, repoRoot, showFlash])
+
   useKeyboard((key) => {
     if (mode === "input") return
 
     if (key.name === "escape") {
-      if (mode === "kill" || mode === "delete") { setMode("normal"); return }
+      if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
+      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
     }
@@ -179,6 +198,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         if (selectedTask.pid) killAgent(selectedTask.pid)
         removeWorktree(repoRoot, selectedTask.id).catch(() => {})
         if (logPaneTaskId === selectedTask.id) setLogPaneTaskId(null)
+        if (diffPaneTaskId === selectedTask.id) setDiffPaneTaskId(null)
         removeTaskFromState(selectedTask.id)
         setMode("normal")
         return
@@ -187,9 +207,28 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
+    if (mode === "merge") {
+      if (key.name === "y") { handleMerge(); return }
+      if (key.name === "n" || key.name === "q") { setMode("normal"); return }
+      return
+    }
+
     if (key.name === "q") {
+      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       onExit()
+      return
+    }
+
+    if (diffPaneTaskId !== null) {
+      if (key.name === "m") {
+        if (selectedTask) setMode("merge")
+        return
+      }
+      if (key.name === "d") {
+        if (selectedTask) setMode("delete")
+        return
+      }
       return
     }
 
@@ -200,6 +239,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       }
       if (key.name === "r") { handleResume(); return }
       if (key.name === "s") { handleSession(); return }
+      if (key.name === "f") { handleOpenDiff(); return }
       if (key.name === "d") {
         if (selectedTask) setMode("delete")
         return
@@ -215,6 +255,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
     if (key.name === "o" || key.name === "return") { handleOpenLog(); return }
+    if (key.name === "f") { handleOpenDiff(); return }
     if (key.name === "s") { handleSession(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "c") { handleClone(); return }
@@ -224,17 +265,24 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   })
 
-  const normalBindings = logPaneTaskId ? [
+  const normalBindings = diffPaneTaskId ? [
+    { key: "q", label: "back to list" },
+    { key: "↑↓", label: "scroll" },
+    { key: "m", label: "merge into HEAD", disabled: !selectedTask },
+    { key: "d", label: "delete", disabled: !selectedTask },
+  ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
+    { key: "f", label: "diff", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
   ] : [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
     { key: "enter", label: "open", disabled: !selectedTask },
+    { key: "f", label: "diff", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
@@ -255,6 +303,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Delete ${selectedTask.id}?`}</strong>{` [y/n]`}</text>
     </box>
+  ) : mode === "merge" && selectedTask ? (
+    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
+      <text><strong>{`Merge ${selectedTask.id} into HEAD?`}</strong>{` [y/n]`}</text>
+    </box>
   ) : (
     <StatusBar bindings={normalBindings} />
   )
@@ -269,7 +321,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       </box>
 
       <box style={{ flexGrow: 1, flexDirection: "row" }}>
-        {logPaneTaskId ? (() => {
+        {diffPaneTaskId ? (() => {
+          const diffTask = tasks.find((t) => t.id === diffPaneTaskId) ?? null
+          return diffTask ? (
+            <DiffView
+              repoRoot={repoRoot}
+              task={diffTask}
+            />
+          ) : null
+        })() : logPaneTaskId ? (() => {
           const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
           return logTask ? (
             <AgentLog
