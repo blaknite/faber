@@ -15,6 +15,10 @@ import { DEFAULT_MODEL } from "./types.js"
 
 type Mode = "normal" | "input" | "delete" | "kill"
 
+function sortDescending(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+}
+
 interface Props {
   repoRoot: string
   repoName: string
@@ -24,7 +28,7 @@ interface Props {
 }
 
 export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [tasks, setTasks] = useState<Task[]>(sortDescending(initialTasks))
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
@@ -33,7 +37,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
-    setTasks(state.tasks)
+    setTasks(sortDescending(state.tasks))
   }, [repoRoot])
 
   useEffect(() => {
@@ -80,8 +84,8 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     setTasks((prev) => {
-      const next = [...prev, task]
-      setSelectedIdx(next.length - 1)
+      const next = [task, ...prev]
+      setSelectedIdx(0)
       return next
     })
     addTask(repoRoot, task)
