@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { createTextAttributes } from "@opentui/core"
-import type { ScrollBoxRenderable } from "@opentui/core"
+import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus } from "../types.js"
 
 interface Props {
@@ -20,16 +20,6 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: "done",
   failed: "failed",
   unknown: "unknown",
-}
-
-// Each task card is: paddingTop(1) + status line(1) + marginTop(1) + prompt line(1) + paddingBottom(1) = 5 rows
-// Plus a 1-row separator border between cards (for i > 0)
-const CARD_HEIGHT = 5
-const SEPARATOR_HEIGHT = 1
-
-function rowOffset(index: number): number {
-  // outer paddingTop(1) + sum of all preceding cards + their separators
-  return 1 + index * CARD_HEIGHT + Math.max(0, index) * SEPARATOR_HEIGHT
 }
 
 function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {
@@ -63,16 +53,28 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
 
 export function AgentList({ tasks, selectedId }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
+  const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
+
+  const setCardRef = useCallback((id: string) => (el: BoxRenderable | null) => {
+    if (el) {
+      cardRefs.current.set(id, el)
+    } else {
+      cardRefs.current.delete(id)
+    }
+  }, [])
 
   useEffect(() => {
     if (!scrollRef.current || !selectedId) return
-    const index = tasks.findIndex((t) => t.id === selectedId)
-    if (index === -1) return
 
     const scrollbox = scrollRef.current
-    const top = rowOffset(index)
-    const bottom = top + CARD_HEIGHT
+    const card = cardRefs.current.get(selectedId)
+    if (!card) return
 
+    // card.y is in screen coordinates; subtract the content container's y to get
+    // the row offset within the scrollable content
+    const contentY = scrollbox.content.y
+    const top = card.y - contentY
+    const bottom = top + card.height
     const viewportHeight = scrollbox.viewport.height
     const currentTop = scrollbox.scrollTop
 
@@ -98,7 +100,7 @@ export function AgentList({ tasks, selectedId }: Props) {
         {tasks.map((task, i) => {
           const selected = task.id === selectedId
           return (
-            <box key={task.id} style={{ flexDirection: "column" }}>
+            <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
               {i > 0 && <box border={["top"]} borderColor="#222222" />}
               <box
                 style={{
