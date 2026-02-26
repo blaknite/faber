@@ -137,13 +137,15 @@ export function AgentLog({ repoRoot, taskId }: Props) {
           <text fg="#333333">No output yet.</text>
         </box>
       ) : (
-        <scrollbox style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" viewportOptions={{ maxHeight: "100%" }}>
-          <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-            {lines.map((line, i) => (
-              <text key={i} fg="#666666">{line}</text>
-            ))}
-          </box>
-        </scrollbox>
+        <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+          <scrollbox style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" viewportOptions={{ maxHeight: "100%" }}>
+            <box style={{ flexDirection: "column" }}>
+              {lines.map((line, i) => (
+                <text key={i} fg="#666666">{line}</text>
+              ))}
+            </box>
+          </scrollbox>
+        </box>
       )}
     </box>
   )
