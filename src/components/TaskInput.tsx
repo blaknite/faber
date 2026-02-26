@@ -36,9 +36,9 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   return (
     <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
       <box
-        border={["left"]}
+        border={true}
         borderColor={model.color}
-        style={{ paddingLeft: 1 }}
+        style={{ paddingLeft: 1, paddingRight: 1 }}
       >
         <box>
           <textarea
@@ -64,7 +64,8 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
             focused
           />
         </box>
-        <box>
+        <box border={["top"]} borderColor={model.color} />
+        <box style={{ paddingLeft: 1 }}>
           <text fg={model.color}>{model.label}</text>
         </box>
       </box>
