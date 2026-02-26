@@ -388,7 +388,7 @@ function BlockContent({ content }: { content: string }) {
     <box
       border={["left"]}
       borderColor="#444444"
-      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+      style={{ paddingLeft: 1, marginTop: 0 }}
     >
       {visible.map((line, i) => (
         <text key={i} fg="#888888">{line}</text>
@@ -429,7 +429,7 @@ function DiffContent({ diff }: { diff: string }) {
     <box
       border={["left"]}
       borderColor="#444444"
-      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+      style={{ paddingLeft: 1, marginTop: 0 }}
     >
       {visible.map((line, i) => (
         <text key={i} fg={diffLineColor(line)}>{line}</text>
@@ -556,7 +556,7 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
     <box
       border={["left"]}
       borderColor="#555555"
-      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+      style={{ paddingLeft: 1, marginTop: 0 }}
     >
       <text fg="#666666">
         {summary}
