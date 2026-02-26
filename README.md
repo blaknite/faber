@@ -2,7 +2,7 @@
 
 A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, and it spins up a git worktree and an [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
 
-![faber TUI screenshot placeholder]
+<img width="1211" height="1344" alt="Screenshot 2026-02-26 at 11 58 29 pm" src="https://github.com/user-attachments/assets/9f007317-9617-4397-8952-3f35b0d9162c" />
 
 ## How it works
 
