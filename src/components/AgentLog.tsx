@@ -113,6 +113,26 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
   return entries
 }
 
+function PromptRow({ prompt }: { prompt: string }) {
+  return (
+    <box style={{ flexDirection: "column", paddingBottom: 1 }}>
+      <text fg="#444444" attributes={createTextAttributes({ dim: true })}>prompt</text>
+      <markdown
+        content={prompt}
+        syntaxStyle={syntaxStyle}
+        style={{ flexGrow: 1, flexShrink: 1 }}
+        renderNode={(token, context) => {
+          const renderable = context.defaultRender()
+          if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+            (renderable as any).wrapMode = "word"
+          }
+          return renderable
+        }}
+      />
+    </box>
+  )
+}
+
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
     <box style={{ flexDirection: "row" }}>
@@ -302,21 +322,20 @@ export function AgentLog({ repoRoot, task }: Props) {
         <TitleBar task={task} />
       </box>
 
-      {entries.length === 0 ? (
-        <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="#333333">No output yet.</text>
-        </box>
-      ) : (
-        <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1, overflow: "hidden" }}>
-          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
-            <box style={{ flexDirection: "column" }}>
-              {entries.map((entry, i) => (
+      <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1, overflow: "hidden" }}>
+        <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
+          <box style={{ flexDirection: "column" }}>
+            <PromptRow prompt={task.prompt} />
+            {entries.length === 0 ? (
+              <text fg="#333333">No output yet.</text>
+            ) : (
+              entries.map((entry, i) => (
                 <LogRow key={i} entry={entry} />
-              ))}
-            </box>
-          </scrollbox>
-        </box>
-      )}
+              ))
+            )}
+          </box>
+        </scrollbox>
+      </box>
     </box>
   )
 }
