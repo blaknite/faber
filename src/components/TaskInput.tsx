@@ -34,7 +34,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   }
 
   return (
-    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#222222" }}>
+    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
       <box
         border={["left"]}
         borderColor={model.color}
