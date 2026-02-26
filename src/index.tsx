@@ -29,9 +29,10 @@ async function main() {
       console.error("Could not find faber state file from current directory")
       process.exit(exitCode)
     }
-    const status = exitCode === 0 ? "done" : "failed"
-
-    if (status === "failed") {
+    // Always mark the task as done so intermittent non-zero exit codes from the
+    // agent process don't permanently flip a completed task to "failed". The
+    // exit code is still recorded for diagnostics.
+    if (exitCode !== 0) {
       logTaskFailure(repoRoot, {
         taskId,
         callSite: "index.tsx:--finish",
@@ -42,7 +43,7 @@ async function main() {
 
     try {
       updateTask(repoRoot, taskId, {
-        status,
+        status: "done",
         exitCode,
         completedAt: new Date().toISOString(),
         pid: null,
