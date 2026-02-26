@@ -43,6 +43,13 @@ export function spawnAgent(
     // faber exiting. unref() allows faber to exit without waiting, but the
     // close event still fires while faber is running.
     detached: true,
+    env: {
+      ...process.env,
+      // Disable the explore subagent to prevent indefinite hangs in non-interactive
+      // mode. The explore agent calls the question tool, which blocks waiting for
+      // user input that never arrives. See: https://github.com/sst/opencode/issues/13841
+      OPENCODE_PERMISSION: JSON.stringify({ task: { "*": "allow", explore: "deny" } }),
+    },
   })
   child.unref()
 
