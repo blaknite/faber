@@ -56,6 +56,7 @@ faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
 | `s` | Copy `opencode -s <sessionId>` to clipboard |
 | `x` | Kill running task (confirms with y/n) |
 | `d` | Delete task and remove its worktree (confirms with y/n) |
+| `f` | Open diff view (task branch vs HEAD) |
 | `q` / `Ctrl-C` | Quit |
 
 **Log pane** (after pressing `enter` on a task)
@@ -68,7 +69,17 @@ faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
 | `s` | Copy session ID to clipboard |
 | `x` | Kill running task |
 | `d` | Delete task and worktree |
+| `f` | Open diff view |
 | `q` / `Escape` | Back to task list |
+
+**Diff view** (after pressing `f`)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` or arrows | Scroll |
+| `PgUp` / `PgDn` | Scroll by page |
+| `m` | Merge branch into HEAD (git merge --no-ff, confirms with y/n) |
+| `q` / `Escape` | Back |
 
 When creating a task, `Tab` cycles through models and `Enter` submits. Multi-line prompts are supported with `Shift-Enter`, `Ctrl-Enter`, or `Ctrl-J`.
 
