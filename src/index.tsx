@@ -30,12 +30,18 @@ async function main() {
       process.exit(exitCode)
     }
     const status = exitCode === 0 ? "done" : "failed"
-    updateTask(repoRoot, taskId, {
-      status,
-      exitCode,
-      completedAt: new Date().toISOString(),
-      pid: null,
-    })
+    try {
+      updateTask(repoRoot, taskId, {
+        status,
+        exitCode,
+        completedAt: new Date().toISOString(),
+        pid: null,
+      })
+    } catch (err) {
+      // If we can't write the state, log it but still exit with the correct code.
+      // The close handler in agent.ts will catch this and use it as a fallback.
+      console.error("Failed to write task status:", (err as Error).message)
+    }
     process.exit(exitCode)
   }
 
