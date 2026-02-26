@@ -489,7 +489,7 @@ function StepFinishRow({ entry }: { entry: LogEntry }) {
   const elapsed = entry.elapsedMs != null ? formatElapsedMs(entry.elapsedMs) : null
 
   return (
-    <box style={{ flexDirection: "row" }}>
+    <box style={{ flexDirection: "row", paddingBottom: 1 }}>
       <text fg="#00cc66">
         {"▣  "}
         {modelLabel ? `${modelLabel} · ` : ""}
@@ -670,7 +670,7 @@ export function AgentLog({ repoRoot, task }: Props) {
         <TitleBar task={task} />
       </box>
 
-      <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1, overflow: "hidden" }}>
+      <box style={{ flexGrow: 1, paddingLeft: 2, paddingRight: 2, paddingBottom: 1, overflow: "hidden" }}>
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
             <PromptRow prompt={task.prompt} model={task.model} />
