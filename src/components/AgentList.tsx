@@ -46,8 +46,8 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
       {"  "}
       <span fg={STATUS_COLOR[task.status]}>{STATUS_LABEL[task.status]}</span>
       {"  "}
-      <span fg={selected ? "#aaaaaa" : "#555555"}>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
-      {task.sessionId ? <span fg="#444444">{"  "}{task.sessionId}</span> : null}
+      <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+      {task.sessionId ? <span>{"  "}{task.sessionId}</span> : null}
     </text>
   )
 }
