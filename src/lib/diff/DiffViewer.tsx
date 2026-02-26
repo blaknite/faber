@@ -75,16 +75,17 @@ function SegmentedLine({ segments, baseColor, highlightBg }: {
 }
 
 // A single line row: optional line number + content
-function LineRow({ lineNum, color, segments, highlightBg, prefix }: {
+function LineRow({ lineNum, color, segments, highlightBg, rowBg, prefix }: {
   lineNum?: number
   color: string
   segments: Segment[]
   highlightBg: string
+  rowBg?: string
   prefix?: string
 }) {
   const numStr = lineNum !== undefined ? String(lineNum).padStart(4, " ") : "    "
   return (
-    <box style={{ flexDirection: "row" }}>
+    <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
       <text fg={colors.lineNum}>{numStr} </text>
       {prefix !== undefined && <text fg={color}>{prefix}</text>}
       <SegmentedLine segments={segments} baseColor={color} highlightBg={highlightBg} />
@@ -93,9 +94,9 @@ function LineRow({ lineNum, color, segments, highlightBg, prefix }: {
 }
 
 // Empty row for side-by-side padding
-function EmptyRow() {
+function EmptyRow({ rowBg }: { rowBg?: string } = {}) {
   return (
-    <box style={{ flexDirection: "row" }}>
+    <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
       <text fg={colors.lineNum}>{"     "}</text>
     </box>
   )
@@ -156,6 +157,7 @@ function InlineHunk({ hunk }: { hunk: Hunk }) {
             color={colors.remove}
             segments={oldSegs}
             highlightBg={colors.removeHighlight}
+            rowBg={colors.removeRow}
             prefix="-"
           />
         )
@@ -166,6 +168,7 @@ function InlineHunk({ hunk }: { hunk: Hunk }) {
             color={colors.add}
             segments={newSegs}
             highlightBg={colors.addHighlight}
+            rowBg={colors.addRow}
             prefix="+"
           />
         )
@@ -177,6 +180,7 @@ function InlineHunk({ hunk }: { hunk: Hunk }) {
             color={colors.remove}
             segments={highlightSingleLine(rem.content)}
             highlightBg={colors.removeHighlight}
+            rowBg={colors.removeRow}
             prefix="-"
           />
         )
@@ -188,6 +192,7 @@ function InlineHunk({ hunk }: { hunk: Hunk }) {
             color={colors.add}
             segments={highlightSingleLine(add.content)}
             highlightBg={colors.addHighlight}
+            rowBg={colors.addRow}
             prefix="+"
           />
         )
@@ -258,6 +263,7 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
             color={colors.remove}
             segments={oldSegs}
             highlightBg={colors.removeHighlight}
+            rowBg={colors.removeRow}
           />
         )
         rightRows.push(
@@ -267,6 +273,7 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
             color={colors.add}
             segments={newSegs}
             highlightBg={colors.addHighlight}
+            rowBg={colors.addRow}
           />
         )
       } else if (rem) {
@@ -277,11 +284,12 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
             color={colors.remove}
             segments={highlightSingleLine(rem.content)}
             highlightBg={colors.removeHighlight}
+            rowBg={colors.removeRow}
           />
         )
-        rightRows.push(<EmptyRow key={`r-${i}-${j}`} />)
+        rightRows.push(<EmptyRow key={`r-${i}-${j}`} rowBg={colors.removeRow} />)
       } else if (add) {
-        leftRows.push(<EmptyRow key={`l-${i}-${j}`} />)
+        leftRows.push(<EmptyRow key={`l-${i}-${j}`} rowBg={colors.addRow} />)
         rightRows.push(
           <LineRow
             key={`r-${i}-${j}`}
@@ -289,6 +297,7 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
             color={colors.add}
             segments={highlightSingleLine(add.content)}
             highlightBg={colors.addHighlight}
+            rowBg={colors.addRow}
           />
         )
       }
