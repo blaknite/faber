@@ -380,14 +380,14 @@ function BlockContent({ content }: { content: string }) {
   return (
     <box
       border={["left"]}
-      borderColor="#222222"
+      borderColor="#444444"
       style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
     >
       {visible.map((line, i) => (
-        <text key={i} fg="#555555">{line}</text>
+        <text key={i} fg="#888888">{line}</text>
       ))}
       {overflow > 0 ? (
-        <text fg="#333333" attributes={createTextAttributes({ dim: true })}>
+        <text fg="#666666">
           {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
         </text>
       ) : null}
@@ -424,7 +424,7 @@ function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) 
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
     <box style={{ flexDirection: "row" }}>
-      <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
+      <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
       <markdown
@@ -450,25 +450,25 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   const isDone = entry.status === "completed"
   const isError = entry.status === "error"
 
-  const titleAttr = isDone ? createTextAttributes({ dim: true }) : createTextAttributes({ bold: false })
-  const iconAttr = isDone ? createTextAttributes({ dim: true }) : undefined
+  const titleAttr = createTextAttributes({ bold: !isDone })
+  const iconAttr = undefined
 
   return (
     <box style={{ flexDirection: "column" }}>
       <box style={{ flexDirection: "row", paddingBottom: 0 }}>
-        <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
+        <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
           {formatTimestamp(entry.timestamp)}
         </text>
-        <text fg={isDone ? "#555555" : color} attributes={iconAttr} style={{ flexShrink: 0 }}>
+        <text fg={color} attributes={iconAttr} style={{ flexShrink: 0 }}>
           {icon}{" "}
         </text>
-        <text fg={isDone ? "#555555" : color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>
+        <text fg={color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>
           {title}
         </text>
         {entry.description ? (
           <>
-            <text fg="#444444">{" "}</text>
-            <text fg="#555555" attributes={createTextAttributes({ dim: true })} truncate>
+            <text fg="#555555">{" "}</text>
+            <text fg="#777777" truncate>
               {entry.description}
             </text>
           </>
@@ -491,10 +491,10 @@ function StepFinishRow({ entry }: { entry: LogEntry }) {
 
   return (
     <box style={{ flexDirection: "row" }}>
-      <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
+      <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
-      <text fg="#333333" attributes={createTextAttributes({ dim: true })}>
+      <text fg="#555555">
         {"▣  "}
         {modelLabel ? `${modelLabel} · ` : ""}
         {"done"}
@@ -510,10 +510,10 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
   return (
     <box
       border={["left"]}
-      borderColor="#333333"
+      borderColor="#555555"
       style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
     >
-      <text fg="#444444" attributes={createTextAttributes({ dim: true })}>
+      <text fg="#666666">
         {summary}
       </text>
     </box>
@@ -582,7 +582,7 @@ function TitleBar({ task }: { task: Task }) {
         {"  "}
         <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, now)}</span>
       </text>
-      {task.sessionId ? <text fg="#444444">{task.sessionId}</text> : null}
+      {task.sessionId ? <text fg="#666666">{task.sessionId}</text> : null}
     </box>
   )
 }
@@ -661,7 +661,7 @@ export function AgentLog({ repoRoot, task }: Props) {
     <box
       style={{ flexDirection: "column", flexGrow: 1, paddingBottom: 1 }}
     >
-      <box border={["bottom"]} borderColor="#333333" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#000000" }}>
+      <box border={["bottom"]} borderColor="#555555" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#000000" }}>
         <TitleBar task={task} />
       </box>
 
@@ -669,9 +669,9 @@ export function AgentLog({ repoRoot, task }: Props) {
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
             <PromptRow prompt={task.prompt} model={task.model} />
-            <box border={["bottom"]} borderColor="#222222" style={{ marginLeft: 1, marginRight: 1 }} />
+            <box border={["bottom"]} borderColor="#444444" style={{ marginLeft: 1, marginRight: 1 }} />
             {entries.length === 0 ? (
-              <text fg="#333333">No output yet.</text>
+              <text fg="#555555">No output yet.</text>
             ) : (
               entries.map((entry, i) => (
                 <LogRow key={i} entry={entry} />
