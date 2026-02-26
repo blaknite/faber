@@ -4,6 +4,7 @@ import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
 
 interface Props {
+  active: boolean
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
 }
@@ -16,11 +17,21 @@ const KEY_BINDINGS = [
   { name: "j", ctrl: true, action: "newline" as const },
 ]
 
-export function TaskInput({ onSubmit, onCancel }: Props) {
+export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
   const textareaRef = useRef<TextareaRenderable>(null)
 
   const model = MODELS[modelIdx]!
+
+  if (!active) {
+    return (
+      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+        <box border={["left"]} borderColor="#333333" style={{ paddingLeft: 1 }}>
+          <text fg="#444444">Press [n] to create a new task</text>
+        </box>
+      </box>
+    )
+  }
 
   return (
     <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#222222" }}>

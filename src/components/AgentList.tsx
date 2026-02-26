@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
-import type { Task, TaskStatus } from "../types.js"
+import type { Task, TaskStatus, Model } from "../types.js"
+import { TaskInput } from "./TaskInput.js"
 
 interface Props {
   tasks: Task[]
   selectedId: string | null
   width?: number | "auto" | `${number}%`
+  inputActive: boolean
+  onSubmit: (prompt: string, model: Model) => void
+  onCancel: () => void
 }
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -69,7 +73,7 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function AgentList({ tasks, selectedId, width = undefined }: Props) {
+export function AgentList({ tasks, selectedId, width = undefined, inputActive, onSubmit, onCancel }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -109,50 +113,51 @@ export function AgentList({ tasks, selectedId, width = undefined }: Props) {
 
   const containerStyle = width !== undefined ? { width } : { flexGrow: 1 }
 
-  if (tasks.length === 0) {
-    return (
-      <box style={{ ...containerStyle, alignItems: "center", justifyContent: "center" }}>
-        <text fg="#555555">No tasks yet.</text>
-        <text fg="#333333">Press [n] to dispatch one.</text>
-      </box>
-    )
-  }
-
   return (
-    <box style={{ ...containerStyle, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-      <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
-        <box style={{ flexDirection: "column", paddingRight: 1 }}>
-          {tasks.map((task, i) => {
-            const selected = task.id === selectedId
-            return (
-              <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
-                {i > 0 && <box border={["top"]} borderColor="#222222" />}
-                <box
-                  style={{
-                    flexDirection: "column",
-                    paddingLeft: 1,
-                    paddingRight: 1,
-                    paddingTop: 1,
-                    paddingBottom: 1,
-                    backgroundColor: selected ? "#222222" : "#111111",
-                  }}
-                  border={["left"]}
-                  borderColor={selected ? "#ff6600" : "#ffffff"}
-                >
-                  <TaskRow task={task} selected={selected} />
-                  <box
-                    border={["left"]}
-                    borderColor="#ffffff"
-                    style={{ marginTop: 1, paddingLeft: 1 }}
-                  >
-                    <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt.split("\n").slice(0, 5).join("\n")}</text>
-                  </box>
-                </box>
-              </box>
-            )
-          })}
+    <box style={{ ...containerStyle, flexDirection: "column" }}>
+      <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
+
+      {tasks.length === 0 ? (
+        <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
+          <text fg="#333333">No tasks yet.</text>
         </box>
-      </scrollbox>
+      ) : (
+        <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
+            <box style={{ flexDirection: "column", paddingRight: 1 }}>
+              {tasks.map((task, i) => {
+                const selected = task.id === selectedId
+                return (
+                  <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
+                    {i > 0 && <box border={["top"]} borderColor="#222222" />}
+                    <box
+                      style={{
+                        flexDirection: "column",
+                        paddingLeft: 1,
+                        paddingRight: 1,
+                        paddingTop: 1,
+                        paddingBottom: 1,
+                        backgroundColor: selected ? "#222222" : "#111111",
+                      }}
+                      border={["left"]}
+                      borderColor={selected ? "#ff6600" : "#ffffff"}
+                    >
+                      <TaskRow task={task} selected={selected} />
+                      <box
+                        border={["left"]}
+                        borderColor="#ffffff"
+                        style={{ marginTop: 1, paddingLeft: 1 }}
+                      >
+                        <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt.split("\n").slice(0, 5).join("\n")}</text>
+                      </box>
+                    </box>
+                  </box>
+                )
+              })}
+            </box>
+          </scrollbox>
+        </box>
+      )}
     </box>
   )
 }

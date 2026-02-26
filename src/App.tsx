@@ -5,7 +5,6 @@ import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { StatusBar } from "./components/StatusBar.js"
-import { TaskInput } from "./components/TaskInput.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
 import { removeWorktree } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
@@ -245,8 +244,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text fg="#0088ff">{flashMessage}</text>
     </box>
-  ) : mode === "input" ? (
-    <TaskInput onSubmit={(prompt, model) => handleDispatch(prompt, model)} onCancel={() => setMode("normal")} />
   ) : mode === "kill" && selectedTask ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Kill ${selectedTask.id}?`}</strong>{` [y/n]`}</text>
@@ -278,7 +275,13 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             />
           ) : null
         })() : (
-          <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} />
+          <AgentList
+            tasks={tasks}
+            selectedId={selectedTask?.id ?? null}
+            inputActive={mode === "input"}
+            onSubmit={(prompt, model) => handleDispatch(prompt, model)}
+            onCancel={() => setMode("normal")}
+          />
         )}
       </box>
 
