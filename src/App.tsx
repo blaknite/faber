@@ -155,6 +155,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
+    if (key.name === "q" || (key.ctrl && key.name === "c")) { onExit(); return }
+
+    // Keys below only apply in the list view
+    if (logPaneTaskId !== null) return
+
     if (mode === "kill") {
       if (key.name === "y") { handleKill(); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
@@ -176,7 +181,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (key.name === "n") { setMode("input"); return }
-    if (key.name === "q" || (key.ctrl && key.name === "c")) { onExit(); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
     if (key.name === "x") {
@@ -193,11 +197,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   })
 
-  const normalBindings = [
+  const normalBindings = logPaneTaskId ? [
+    { key: "esc", label: "back to list" },
+    { key: "PgUp/PgDn", label: "scroll" },
+    { key: "q", label: "quit" },
+  ] : [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
     { key: "o", label: "open log", disabled: !selectedTask },
-    ...(logPaneTaskId ? [{ key: "PgUp/PgDn", label: "scroll log" }] : []),
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
@@ -234,8 +241,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       </box>
 
       <box style={{ flexGrow: 1, flexDirection: "row" }}>
-        <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} width={logPaneTaskId ? "40%" : undefined} />
-        {logPaneTaskId && (() => {
+        {logPaneTaskId ? (() => {
           const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
           return logTask ? (
             <AgentLog
@@ -243,7 +249,9 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
               task={logTask}
             />
           ) : null
-        })()}
+        })() : (
+          <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} />
+        )}
       </box>
 
       {bottomBar}
