@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { existsSync, readFileSync } from "node:fs"
-import type { ScrollBoxRenderable } from "@opentui/core"
 import { taskOutputPath } from "../lib/state.js"
 
 interface LogEvent {
@@ -75,7 +74,6 @@ interface Props {
 }
 
 export function AgentLog({ repoRoot, taskId, isRunning }: Props) {
-  const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [lines, setLines] = useState<string[]>(() => readLogLines(repoRoot, taskId))
   const prevTaskIdRef = useRef(taskId)
 
@@ -98,14 +96,6 @@ export function AgentLog({ repoRoot, taskId, isRunning }: Props) {
     return () => clearInterval(interval)
   }, [isRunning, refresh])
 
-  // Scroll to bottom when lines change
-  useEffect(() => {
-    const scrollbox = scrollRef.current
-    if (!scrollbox) return
-    const contentHeight = scrollbox.content.height
-    scrollbox.scrollTo(Math.max(0, contentHeight))
-  }, [lines])
-
   return (
     <box
       border={["left"]}
@@ -122,7 +112,7 @@ export function AgentLog({ repoRoot, taskId, isRunning }: Props) {
           <text fg="#333333">No output yet.</text>
         </box>
       ) : (
-        <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false}>
+        <scrollbox style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom">
           <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
             {lines.map((line, i) => (
               <text key={i} fg="#666666">{line}</text>
