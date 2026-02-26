@@ -60,7 +60,7 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
       <text fg={selected ? "#ffffff" : "#666666"}>
         {selected ? <strong>{task.id.slice(0, 6)}</strong> : task.id.slice(0, 6)}
         {"  "}
-        <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
+        <span fg={STATUS_COLOR[task.status]}>{selected ? <strong>{symbol} {STATUS_LABEL[task.status]}</strong> : <>{symbol} {STATUS_LABEL[task.status]}</>}</span>
         {"  "}
         <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
       </text>
