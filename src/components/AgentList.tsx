@@ -78,10 +78,16 @@ export function AgentList({ tasks, selectedId }: Props) {
     const viewportHeight = scrollbox.viewport.height
     const currentTop = scrollbox.scrollTop
 
+    // The content container has paddingTop and paddingBottom of 1. When
+    // scrolling upward, pull back one extra row so the top padding stays
+    // visible. When scrolling downward, push one extra row so the bottom
+    // padding is included and the scroll bar reaches the end.
+    const CONTENT_PADDING = 1
+
     if (top < currentTop) {
-      scrollbox.scrollTo(top)
+      scrollbox.scrollTo(Math.max(0, top - CONTENT_PADDING))
     } else if (bottom > currentTop + viewportHeight) {
-      scrollbox.scrollTo(bottom - viewportHeight)
+      scrollbox.scrollTo(bottom - viewportHeight + CONTENT_PADDING)
     }
   }, [selectedId, tasks])
 
