@@ -298,12 +298,10 @@ export function AgentLog({ repoRoot, task }: Props) {
   useKeyboard((key) => {
     if (!scrollRef.current) return
     if (key.name === "up" || key.name === "k") {
-      scrollRef.current.stickyScroll = false
       scrollRef.current.scrollBy(-3, "step")
     } else if (key.name === "down" || key.name === "j") {
       scrollRef.current.scrollBy(3, "step")
     } else if (key.name === "pageup") {
-      scrollRef.current.stickyScroll = false
       scrollRef.current.scrollBy(-0.5, "viewport")
     } else if (key.name === "pagedown") {
       scrollRef.current.scrollBy(0.5, "viewport")
