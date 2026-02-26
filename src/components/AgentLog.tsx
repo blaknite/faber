@@ -125,7 +125,7 @@ export function AgentLog({ repoRoot, taskId }: Props) {
     <box
       border={["left"]}
       borderColor="#333333"
-      style={{ flexDirection: "column", width: "50%", height: "100%" }}
+      style={{ flexDirection: "column", width: "60%", height: "100%" }}
     >
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
         <text fg="#555555">log  </text>
