@@ -116,13 +116,14 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
   return (
     <box style={{ ...containerStyle, flexDirection: "column" }}>
       <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
+      <box border={["top"]} borderColor="#222222" />
 
       {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
           <text fg="#333333">No tasks yet.</text>
         </box>
       ) : (
-        <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+        <box style={{ flexGrow: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column", paddingRight: 1 }}>
               {tasks.map((task, i) => {

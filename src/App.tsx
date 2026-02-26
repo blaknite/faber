@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { CliRenderer } from "@opentui/core"
 import { execa } from "execa"
@@ -34,6 +34,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
+  const prevSelectedIdx = useRef(0)
   const selectedTask = tasks[selectedIdx] ?? null
 
   const refreshTasks = useCallback(() => {
@@ -69,6 +70,8 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
     setMode("normal")
+    setSelectedIdx(0)
+    prevSelectedIdx.current = 0
     const slug = generateSlug(prompt)
     const worktree = `.worktrees/${slug}`
     const task: Task = {
@@ -204,7 +207,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
-    if (key.name === "n") { setMode("input"); return }
+    if (key.name === "n") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
     if (key.name === "x") {
@@ -280,7 +283,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             selectedId={selectedTask?.id ?? null}
             inputActive={mode === "input"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
-            onCancel={() => setMode("normal")}
+            onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
           />
         )}
       </box>

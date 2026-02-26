@@ -40,10 +40,16 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const borderHeight = textareaHeight + 2
 
   return (
-    <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111", height: active ? borderHeight + 2 : 3 }}>
+    <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, marginTop: 1, marginLeft: 1, marginRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
       {!active ? (
-        <box border={["left"]} borderColor="#333333" style={{ paddingLeft: 1 }}>
+        <box
+          border={["left"]}
+          borderColor={model.dimColor}
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
+        >
           <text fg="#444444">Press [n] to create a new task</text>
+          <box style={{ height: 1 }} />
+          <text fg={model.dimColor}>{model.label}</text>
         </box>
       ) : (
         <box

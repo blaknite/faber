@@ -2,10 +2,10 @@ export type TaskStatus = "running" | "done" | "failed" | "unknown"
 
 export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"
 
-export const MODELS: { label: string; value: Model; color: string }[] = [
-  { label: "Sonnet", value: "anthropic/claude-sonnet-4-6", color: "#0088ff" },
-  { label: "Haiku", value: "anthropic/claude-haiku-4-5", color: "#00cc66" },
-  { label: "Opus", value: "anthropic/claude-opus-4-6", color: "#9966ff" },
+export const MODELS: { label: string; value: Model; color: string; dimColor: string }[] = [
+  { label: "Sonnet", value: "anthropic/claude-sonnet-4-6", color: "#0088ff", dimColor: "#1a4466" },
+  { label: "Haiku", value: "anthropic/claude-haiku-4-5", color: "#00cc66", dimColor: "#1a4d36" },
+  { label: "Opus", value: "anthropic/claude-opus-4-6", color: "#9966ff", dimColor: "#3d2d55" },
 ]
 
 export const DEFAULT_MODEL: Model = "anthropic/claude-sonnet-4-6"
