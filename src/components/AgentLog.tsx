@@ -5,6 +5,7 @@ import { createTextAttributes, SyntaxStyle } from "@opentui/core"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard } from "@opentui/react"
 import { taskOutputPath } from "../lib/state.js"
+import { MODELS } from "../types.js"
 import type { Task, TaskStatus } from "../types.js"
 
 const syntaxStyle = SyntaxStyle.create()
@@ -113,22 +114,33 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
   return entries
 }
 
-function PromptRow({ prompt }: { prompt: string }) {
+function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
+  const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
   return (
-    <box style={{ flexDirection: "column", paddingBottom: 1 }}>
-      <text fg="#444444" attributes={createTextAttributes({ dim: true })}>prompt</text>
-      <markdown
-        content={prompt}
-        syntaxStyle={syntaxStyle}
-        style={{ flexGrow: 1, flexShrink: 1 }}
-        renderNode={(token, context) => {
-          const renderable = context.defaultRender()
-          if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
-            (renderable as any).wrapMode = "word"
-          }
-          return renderable
-        }}
-      />
+    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#222222" }}>
+      <box
+        border={["left"]}
+        borderColor={modelDef.color}
+        style={{ paddingLeft: 1, flexDirection: "column" }}
+      >
+        <text>
+          <strong>Prompt</strong>
+          {"  "}
+          <span fg={modelDef.color}>{modelDef.label}</span>
+        </text>
+        <markdown
+          content={prompt}
+          syntaxStyle={syntaxStyle}
+          style={{ flexGrow: 1, flexShrink: 1 }}
+          renderNode={(token, context) => {
+            const renderable = context.defaultRender()
+            if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+              (renderable as any).wrapMode = "word"
+            }
+            return renderable
+          }}
+        />
+      </box>
     </box>
   )
 }
@@ -325,7 +337,7 @@ export function AgentLog({ repoRoot, task }: Props) {
       <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1, overflow: "hidden" }}>
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
-            <PromptRow prompt={task.prompt} />
+            <PromptRow prompt={task.prompt} model={task.model} />
             {entries.length === 0 ? (
               <text fg="#333333">No output yet.</text>
             ) : (
