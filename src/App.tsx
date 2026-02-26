@@ -242,7 +242,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <AgentLog
               repoRoot={repoRoot}
               taskId={logTask.id}
-              isRunning={logTask.status === "running"}
             />
           ) : null
         })()}

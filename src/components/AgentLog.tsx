@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { existsSync, readFileSync } from "node:fs"
+import { useCallback, useEffect, useState } from "react"
+import { existsSync, readFileSync, watch } from "node:fs"
+import type { FSWatcher } from "node:fs"
 import { taskOutputPath } from "../lib/state.js"
 
 interface LogEvent {
@@ -70,31 +71,55 @@ function readLogLines(repoRoot: string, taskId: string): string[] {
 interface Props {
   repoRoot: string
   taskId: string
-  isRunning: boolean
 }
 
-export function AgentLog({ repoRoot, taskId, isRunning }: Props) {
+export function AgentLog({ repoRoot, taskId }: Props) {
   const [lines, setLines] = useState<string[]>(() => readLogLines(repoRoot, taskId))
-  const prevTaskIdRef = useRef(taskId)
 
   const refresh = useCallback(() => {
     setLines(readLogLines(repoRoot, taskId))
   }, [repoRoot, taskId])
 
-  // When the task changes, reload immediately
+  // Reload immediately when the task changes
   useEffect(() => {
-    if (prevTaskIdRef.current !== taskId) {
-      prevTaskIdRef.current = taskId
-      setLines(readLogLines(repoRoot, taskId))
-    }
+    setLines(readLogLines(repoRoot, taskId))
   }, [repoRoot, taskId])
 
-  // Poll while the task is running
+  // Watch the log file for changes while the task is running.
+  // Falls back to polling if the file doesn't exist yet when the effect fires.
   useEffect(() => {
-    if (!isRunning) return
-    const interval = setInterval(refresh, 1000)
-    return () => clearInterval(interval)
-  }, [isRunning, refresh])
+    const logPath = taskOutputPath(repoRoot, taskId)
+    let watcher: FSWatcher | null = null
+    let pollInterval: ReturnType<typeof setInterval> | null = null
+
+    const startWatching = () => {
+      if (watcher) return
+      try {
+        watcher = watch(logPath, () => refresh())
+      } catch {
+        // watch failed, keep polling
+      }
+    }
+
+    if (existsSync(logPath)) {
+      startWatching()
+    } else {
+      // File doesn't exist yet — poll until it appears, then switch to watch
+      pollInterval = setInterval(() => {
+        refresh()
+        if (existsSync(logPath)) {
+          if (pollInterval) clearInterval(pollInterval)
+          pollInterval = null
+          startWatching()
+        }
+      }, 500)
+    }
+
+    return () => {
+      watcher?.close()
+      if (pollInterval) clearInterval(pollInterval)
+    }
+  }, [repoRoot, taskId, refresh])
 
   return (
     <box
