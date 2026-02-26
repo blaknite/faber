@@ -11,17 +11,22 @@ interface Props {
 
 export function TaskInput({ onSubmit, onCancel }: Props) {
   const [value, setValue] = useState("")
+  const [cursorPos, setCursorPos] = useState(0)
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
   const { keyHandler } = useAppContext()
 
   useEffect(() => {
     if (!keyHandler) return
     const handler = (event: PasteEvent) => {
-      setValue((v) => v + event.text)
+      setValue((v) => {
+        const next = v.slice(0, cursorPos) + event.text + v.slice(cursorPos)
+        setCursorPos(cursorPos + event.text.length)
+        return next
+      })
     }
     keyHandler.on("paste", handler)
     return () => { keyHandler.off("paste", handler) }
-  }, [keyHandler])
+  }, [keyHandler, cursorPos])
 
   useKeyboard((key) => {
     if (key.name === "escape") {
@@ -40,17 +45,47 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
       return
     }
 
-    if (key.name === "backspace" || key.name === "delete") {
-      setValue((v) => v.slice(0, -1))
+    if (key.name === "left") {
+      setCursorPos((p) => Math.max(0, p - 1))
+      return
+    }
+
+    if (key.name === "right") {
+      setCursorPos((p) => Math.min(value.length, p + 1))
+      return
+    }
+
+    if (key.name === "home" || (key.ctrl && key.name === "a")) {
+      setCursorPos(0)
+      return
+    }
+
+    if (key.name === "end" || (key.ctrl && key.name === "e")) {
+      setCursorPos(value.length)
+      return
+    }
+
+    if (key.name === "backspace") {
+      if (cursorPos === 0) return
+      setValue((v) => v.slice(0, cursorPos - 1) + v.slice(cursorPos))
+      setCursorPos((p) => p - 1)
+      return
+    }
+
+    if (key.name === "delete") {
+      setValue((v) => v.slice(0, cursorPos) + v.slice(cursorPos + 1))
       return
     }
 
     if (!key.ctrl && !key.meta && key.sequence.length === 1) {
-      setValue((v) => v + key.sequence)
+      setValue((v) => v.slice(0, cursorPos) + key.sequence + v.slice(cursorPos))
+      setCursorPos((p) => p + 1)
     }
   })
 
   const model = MODELS[modelIdx]!
+  const before = value.slice(0, cursorPos)
+  const after = value.slice(cursorPos)
 
   return (
     <box border={["top"]} style={{ paddingTop: 1, paddingBottom: 1, paddingRight: 1, backgroundColor: "#222222" }}>
@@ -61,7 +96,7 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
       >
         <text><strong>New task</strong></text>
         <text>{" "}</text>
-        <text>{value}<span bg="#ffffff" fg="#000000">{" "}</span></text>
+        <text>{before}<span bg="#ffffff" fg="#000000">{after.length > 0 ? after[0] : " "}</span>{after.slice(1)}</text>
         <text>{" "}</text>
         <text fg={model.color}>{model.label}</text>
       </box>
