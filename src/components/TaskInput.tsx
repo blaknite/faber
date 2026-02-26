@@ -65,7 +65,9 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
           />
         </box>
         <text> </text>
-        <text fg={model.color}>{model.label}</text>
+        <box border={["left"]} borderColor={model.color}>
+          <text fg={model.color}>{model.label}</text>
+        </box>
       </box>
     </box>
   )
