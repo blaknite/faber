@@ -15,18 +15,20 @@ async function main() {
 
   // faber --finish <taskId> [exitCode]
   // Called via command chaining to mark a task done or failed when faber is not running.
+  // Always exits with opencode's exit code so the shell's $? stays meaningful for the
+  // close event handler in agent.ts, which uses it as a fallback if this write fails.
   if (args[0] === "--finish") {
     const taskId = args[1]
+    const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
     if (!taskId) {
       console.error("Usage: faber --finish <taskId> [exitCode]")
-      process.exit(1)
+      process.exit(exitCode)
     }
     const repoRoot = findRepoRoot(process.cwd())
     if (!repoRoot) {
       console.error("Could not find faber state file from current directory")
-      process.exit(1)
+      process.exit(exitCode)
     }
-    const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
     const status = exitCode === 0 ? "done" : "failed"
     updateTask(repoRoot, taskId, {
       status,
@@ -34,7 +36,7 @@ async function main() {
       completedAt: new Date().toISOString(),
       pid: null,
     })
-    return
+    process.exit(exitCode)
   }
 
   // faber dispatch "prompt" [--dir /path/to/repo] [--model provider/model]
