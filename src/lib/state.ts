@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs"
 import { join, dirname } from "node:path"
 import lockfile from "proper-lockfile"
 import type { State, Task } from "../types.js"
@@ -67,6 +67,11 @@ export function removeTask(repoRoot: string, id: string): void {
   const state = readState(repoRoot)
   state.tasks = state.tasks.filter((t) => t.id !== id)
   writeState(repoRoot, state)
+
+  const logPath = taskOutputPath(repoRoot, id)
+  if (existsSync(logPath)) {
+    rmSync(logPath)
+  }
 }
 
 // Returns a release function. Throws if already locked (another instance running).
