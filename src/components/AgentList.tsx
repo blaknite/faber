@@ -103,8 +103,8 @@ export function AgentList({ tasks, selectedId, width = undefined }: Props) {
 
   return (
     <box style={{ ...containerStyle, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-      <scrollbox ref={scrollRef} style={{ flexGrow: 1, paddingRight: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
-        <box style={{ flexDirection: "column" }}>
+      <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
+        <box style={{ flexDirection: "column", paddingRight: 1 }}>
           {tasks.map((task, i) => {
             const selected = task.id === selectedId
             return (
