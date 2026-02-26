@@ -2,48 +2,130 @@
 
 ## What is Faber?
 
-Faber is a terminal UI orchestrator that lets you dispatch multiple autonomous coding tasks in parallel. It spins up isolated git worktrees and runs `opencode` agents in each one, while you keep the main TUI open to dispatch more work.
+Faber is a terminal UI orchestrator that lets you dispatch multiple autonomous coding tasks in parallel. It spins up isolated git worktrees and runs `opencode` agents in each one, while you keep the TUI open to dispatch more work, monitor progress, or attach to a running session.
 
 ## Core architecture
 
-Key components:
+The codebase is TypeScript/JSX, built on Bun, with five library modules under `src/lib/`:
 
-- **State management** (`state.ts`): Persistent JSON file in `.faber/state.json` tracks all tasks. Uses file locking to ensure only one TUI instance runs per repo.
-- **Agent orchestration** (`agent.ts`): Spawns `opencode` subprocesses with prompt + model selection, tracks PIDs, and listens for completion.
-- **Git integration** (`worktree.ts`): Creates isolated git worktrees for each task so they don't interfere with each other.
-- **React TUI** (`App.tsx`): Renders the terminal UI with task list, status display, and keyboard controls.
+- `state.ts`: reads and writes `.faber/state.json`, the single source of truth for all task records. A file lock (via `proper-lockfile`) prevents two TUI instances from running against the same repo at once.
+- `agent.ts`: spawns `opencode` subprocesses, tracks their PIDs and session IDs, and handles the completion callback.
+- `worktree.ts`: thin wrappers around `git worktree add`, `git worktree remove`, and `git worktree list`.
+- `slug.ts`: generates the task ID from the prompt (6 random hex chars + a hyphenated truncation of the prompt text).
+- `failureLog.ts`: appends failure events to `.faber/failures.log` as JSON lines for post-mortem debugging.
+
+The TUI itself is a React tree rendered to the terminal by `@opentui/react` (a React 19 renderer that targets terminal output). `App.tsx` owns all application state and keyboard handling; the four components are `AgentList`, `AgentLog`, `TaskInput`, and `StatusBar`.
 
 ## Task lifecycle
 
-1. You press [n] in the TUI and type a prompt
-2. Faber generates a unique task ID (like `a3f2-resolve-issue`)
-3. Creates a new git worktree at `.worktrees/a3f2-resolve-issue`
-4. Spawns an `opencode` subprocess inside that worktree
-5. The subprocess runs your prompt with the selected Claude model
-6. When done, the process exits and calls `faber --finish <taskId>` to update state
-7. Task shows as "done" or "failed" in the TUI
+1. You press `n`, type a prompt, select a model with `Tab`, and press `Enter`
+2. Faber generates a slug like `a3f2-resolve-issue-uic-002` and constructs the task record
+3. `git worktree add .worktrees/a3f2-... -b a3f2-...` creates an isolated checkout on a new branch
+4. Faber spawns the agent (see below) and stores the task as `status: "running"`
+5. The agent runs; its JSON output streams to `.faber/tasks/<taskId>.jsonl` via `tee`
+6. When the agent exits, `faber --finish <taskId> $?` is called automatically, writing `status: "done"` or `"failed"` and the exit code to state
+7. The TUI polls `state.json` every two seconds and updates the display
 
-## Key features
+State transitions:
 
-- **Parallel execution**: Dispatch as many tasks as you want; they run in parallel across different worktrees
-- **Session attachment**: Copy the session ID and `opencode -s <sessionId>` to attach to a running task
-- **Persistent state**: All task metadata survives terminal crashes; tasks marked "unknown" if their PID dies
-- **Model selection**: Tab through Claude Sonnet (default), Haiku, or Opus before submitting
-- **Lightweight**: Just JSON state files and git worktrees--no database or complex infrastructure
+```
+(new) ──── worktree creation fails ──────────────────────> "failed"
+  |
+  └── worktree created ──> "running"
+                              |
+                              ├── exit 0 ─────────────────> "done"
+                              ├── exit != 0 ───────────────> "failed"
+                              └── SIGTERM (x key) ──────────> "failed" (exit 143)
 
-## Design philosophy
+"done" or "failed" ──── r key (resume) ──────────────────> "running"
 
-Simple and git-native: Faber leverages git's built-in worktree isolation instead of containers, stores state as JSON instead of a database, and trusts OS process management. It's essentially a dispatcher that wraps `opencode` in a multi-task TUI wrapper.
+On startup: "running" with a dead PID ───────────────────> "unknown"
+```
+
+The `"unknown"` state is set at startup by `reconcileRunningTasks`: any task still marked `"running"` whose PID is no longer alive gets marked `"unknown"`. This catches agents that died while Faber was closed.
+
+## How agents are spawned
+
+`spawnAgent` in `agent.ts` builds a shell command along these lines:
+
+```sh
+set -o pipefail; opencode run --format json --model <model> '<prompt>' \
+  | tee -a ".faber/tasks/<taskId>.jsonl" \
+  ; faber --finish <taskId> $?
+```
+
+A few things worth noting:
+
+- The prompt is automatically prefixed with `Load the skill \`working-in-faber\`` so the agent knows it is running inside a Faber worktree and follows the expected commit/wrap-up conventions.
+- `set -o pipefail` ensures `$?` reflects opencode's exit code, not `tee`'s.
+- `tee` captures the JSON output to disk while it is still streaming to Faber's stdout listener.
+- `faber --finish` is appended with `;` (not `&&`) so it runs regardless of exit code.
+- The process is spawned with `detached: true` and `child.unref()`, so agents survive Faber closing. The `--finish` hook writes directly to `state.json`, so the final status is persisted even if Faber is not running when the agent completes.
+- The `OPENCODE_CONFIG_CONTENT` environment variable injects a generated opencode config that grants read access to the whole repo root but restricts writes to just the agent's own worktree path.
+
+After spawning, Faber polls `pgrep -P <shellPid>` to find the actual opencode PID, and watches stdout for the first JSON line containing a `sessionID` field.
+
+## The TUI
+
+Layout:
+
+- Header: "faber" logo, repo name, running task count
+- Main body: `AgentList` (task list + input) or `AgentLog` (full log for the selected task)
+- Footer: key binding hints, or an inline `y/n` confirmation prompt for kill/delete
+
+The app is modal. The relevant modes are `normal` (navigating the list), `input` (typing a prompt), `kill` (confirming SIGTERM), and `delete` (confirming task + worktree removal).
+
+Key bindings:
+
+| Key | Action |
+|-----|--------|
+| `n` | New task (switch to input mode) |
+| `j`/`k` or arrows | Navigate task list |
+| `Enter`/`o` | Open log view for selected task |
+| `x` | Kill running task (sends SIGTERM) |
+| `r` | Resume a done or failed task (forks the opencode session) |
+| `s` | Copy `opencode -s <sessionId>` to clipboard |
+| `c` | Clone task (re-dispatch same prompt and model) |
+| `d` | Delete task and remove worktree |
+| `q` / `Ctrl-C` | Quit |
+| `Escape` | Close log view or cancel confirmation |
+
+`TaskInput` is a multi-line textarea (1-6 lines, auto-grows). `Tab` cycles through the three available models; the active model and its color are shown below the textarea.
+
+## The log view
+
+`AgentLog` renders a full-screen view of a single task's output, streaming in real time from the task's `.jsonl` file via `fs.watch` (falling back to 500ms polling).
+
+Each line of the JSONL file is a JSON event from opencode. The log view normalises these into display rows:
+
+- Text output is markdown-rendered with word wrapping
+- Tool calls show a colored icon, tool name, and a concise summary (e.g. the shell command for Bash, the file path for Read, a truncated syntax-highlighted diff for Edit)
+- Step finish events show a green "done" row with the model name and how long that reasoning step took
+- Reasoning/thinking events show a truncated grey "Thinking: ..." preview
+
+The log view uses sticky scroll by default: it follows new output as it arrives. Scrolling up disables sticky; scrolling back to the bottom re-enables it.
+
+## Data on disk
+
+```
+.faber/
+  state.json              # all task records
+  state.json.lock/        # lockfile directory (proper-lockfile)
+  tasks/<taskId>.jsonl    # raw JSON-lines output for each agent
+  failures.log            # append-only failure event log
+.worktrees/
+  <task-slug>/            # isolated git checkout for each task
+```
 
 ## Technology stack
 
-- **Runtime**: Bun (fast JavaScript runtime)
-- **UI framework**: OpenTUI with React 19
-- **Language**: TypeScript/JSX
-- **Key dependencies**: `execa` (subprocess execution), `proper-lockfile` (file-based locking)
+- Runtime: Bun
+- UI framework: `@opentui/core` + `@opentui/react` (React 19, terminal renderer)
+- Language: TypeScript/JSX
+- Key dependencies: `execa` (subprocess execution), `proper-lockfile` (file locking)
 
-## Main entry points
+## Entry points
 
-1. **TUI mode** (default): `faber [path/to/repo]` - Opens interactive terminal UI
-2. **Headless dispatch**: `faber dispatch "prompt" [--dir path] [--model model]` - Creates task without TUI
-3. **Task completion hook**: `faber --finish <taskId> [exitCode]` - Called automatically by subprocess
+1. `faber [path/to/repo]` - opens the interactive TUI (default)
+2. `faber dispatch "prompt" [--dir path] [--model model]` - headless dispatch, waits for the agent to finish
+3. `faber --finish <taskId> [exitCode]` - called automatically by each agent on exit to write final status
