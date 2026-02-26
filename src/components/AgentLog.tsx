@@ -296,7 +296,7 @@ export function AgentLog({ repoRoot, task }: Props) {
 
   return (
     <box
-      style={{ flexDirection: "column", flexGrow: 1, overflow: "hidden" }}
+      style={{ flexDirection: "column", flexGrow: 1 }}
     >
       <box border={["bottom"]} borderColor="#333333" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#000000" }}>
         <TitleBar task={task} />
@@ -307,7 +307,7 @@ export function AgentLog({ repoRoot, task }: Props) {
           <text fg="#333333">No output yet.</text>
         </box>
       ) : (
-        <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1 }}>
+        <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1, overflow: "hidden" }}>
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column" }}>
               {entries.map((entry, i) => (

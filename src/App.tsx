@@ -260,7 +260,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         )}
       </box>
 
-      <box style={{ flexGrow: 1, flexDirection: "row", overflow: "hidden" }}>
+      <box style={{ flexGrow: 1, flexDirection: "row" }}>
         {logPaneTaskId ? (() => {
           const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
           return logTask ? (
