@@ -10,21 +10,38 @@ import type { Task, TaskStatus } from "../types.js"
 
 const syntaxStyle = SyntaxStyle.create()
 
+interface ToolStatePart {
+  input?: Record<string, unknown>
+  output?: string
+  status?: string
+  title?: string
+  metadata?: Record<string, unknown>
+  error?: string
+}
+
 interface LogEvent {
   type: string
   timestamp: number
   part?: {
+    // tool parts
     tool?: string
+    state?: ToolStatePart
+    // text/reasoning parts
+    type?: string
     text?: string
-    state?: {
-      title?: string
-      input?: unknown
-      status?: string
+    time?: { end?: number }
+    // step-finish parts
+    reason?: string
+    tokens?: {
+      total?: number
+      input: number
+      output: number
     }
   }
+  modelID?: string
 }
 
-type LogEntryKind = "text" | "tool_use"
+type LogEntryKind = "text" | "tool_use" | "step_finish" | "reasoning"
 
 interface LogEntry {
   kind: LogEntryKind
@@ -33,7 +50,16 @@ interface LogEntry {
   text?: string
   // tool_use entries
   tool?: string
+  icon?: string
+  title?: string
   description?: string
+  blockContent?: string
+  status?: string
+  errorMessage?: string
+  // step_finish entries
+  modelId?: string
+  // reasoning entries
+  reasoningText?: string
 }
 
 const TOOL_COLORS: Record<string, string> = {
@@ -45,6 +71,9 @@ const TOOL_COLORS: Record<string, string> = {
   grep: "#aa66ff",
   task: "#ffcc00",
   webfetch: "#0099ff",
+  list: "#0099ff",
+  todowrite: "#888888",
+  skill: "#0099ff",
 }
 
 function toolColor(tool: string): string {
@@ -63,6 +92,227 @@ function formatTimestamp(ms: number): string {
   return `${hh}:${mm}:${ss}`
 }
 
+function normalizePath(input?: string): string {
+  if (!input) return ""
+  // If it looks like an absolute path, show the last 2-3 segments to keep it readable
+  if (input.startsWith("/")) {
+    const parts = input.split("/").filter(Boolean)
+    return parts.slice(-3).join("/")
+  }
+  return input
+}
+
+function parseToolEntry(event: LogEvent): LogEntry | null {
+  const tool = event.part?.tool
+  if (!tool) return null
+
+  const state = event.part?.state
+  const input = state?.input ?? {}
+  const status = state?.status ?? "unknown"
+  const metadata = state?.metadata ?? {}
+  const errorMessage = status === "error" ? (state?.error ?? "error") : undefined
+
+  const str = (v: unknown): string => (typeof v === "string" ? v : "")
+  const num = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined)
+
+  const toolLower = tool.toLowerCase()
+
+  // bash
+  if (toolLower === "bash" || toolLower.includes("bash")) {
+    const command = str(input.command) || str(input.description) || tool
+    const output = str(metadata.output) || str(state?.output)
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "$",
+      title: command,
+      blockContent: output || undefined,
+      status,
+      errorMessage,
+    }
+  }
+
+  // read
+  if (toolLower === "read" || toolLower.includes("_read") || toolLower.endsWith("read")) {
+    const filePath = normalizePath(str(input.filePath))
+    const extras = Object.entries(input)
+      .filter(([k]) => k !== "filePath")
+      .filter(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
+      .map(([k, v]) => `${k}=${v}`)
+    const description = extras.length ? `[${extras.join(", ")}]` : undefined
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "→",
+      title: `Read ${filePath}`,
+      description,
+      status,
+      errorMessage,
+    }
+  }
+
+  // write
+  if (toolLower === "write" || toolLower.includes("_write") || toolLower.endsWith("write")) {
+    const filePath = normalizePath(str(input.filePath))
+    const output = str(state?.output)
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "←",
+      title: `Write ${filePath}`,
+      blockContent: output || undefined,
+      status,
+      errorMessage,
+    }
+  }
+
+  // edit
+  if (toolLower === "edit" || toolLower.includes("_edit") || toolLower.endsWith("edit")) {
+    const filePath = normalizePath(str(input.filePath))
+    const diff = str(metadata.diff) || str(metadata.output)
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "←",
+      title: `Edit ${filePath}`,
+      blockContent: diff || undefined,
+      status,
+      errorMessage,
+    }
+  }
+
+  // glob
+  if (toolLower === "glob") {
+    const pattern = str(input.pattern)
+    const root = str(input.path)
+    const count = num(metadata.count)
+    const suffix = root ? `in ${normalizePath(root)}` : ""
+    const countStr = count !== undefined ? `${count} ${count === 1 ? "match" : "matches"}` : ""
+    const description = [suffix, countStr].filter(Boolean).join(" · ") || undefined
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "✱",
+      title: `Glob "${pattern}"`,
+      description,
+      status,
+      errorMessage,
+    }
+  }
+
+  // grep
+  if (toolLower === "grep") {
+    const pattern = str(input.pattern)
+    const root = str(input.path)
+    const matches = num(metadata.matches)
+    const suffix = root ? `in ${normalizePath(root)}` : ""
+    const matchStr = matches !== undefined ? `${matches} ${matches === 1 ? "match" : "matches"}` : ""
+    const description = [suffix, matchStr].filter(Boolean).join(" · ") || undefined
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "✱",
+      title: `Grep "${pattern}"`,
+      description,
+      status,
+      errorMessage,
+    }
+  }
+
+  // list
+  if (toolLower === "list" || toolLower === "ls") {
+    const dir = normalizePath(str(input.path))
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "→",
+      title: dir ? `List ${dir}` : "List",
+      status,
+      errorMessage,
+    }
+  }
+
+  // webfetch
+  if (toolLower === "webfetch") {
+    const url = str(input.url)
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "%",
+      title: `WebFetch ${url}`,
+      status,
+      errorMessage,
+    }
+  }
+
+  // task
+  if (toolLower === "task") {
+    const subagent = str(input.subagent_type).trim() || "unknown"
+    const desc = str(input.description).trim() || undefined
+    const icon = status === "error" ? "✗" : status === "running" ? "•" : "✓"
+    const name = desc ?? `${subagent} Task`
+    const description = desc ? subagent : undefined
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon,
+      title: name,
+      description,
+      status,
+      errorMessage,
+    }
+  }
+
+  // todowrite
+  if (toolLower === "todowrite") {
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "#",
+      title: "Todos",
+      status,
+      errorMessage,
+    }
+  }
+
+  // skill
+  if (toolLower === "skill") {
+    const name = str(input.name)
+    return {
+      kind: "tool_use",
+      timestamp: event.timestamp,
+      tool,
+      icon: "→",
+      title: `Skill "${name}"`,
+      status,
+      errorMessage,
+    }
+  }
+
+  // fallback: anything else
+  const firstValue = Object.values(input)[0]
+  const fallbackDesc = typeof firstValue === "string" ? firstValue.slice(0, 80) : ""
+  return {
+    kind: "tool_use",
+    timestamp: event.timestamp,
+    tool,
+    icon: "⚙",
+    title: `${tool}${fallbackDesc ? " " + fallbackDesc : ""}`,
+    status,
+    errorMessage,
+  }
+}
+
 function parseEvent(event: LogEvent): LogEntry[] {
   switch (event.type) {
     case "text": {
@@ -70,27 +320,33 @@ function parseEvent(event: LogEvent): LogEntry[] {
       if (!text) return []
       return [{ kind: "text", timestamp: event.timestamp, text }]
     }
+
     case "tool_use": {
-      const tool = event.part?.tool
-      if (!tool) return []
-      const title = event.part?.state?.title
-      let description: string | undefined
-      if (title) {
-        description = title
-      } else {
-        const input = event.part?.state?.input
-        if (input && typeof input === "object") {
-          const first = Object.values(input as Record<string, unknown>)[0]
-          if (typeof first === "string") description = first.slice(0, 80)
-        }
-      }
+      const entry = parseToolEntry(event)
+      if (!entry) return []
+      return [entry]
+    }
+
+    case "step_finish": {
+      // model ID may be in the event at top level or not present
+      const modelId = typeof event.modelID === "string" ? event.modelID : undefined
       return [{
-        kind: "tool_use",
+        kind: "step_finish",
         timestamp: event.timestamp,
-        tool,
-        description,
+        modelId,
       }]
     }
+
+    case "reasoning": {
+      const text = event.part?.text?.trim()
+      if (!text) return []
+      return [{
+        kind: "reasoning",
+        timestamp: event.timestamp,
+        reasoningText: text,
+      }]
+    }
+
     default:
       return []
   }
@@ -112,6 +368,31 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
     }
   }
   return entries
+}
+
+const BLOCK_MAX_LINES = 5
+
+function BlockContent({ content }: { content: string }) {
+  const lines = content.split("\n")
+  const visible = lines.slice(0, BLOCK_MAX_LINES)
+  const overflow = lines.length - BLOCK_MAX_LINES
+
+  return (
+    <box
+      border={["left"]}
+      borderColor="#222222"
+      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+    >
+      {visible.map((line, i) => (
+        <text key={i} fg="#555555">{line}</text>
+      ))}
+      {overflow > 0 ? (
+        <text fg="#333333" attributes={createTextAttributes({ dim: true })}>
+          {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
+        </text>
+      ) : null}
+    </box>
+  )
 }
 
 function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
@@ -164,30 +445,85 @@ function TextRow({ entry }: { entry: LogEntry }) {
 
 function ToolRow({ entry }: { entry: LogEntry }) {
   const color = toolColor(entry.tool ?? "")
-  const toolName = entry.tool ?? ""
+  const icon = entry.icon ?? "⚙"
+  const title = entry.title ?? entry.tool ?? ""
+  const isDone = entry.status === "completed"
+  const isError = entry.status === "error"
+
+  const titleAttr = isDone ? createTextAttributes({ dim: true }) : createTextAttributes({ bold: false })
+  const iconAttr = isDone ? createTextAttributes({ dim: true }) : undefined
+
   return (
-    <box style={{ flexDirection: "row", paddingBottom: 0 }}>
+    <box style={{ flexDirection: "column" }}>
+      <box style={{ flexDirection: "row", paddingBottom: 0 }}>
+        <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
+          {formatTimestamp(entry.timestamp)}
+        </text>
+        <text fg={isDone ? "#555555" : color} attributes={iconAttr} style={{ flexShrink: 0 }}>
+          {icon}{" "}
+        </text>
+        <text fg={isDone ? "#555555" : color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>
+          {title}
+        </text>
+        {entry.description ? (
+          <>
+            <text fg="#444444">{" "}</text>
+            <text fg="#555555" attributes={createTextAttributes({ dim: true })} truncate>
+              {entry.description}
+            </text>
+          </>
+        ) : null}
+        {isError && entry.errorMessage ? (
+          <text fg="#cc3333" attributes={createTextAttributes({ dim: true })}>
+            {" "}{entry.errorMessage}
+          </text>
+        ) : null}
+      </box>
+      {entry.blockContent ? <BlockContent content={entry.blockContent} /> : null}
+    </box>
+  )
+}
+
+function StepFinishRow({ entry }: { entry: LogEntry }) {
+  const modelLabel = entry.modelId
+    ? entry.modelId.replace(/^[^/]+\//, "") // strip provider prefix, e.g. "anthropic/claude-sonnet-4-6" -> "claude-sonnet-4-6"
+    : null
+
+  return (
+    <box style={{ flexDirection: "row" }}>
       <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
-      <text fg={color} style={{ flexShrink: 0 }}>{"> "}</text>
-      <text fg={color} attributes={createTextAttributes({ bold: true })} style={{ flexShrink: 0 }}>
-        {toolName}
+      <text fg="#333333" attributes={createTextAttributes({ dim: true })}>
+        {"▣  "}
+        {modelLabel ? `${modelLabel} · ` : ""}
+        {"done"}
       </text>
-      {entry.description ? (
-        <>
-          <text fg="#444444">{" "}</text>
-          <text fg="#555555" attributes={createTextAttributes({ dim: true })} truncate>
-            {entry.description}
-          </text>
-        </>
-      ) : null}
+    </box>
+  )
+}
+
+function ReasoningRow({ entry }: { entry: LogEntry }) {
+  const text = entry.reasoningText ?? ""
+  const summary = `Thinking: ${text.slice(0, 80)}${text.length > 80 ? "..." : ""}`
+
+  return (
+    <box
+      border={["left"]}
+      borderColor="#333333"
+      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+    >
+      <text fg="#444444" attributes={createTextAttributes({ dim: true })}>
+        {summary}
+      </text>
     </box>
   )
 }
 
 function LogRow({ entry }: { entry: LogEntry }) {
   if (entry.kind === "tool_use") return <ToolRow entry={entry} />
+  if (entry.kind === "step_finish") return <StepFinishRow entry={entry} />
+  if (entry.kind === "reasoning") return <ReasoningRow entry={entry} />
   return <TextRow entry={entry} />
 }
 
