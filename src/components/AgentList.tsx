@@ -56,14 +56,16 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   const symbol = task.status === "running" ? SPINNER_FRAMES[spinnerFrame] : STATUS_SYMBOL[task.status]
 
   return (
-    <text fg={selected ? "#ffffff" : "#666666"}>
-      {selected ? <strong>{task.id.slice(0, 6)}</strong> : task.id.slice(0, 6)}
-      {"  "}
-      <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
-      {"  "}
-      <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
-      {task.sessionId ? <span>{"  "}{task.sessionId}</span> : null}
-    </text>
+    <box style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <text fg={selected ? "#ffffff" : "#666666"}>
+        {selected ? <strong>{task.id.slice(0, 6)}</strong> : task.id.slice(0, 6)}
+        {"  "}
+        <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
+        {"  "}
+        <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+      </text>
+      {task.sessionId ? <text fg={selected ? "#555555" : "#333333"}>{task.sessionId}</text> : null}
+    </box>
   )
 }
 
