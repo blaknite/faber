@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process"
+import { createWriteStream } from "node:fs"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
-import { readState, updateTask } from "./state.js"
+import { readState, updateTask, taskOutputPath } from "./state.js"
 
 export function spawnAgent(
   task: Task,
@@ -80,28 +81,39 @@ export function spawnAgent(
     }, 50)
   }
 
+  const outputFile = taskOutputPath(repoRoot, task.id)
+  const outputStream = createWriteStream(outputFile, { flags: "a" })
+
   let sessionIdCaptured = false
-  let stdoutBuffer = ""
+  let lineBuffer = ""
 
   child.stdout?.on("data", (chunk: Buffer) => {
+    outputStream.write(chunk)
+
     if (sessionIdCaptured) return
-    stdoutBuffer += chunk.toString()
-    const newline = stdoutBuffer.indexOf("\n")
-    if (newline === -1) return
-    const firstLine = stdoutBuffer.slice(0, newline)
-    stdoutBuffer = ""
-    try {
-      const event = JSON.parse(firstLine) as { sessionID?: string }
-      if (event.sessionID) {
-        sessionIdCaptured = true
-        const patch = { sessionId: event.sessionID }
-        onUpdate(patch)
-        updateTask(repoRoot, task.id, patch)
+
+    lineBuffer += chunk.toString()
+    let newline: number
+    while ((newline = lineBuffer.indexOf("\n")) !== -1) {
+      const line = lineBuffer.slice(0, newline)
+      lineBuffer = lineBuffer.slice(newline + 1)
+      try {
+        const event = JSON.parse(line) as { sessionID?: string }
+        if (event.sessionID) {
+          sessionIdCaptured = true
+          const patch = { sessionId: event.sessionID }
+          onUpdate(patch)
+          updateTask(repoRoot, task.id, patch)
+          lineBuffer = ""
+          break
+        }
+      } catch {
+        // not valid JSON -- keep scanning
       }
-    } catch {
-      // not valid JSON -- ignore
     }
   })
+
+  child.stdout?.on("end", () => outputStream.end())
 
   child.stderr?.resume()
 

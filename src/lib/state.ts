@@ -5,6 +5,7 @@ import type { State, Task } from "../types.js"
 
 const FABER_DIR = ".faber"
 const STATE_FILE = "state.json"
+const TASKS_DIR = "tasks"
 
 function faberDir(repoRoot: string): string {
   return join(repoRoot, FABER_DIR)
@@ -14,10 +15,19 @@ function statePath(repoRoot: string): string {
   return join(faberDir(repoRoot), STATE_FILE)
 }
 
+export function taskOutputPath(repoRoot: string, taskId: string): string {
+  return join(faberDir(repoRoot), TASKS_DIR, `${taskId}.jsonl`)
+}
+
 export function ensureFaberDir(repoRoot: string): void {
   const dir = faberDir(repoRoot)
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
+  }
+  // Ensure the tasks output directory exists
+  const tasksDir = join(dir, TASKS_DIR)
+  if (!existsSync(tasksDir)) {
+    mkdirSync(tasksDir, { recursive: true })
   }
   // Ensure state file exists so lockfile can lock it
   const path = statePath(repoRoot)
