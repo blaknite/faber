@@ -45,7 +45,7 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
       return
     }
 
-    if (!key.ctrl && !key.meta && key.sequence) {
+    if (!key.ctrl && !key.meta && key.sequence.length === 1) {
       setValue((v) => v + key.sequence)
     }
   })
