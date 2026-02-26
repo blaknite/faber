@@ -9,6 +9,9 @@ export const colors = {
   // Highlight variants -- slightly brighter for character-level changes
   addHighlight: "#004d27",
   removeHighlight: "#4d0f0f",
+  // Row-level background for whole add/remove lines
+  addRow: "#002914",
+  removeRow: "#2e0b0b",
   // UI chrome
   border: "#555555",
   background: "#000000",
