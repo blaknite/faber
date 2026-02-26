@@ -3,6 +3,7 @@ import { existsSync, readFileSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes } from "@opentui/core"
 import { taskOutputPath } from "../lib/state.js"
+import type { Task, TaskStatus } from "../types.js"
 
 interface LogEvent {
   type: string
@@ -161,12 +162,56 @@ function LogRow({ entry }: { entry: LogEntry }) {
   return <TextRow entry={entry} />
 }
 
-interface Props {
-  repoRoot: string
-  taskId: string
+const STATUS_COLOR: Record<TaskStatus, string> = {
+  running: "#00aaff",
+  done: "#00cc66",
+  failed: "#cc3333",
+  unknown: "#888888",
 }
 
-export function AgentLog({ repoRoot, taskId }: Props) {
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  running: "running",
+  done: "done",
+  failed: "failed",
+  unknown: "unknown",
+}
+
+function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {
+  const end = completedAt ? new Date(completedAt).getTime() : now
+  const elapsed = Math.floor((end - new Date(startedAt).getTime()) / 1000)
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+  return `${mins}m ${String(secs).padStart(2, "0")}s`
+}
+
+function TitleBar({ task }: { task: Task }) {
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    if (task.completedAt) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [task.completedAt])
+
+  return (
+    <text>
+      <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
+      {"  "}
+      <span fg={STATUS_COLOR[task.status]}>{STATUS_LABEL[task.status]}</span>
+      {"  "}
+      <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+      {task.sessionId ? <span fg="#444444">{"  "}{task.sessionId}</span> : null}
+    </text>
+  )
+}
+
+interface Props {
+  repoRoot: string
+  task: Task
+}
+
+export function AgentLog({ repoRoot, task }: Props) {
+  const taskId = task.id
   const scrollRef = useRef(null)
   const [entries, setEntries] = useState<LogEntry[]>(() => readLogEntries(repoRoot, taskId))
 
@@ -222,8 +267,7 @@ export function AgentLog({ repoRoot, taskId }: Props) {
       style={{ flexDirection: "column", width: "60%", height: "100%" }}
     >
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-        <text fg="#555555">log  </text>
-        <text fg="#333333">{taskId}</text>
+        <TitleBar task={task} />
       </box>
 
       {entries.length === 0 ? (

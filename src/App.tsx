@@ -239,7 +239,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
           return logTask ? (
             <AgentLog
               repoRoot={repoRoot}
-              taskId={logTask.id}
+              task={logTask}
             />
           ) : null
         })()}
