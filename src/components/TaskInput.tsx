@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react"
-import { useKeyboard, useAppContext } from "@opentui/react"
-import type { PasteEvent } from "@opentui/core"
+import { useRef, useState } from "react"
+import type { TextareaRenderable } from "@opentui/core"
 import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
 
@@ -9,125 +8,16 @@ interface Props {
   onCancel: () => void
 }
 
-// Given a flat string and a cursor position, return the { row, col } in the
-// split-by-newline representation.
-function posToRowCol(text: string, pos: number): { row: number; col: number } {
-  const lines = text.slice(0, pos).split("\n")
-  return { row: lines.length - 1, col: lines[lines.length - 1]!.length }
-}
-
-// Given a split-by-newline line array and a { row, col }, return the flat
-// position. col is clamped to the line length.
-function rowColToPos(lines: string[], row: number, col: number): number {
-  const clampedRow = Math.max(0, Math.min(lines.length - 1, row))
-  const lineLen = lines[clampedRow]!.length
-  const clampedCol = Math.min(col, lineLen)
-  let pos = 0
-  for (let i = 0; i < clampedRow; i++) {
-    pos += lines[i]!.length + 1 // +1 for the \n
-  }
-  return pos + clampedCol
-}
+const KEY_BINDINGS = [
+  { name: "return", action: "submit" as const },
+  { name: "return", shift: true, action: "newline" as const },
+]
 
 export function TaskInput({ onSubmit, onCancel }: Props) {
-  const [value, setValue] = useState("")
-  const [cursorPos, setCursorPos] = useState(0)
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
-  const { keyHandler } = useAppContext()
-
-  useEffect(() => {
-    if (!keyHandler) return
-    const handler = (event: PasteEvent) => {
-      setValue((v) => {
-        const next = v.slice(0, cursorPos) + event.text + v.slice(cursorPos)
-        setCursorPos(cursorPos + event.text.length)
-        return next
-      })
-    }
-    keyHandler.on("paste", handler)
-    return () => { keyHandler.off("paste", handler) }
-  }, [keyHandler, cursorPos])
-
-  useKeyboard((key) => {
-    if (key.name === "escape") {
-      onCancel()
-      return
-    }
-
-    if ((key.name === "return" || key.name === "enter") && key.shift) {
-      setValue((v) => v.slice(0, cursorPos) + "\n" + v.slice(cursorPos))
-      setCursorPos((p) => p + 1)
-      return
-    }
-
-    if (key.name === "return" || key.name === "enter") {
-      const trimmed = value.trim()
-      if (trimmed) onSubmit(trimmed, MODELS[modelIdx]!.value)
-      return
-    }
-
-    if (key.name === "tab") {
-      setModelIdx((i) => (i + 1) % MODELS.length)
-      return
-    }
-
-    if (key.name === "up") {
-      const lines = value.split("\n")
-      const { row, col } = posToRowCol(value, cursorPos)
-      if (row === 0) return
-      setCursorPos(rowColToPos(lines, row - 1, col))
-      return
-    }
-
-    if (key.name === "down") {
-      const lines = value.split("\n")
-      const { row, col } = posToRowCol(value, cursorPos)
-      if (row === lines.length - 1) return
-      setCursorPos(rowColToPos(lines, row + 1, col))
-      return
-    }
-
-    if (key.name === "left") {
-      setCursorPos((p) => Math.max(0, p - 1))
-      return
-    }
-
-    if (key.name === "right") {
-      setCursorPos((p) => Math.min(value.length, p + 1))
-      return
-    }
-
-    if (key.name === "home" || (key.ctrl && key.name === "a")) {
-      setCursorPos(0)
-      return
-    }
-
-    if (key.name === "end" || (key.ctrl && key.name === "e")) {
-      setCursorPos(value.length)
-      return
-    }
-
-    if (key.name === "backspace") {
-      if (cursorPos === 0) return
-      setValue((v) => v.slice(0, cursorPos - 1) + v.slice(cursorPos))
-      setCursorPos((p) => p - 1)
-      return
-    }
-
-    if (key.name === "delete") {
-      setValue((v) => v.slice(0, cursorPos) + v.slice(cursorPos + 1))
-      return
-    }
-
-    if (!key.ctrl && !key.meta && key.sequence.length === 1) {
-      setValue((v) => v.slice(0, cursorPos) + key.sequence + v.slice(cursorPos))
-      setCursorPos((p) => p + 1)
-    }
-  })
+  const textareaRef = useRef<TextareaRenderable>(null)
 
   const model = MODELS[modelIdx]!
-  const before = value.slice(0, cursorPos)
-  const after = value.slice(cursorPos)
 
   return (
     <box border={["top"]} style={{ paddingTop: 1, paddingBottom: 1, paddingRight: 1, backgroundColor: "#222222" }}>
@@ -138,7 +28,28 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
       >
         <text><strong>New task</strong></text>
         <text>{" "}</text>
-        <text>{before}<span bg="#ffffff" fg="#000000">{after.length > 0 ? after[0] : " "}</span>{after.slice(1)}</text>
+        <textarea
+          ref={textareaRef}
+          minHeight={1}
+          maxHeight={10}
+          keyBindings={KEY_BINDINGS}
+          onSubmit={() => {
+            const trimmed = textareaRef.current?.plainText.trim()
+            if (trimmed) onSubmit(trimmed, model.value)
+          }}
+          onKeyDown={(key) => {
+            if (key.name === "escape") {
+              onCancel()
+              key.preventDefault()
+              return
+            }
+            if (key.name === "tab") {
+              setModelIdx((i) => (i + 1) % MODELS.length)
+              key.preventDefault()
+            }
+          }}
+          focused
+        />
         <text>{" "}</text>
         <text fg={model.color}>{model.label}</text>
       </box>
