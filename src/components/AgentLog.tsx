@@ -117,16 +117,14 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
 function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
   const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
   return (
-    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#222222" }}>
+    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, marginBottom: 1 }}>
       <box
         border={["left"]}
         borderColor={modelDef.color}
-        style={{ paddingLeft: 1, flexDirection: "column" }}
+        style={{ paddingLeft: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "column", backgroundColor: "#222222" }}
       >
         <text>
           <strong>Prompt</strong>
-          {"  "}
-          <span fg={modelDef.color}>{modelDef.label}</span>
         </text>
         <markdown
           content={prompt}
@@ -140,6 +138,9 @@ function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) 
             return renderable
           }}
         />
+        <text style={{ paddingTop: 1 }}>
+          <span fg={modelDef.color}>{modelDef.label}</span>
+        </text>
       </box>
     </box>
   )
