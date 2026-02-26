@@ -23,7 +23,7 @@ export function TaskInput({ onSubmit, onCancel }: Props) {
   const model = MODELS[modelIdx]!
 
   return (
-    <box style={{ paddingTop: 1, paddingBottom: 1, paddingRight: 1, backgroundColor: "#222222" }}>
+    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#222222" }}>
       <box
         border={["left"]}
         borderColor={model.color}
