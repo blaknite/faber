@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process"
-import { createWriteStream } from "node:fs"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
 import { readState, updateTask, taskOutputPath } from "./state.js"
@@ -23,6 +22,8 @@ export function spawnAgent(
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
+  const outputFile = taskOutputPath(repoRoot, task.id)
+
   const opencodeCmd = resumeSessionId
     ? (() => {
         const resumePrompt = "The task was interrupted. Please continue where you left off."
@@ -35,7 +36,8 @@ export function spawnAgent(
         return `${opencodebin} run --format json --model ${task.model} '${prompt}'`
       })()
   const finishCmd = `; ${faberCmd} --finish ${task.id} $?`
-  const shellCmd = `${opencodeCmd}${finishCmd}`
+  // pipefail ensures $? reflects opencode's exit code, not tee's.
+  const shellCmd = `set -o pipefail; ${opencodeCmd} | tee -a "${outputFile}"${finishCmd}`
 
   const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,
@@ -86,15 +88,10 @@ export function spawnAgent(
     }, 50)
   }
 
-  const outputFile = taskOutputPath(repoRoot, task.id)
-  const outputStream = createWriteStream(outputFile, { flags: "a" })
-
   let sessionIdCaptured = false
   let lineBuffer = ""
 
   child.stdout?.on("data", (chunk: Buffer) => {
-    outputStream.write(chunk)
-
     if (sessionIdCaptured) return
 
     lineBuffer += chunk.toString()
@@ -117,8 +114,6 @@ export function spawnAgent(
       }
     }
   })
-
-  child.stdout?.on("end", () => outputStream.end())
 
   child.stderr?.resume()
 
