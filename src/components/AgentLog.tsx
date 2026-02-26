@@ -58,6 +58,7 @@ interface LogEntry {
   errorMessage?: string
   // step_finish entries
   modelId?: string
+  elapsedMs?: number
   // reasoning entries
   reasoningText?: string
 }
@@ -82,14 +83,6 @@ function toolColor(tool: string): string {
     if (lower.includes(key)) return color
   }
   return "#888888"
-}
-
-function formatTimestamp(ms: number): string {
-  const d = new Date(ms)
-  const hh = String(d.getHours()).padStart(2, "0")
-  const mm = String(d.getMinutes()).padStart(2, "0")
-  const ss = String(d.getSeconds()).padStart(2, "0")
-  return `${hh}:${mm}:${ss}`
 }
 
 function normalizePath(input?: string): string {
@@ -367,6 +360,17 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
       // skip unparseable lines
     }
   }
+
+  // Annotate each step_finish with how long it took since the previous step_finish
+  // (or the very first event if it's the first step).
+  let prevTimestamp = entries[0]?.timestamp ?? 0
+  for (const entry of entries) {
+    if (entry.kind === "step_finish") {
+      entry.elapsedMs = entry.timestamp - prevTimestamp
+      prevTimestamp = entry.timestamp
+    }
+  }
+
   return entries
 }
 
@@ -424,9 +428,6 @@ function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) 
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
     <box style={{ flexDirection: "row" }}>
-      <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
-        {formatTimestamp(entry.timestamp)}
-      </text>
       <markdown
         content={entry.text ?? ""}
         syntaxStyle={syntaxStyle}
@@ -456,9 +457,6 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   return (
     <box style={{ flexDirection: "column" }}>
       <box style={{ flexDirection: "row", paddingBottom: 0 }}>
-        <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
-          {formatTimestamp(entry.timestamp)}
-        </text>
         <text fg={color} attributes={iconAttr} style={{ flexShrink: 0 }}>
           {icon}{" "}
         </text>
@@ -488,16 +486,15 @@ function StepFinishRow({ entry }: { entry: LogEntry }) {
   const modelLabel = entry.modelId
     ? entry.modelId.replace(/^[^/]+\//, "") // strip provider prefix, e.g. "anthropic/claude-sonnet-4-6" -> "claude-sonnet-4-6"
     : null
+  const elapsed = entry.elapsedMs != null ? formatElapsedMs(entry.elapsedMs) : null
 
   return (
     <box style={{ flexDirection: "row" }}>
-      <text fg="#555555" style={{ width: 10, flexShrink: 0 }}>
-        {formatTimestamp(entry.timestamp)}
-      </text>
-      <text fg="#555555">
+      <text fg="#00cc66">
         {"▣  "}
         {modelLabel ? `${modelLabel} · ` : ""}
         {"done"}
+        {elapsed ? ` · ${elapsed}` : ""}
       </text>
     </box>
   )
@@ -556,6 +553,14 @@ function formatElapsed(startedAt: string, completedAt: string | null, now: numbe
   const mins = Math.floor(elapsed / 60)
   const secs = elapsed % 60
   return `${mins}m ${String(secs).padStart(2, "0")}s`
+}
+
+function formatElapsedMs(ms: number): string {
+  const totalSecs = Math.floor(ms / 1000)
+  const mins = Math.floor(totalSecs / 60)
+  const secs = totalSecs % 60
+  if (mins > 0) return `${mins}m ${String(secs).padStart(2, "0")}s`
+  return `${secs}s`
 }
 
 function TitleBar({ task }: { task: Task }) {
