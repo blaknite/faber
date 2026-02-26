@@ -145,7 +145,7 @@ export function AgentList({ tasks, selectedId, width = undefined }: Props) {
                     borderColor="#ffffff"
                     style={{ marginTop: 1, paddingLeft: 1 }}
                   >
-                    <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt}</text>
+                    <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt.split("\n").slice(0, 5).join("\n")}</text>
                   </box>
                 </box>
               </box>
