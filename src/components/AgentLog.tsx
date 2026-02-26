@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { existsSync, readFileSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes } from "@opentui/core"
+import type { ScrollBoxRenderable } from "@opentui/core"
+import { useKeyboard } from "@opentui/react"
 import { taskOutputPath } from "../lib/state.js"
 import type { Task, TaskStatus } from "../types.js"
 
@@ -212,8 +214,18 @@ interface Props {
 
 export function AgentLog({ repoRoot, task }: Props) {
   const taskId = task.id
-  const scrollRef = useRef(null)
+  const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [entries, setEntries] = useState<LogEntry[]>(() => readLogEntries(repoRoot, taskId))
+
+  useKeyboard((key) => {
+    if (!scrollRef.current) return
+    if (key.name === "pageup") {
+      scrollRef.current.stickyScroll = false
+      scrollRef.current.scrollBy(-0.5, "viewport")
+    } else if (key.name === "pagedown") {
+      scrollRef.current.scrollBy(0.5, "viewport")
+    }
+  })
 
   const refresh = useCallback(() => {
     setEntries(readLogEntries(repoRoot, taskId))
