@@ -216,7 +216,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const normalBindings = logPaneTaskId ? [
     { key: "q", label: "back to list" },
-    { key: "↑↓/PgUp/PgDn", label: "scroll" },
+    { key: "↑↓", label: "scroll" },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
