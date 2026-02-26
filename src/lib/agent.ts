@@ -55,7 +55,14 @@ export function spawnAgent(
       // checked. Disabling the agents removes them from the tool descriptions entirely,
       // so the model won't attempt to invoke them.
       // See: https://github.com/sst/opencode/issues/13841
-      OPENCODE_CONFIG_CONTENT: JSON.stringify({ agent: { explore: { disable: true }, general: { disable: true } } }),
+      OPENCODE_CONFIG_CONTENT: JSON.stringify({
+        agent: { explore: { disable: true }, general: { disable: true } },
+        permission: {
+          external_directory: {
+            [`${repoRoot}/**`]: "allow",
+          },
+        },
+      }),
     },
   })
   child.unref()
