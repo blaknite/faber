@@ -3,6 +3,7 @@ import { useKeyboard } from "@opentui/react"
 import type { CliRenderer } from "@opentui/core"
 import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
+import { AgentLog } from "./components/AgentLog.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { TaskInput } from "./components/TaskInput.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
@@ -32,6 +33,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
+  const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
 
   const selectedTask = tasks[selectedIdx] ?? null
 
@@ -140,12 +142,25 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }, selectedTask.sessionId)
   }, [selectedTask, repoRoot, updateTaskInState])
 
+  const handleToggleLog = useCallback(() => {
+    if (!selectedTask) return
+    setLogPaneTaskId((current) =>
+      current === selectedTask.id ? null : selectedTask.id
+    )
+  }, [selectedTask])
+
   useKeyboard((key) => {
     if (mode === "input") return
 
+    if (key.name === "escape") {
+      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
+      if (mode === "kill" || mode === "delete") { setMode("normal"); return }
+      return
+    }
+
     if (mode === "kill") {
       if (key.name === "y") { handleKill(); return }
-      if (key.name === "n" || key.name === "escape" || key.name === "q") { setMode("normal"); return }
+      if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
 
@@ -158,7 +173,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         setMode("normal")
         return
       }
-      if (key.name === "n" || key.name === "escape" || key.name === "q") { setMode("normal"); return }
+      if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
 
@@ -170,7 +185,8 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
-    if (key.name === "o") { handleSession(); return }
+    if (key.name === "o") { handleToggleLog(); return }
+    if (key.name === "s") { handleSession(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
@@ -182,9 +198,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const normalBindings = [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
-    { key: "o", label: "open", disabled: !selectedTask?.sessionId },
+    { key: "o", label: logPaneTaskId ? "close log" : "open log", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "s", label: "session", disabled: !selectedTask?.sessionId },
     { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
@@ -217,8 +234,18 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         )}
       </box>
 
-      <box style={{ flexGrow: 1, flexDirection: "column" }}>
+      <box style={{ flexGrow: 1, flexDirection: "row" }}>
         <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} />
+        {logPaneTaskId && (() => {
+          const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
+          return logTask ? (
+            <AgentLog
+              repoRoot={repoRoot}
+              taskId={logTask.id}
+              isRunning={logTask.status === "running"}
+            />
+          ) : null
+        })()}
       </box>
 
       {bottomBar}
