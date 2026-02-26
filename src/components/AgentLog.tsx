@@ -141,8 +141,7 @@ function ToolRow({ entry }: { entry: LogEntry }) {
       <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
-      <text fg={color} style={{ width: 2, flexShrink: 0 }}>{">"}</text>
-      <text fg="#555555">{" "}</text>
+      <text fg={color} style={{ flexShrink: 0 }}>{"> "}</text>
       <text fg={color} attributes={createTextAttributes({ bold: true })} style={{ flexShrink: 0 }}>
         {toolName}
       </text>
