@@ -187,7 +187,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
-    if (key.name === "o") { handleOpenLog(); return }
+    if (key.name === "o" || key.name === "return") { handleOpenLog(); return }
     if (key.name === "s") { handleSession(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "c") { handleClone(); return }
@@ -204,7 +204,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ] : [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
-    { key: "o", label: "open", disabled: !selectedTask },
+    { key: "o/enter", label: "open", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
