@@ -26,6 +26,8 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const textareaRef = useRef<TextareaRenderable>(null)
 
   const model = MODELS[modelIdx]!
+  const modelRef = useRef(model)
+  modelRef.current = model
 
   useEffect(() => {
     if (!active) setTextareaHeight(MIN_LINES)
@@ -65,7 +67,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
             onContentChange={onContentChange}
             onSubmit={() => {
               const trimmed = textareaRef.current?.plainText.trim()
-              if (trimmed) onSubmit(trimmed, model.value)
+              if (trimmed) onSubmit(trimmed, modelRef.current.value)
             }}
             onKeyDown={(key) => {
               if (key.name === "escape") {
