@@ -11,6 +11,7 @@ import { removeWorktree } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
 import { createWorktree } from "./lib/worktree.js"
+import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
@@ -93,7 +94,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     try {
       await createWorktree(repoRoot, slug)
-    } catch {
+    } catch (err) {
+      logTaskFailure(repoRoot, {
+        taskId: slug,
+        callSite: "App.tsx:handleDispatch",
+        reason: "Failed to create git worktree",
+        exitCode: -1,
+        error: err instanceof Error ? err.message : String(err),
+      })
       updateTaskInState(slug, {
         status: "failed",
         completedAt: new Date().toISOString(),

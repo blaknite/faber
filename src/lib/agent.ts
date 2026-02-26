@@ -2,6 +2,7 @@ import { spawn } from "node:child_process"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
 import { readState, updateTask, taskOutputPath } from "./state.js"
+import { logTaskFailure } from "./failureLog.js"
 
 export function spawnAgent(
   task: Task,
@@ -128,11 +129,29 @@ export function spawnAgent(
       completedAt: new Date().toISOString(),
       pid: null,
     }
+
+    if (status === "failed") {
+      logTaskFailure(repoRoot, {
+        taskId: task.id,
+        callSite: "agent.ts:child.on(close)",
+        reason: `Process exited with non-zero exit code`,
+        exitCode: code,
+      })
+    }
+
     onUpdate(patch)
     updateTask(repoRoot, task.id, patch)
   })
 
-  child.on("error", () => {
+  child.on("error", (err) => {
+    logTaskFailure(repoRoot, {
+      taskId: task.id,
+      callSite: "agent.ts:child.on(error)",
+      reason: "Child process emitted an error event",
+      exitCode: -1,
+      error: err.message,
+    })
+
     const patch: Partial<Task> = {
       status: "failed",
       exitCode: -1,
