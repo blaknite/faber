@@ -204,14 +204,16 @@ function TitleBar({ task }: { task: Task }) {
   const symbol = task.status === "running" ? SPINNER_FRAMES[spinnerFrame] : STATUS_SYMBOL[task.status]
 
   return (
-    <text>
-      <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
-      {"  "}
-      <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
-      {"  "}
-      <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, now)}</span>
-      {task.sessionId ? <span fg="#444444">{"  "}{task.sessionId}</span> : null}
-    </text>
+    <box style={{ flexDirection: "row", justifyContent: "space-between", flexGrow: 1 }}>
+      <text>
+        <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
+        {"  "}
+        <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
+        {"  "}
+        <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+      </text>
+      {task.sessionId ? <text fg="#444444">{task.sessionId}</text> : null}
+    </box>
   )
 }
 
