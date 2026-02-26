@@ -1,0 +1,6 @@
+export { DiffViewer } from "./DiffViewer.js"
+export type { DiffViewerProps, ViewMode } from "./DiffViewer.js"
+export { parseDiff } from "./parser.js"
+export type { ParsedDiff, DiffFile, Hunk, DiffLine, DiffLineType, DiffMetadata } from "./parser.js"
+export { highlightLinePair, highlightSingleLine } from "./highlighter.js"
+export type { Segment } from "./highlighter.js"
