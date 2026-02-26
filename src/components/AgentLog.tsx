@@ -124,13 +124,11 @@ function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
 
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
-    <box style={{ flexDirection: "row", paddingBottom: 0 }}>
+    <box style={{ flexDirection: "row", paddingTop: 1, paddingBottom: 1 }}>
       <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
-      <text fg="#444444" style={{ width: 2, flexShrink: 0 }}>{"  "}</text>
-      <text fg="#555555">{" "}</text>
-      <text fg="#999999">{entry.text}</text>
+      <text fg="#ffffff">{entry.text}</text>
     </box>
   )
 }
