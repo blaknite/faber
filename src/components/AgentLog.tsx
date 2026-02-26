@@ -122,7 +122,14 @@ function TextRow({ entry }: { entry: LogEntry }) {
       <markdown
         content={entry.text ?? ""}
         syntaxStyle={syntaxStyle}
-        style={{ flexGrow: 1 }}
+        style={{ flexGrow: 1, flexShrink: 1 }}
+        renderNode={(token, context) => {
+          const renderable = context.defaultRender()
+          if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+            (renderable as any).wrapMode = "word"
+          }
+          return renderable
+        }}
       />
     </box>
   )
