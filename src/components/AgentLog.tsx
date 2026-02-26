@@ -13,6 +13,9 @@ import {
 import type { LogEntry } from "../lib/logParser.js"
 import { MODELS } from "../types.js"
 import type { Task, TaskStatus } from "../types.js"
+import { parseDiff, highlightLinePair, highlightSingleLine } from "../lib/diff/index.js"
+import type { DiffLine, Segment } from "../lib/diff/index.js"
+import { colors as diffColors } from "../lib/diff/DiffViewer.style.js"
 
 const syntaxStyle = SyntaxStyle.create()
 
@@ -65,26 +68,94 @@ function BlockContent({ content }: { content: string }) {
 
 const DIFF_MAX_LINES = 10
 
-function diffLineColor(line: string): string {
-  if (line.startsWith("+")) return "#00cc66"
-  if (line.startsWith("-")) return "#cc3333"
-  if (line.startsWith("@@")) return "#559999"
-  return "#666666"
+function DiffSegmentedLine({ segments, baseColor, highlightBg }: {
+  segments: Segment[]
+  baseColor: string
+  highlightBg: string
+}) {
+  if (segments.length === 0) return <text fg={baseColor}>{" "}</text>
+  return (
+    <text fg={baseColor}>
+      {segments.map((seg, i) =>
+        seg.isChanged ? (
+          <span key={i} fg={baseColor} bg={highlightBg}>{seg.text || " "}</span>
+        ) : (
+          <span key={i} fg={baseColor}>{seg.text || " "}</span>
+        )
+      )}
+    </text>
+  )
 }
 
 function DiffContent({ diff }: { diff: string }) {
-  // Strip the unified diff file header (Index:, ===, ---, +++ lines)
-  const lines = diff.split("\n").filter((line) => {
-    if (line.startsWith("Index:")) return false
-    if (line.startsWith("===")) return false
-    if (line.startsWith("--- ")) return false
-    if (line.startsWith("+++ ")) return false
-    return true
-  })
+  const parsed = parseDiff(diff)
 
-  const nonEmpty = lines.filter((l) => l.trim() !== "")
-  const visible = nonEmpty.slice(0, DIFF_MAX_LINES)
-  const overflow = nonEmpty.length - DIFF_MAX_LINES
+  // Flatten all diff lines across all files and hunks into a simple list for
+  // the inline preview, then cap at DIFF_MAX_LINES.
+  type PreviewLine =
+    | { kind: "hunk"; header: string }
+    | { kind: "context"; line: DiffLine }
+    | { kind: "remove"; line: DiffLine; segments: Segment[] }
+    | { kind: "add"; line: DiffLine; segments: Segment[] }
+
+  const previewLines: PreviewLine[] = []
+
+  for (const file of parsed.files) {
+    for (const hunk of file.hunks) {
+      previewLines.push({ kind: "hunk", header: hunk.header })
+
+      let i = 0
+      const lines = hunk.lines
+
+      while (i < lines.length && previewLines.length < DIFF_MAX_LINES) {
+        const line = lines[i]!
+
+        if (line.type === "context") {
+          previewLines.push({ kind: "context", line })
+          i++
+          continue
+        }
+
+        // Collect a block of removes followed by adds for character highlighting
+        const removeBlock: DiffLine[] = []
+        const addBlock: DiffLine[] = []
+
+        while (i < lines.length && lines[i]!.type === "remove") {
+          removeBlock.push(lines[i]!)
+          i++
+        }
+        while (i < lines.length && lines[i]!.type === "add") {
+          addBlock.push(lines[i]!)
+          i++
+        }
+
+        const count = Math.max(removeBlock.length, addBlock.length)
+        for (let j = 0; j < count && previewLines.length < DIFF_MAX_LINES; j++) {
+          const rem = removeBlock[j]
+          const add = addBlock[j]
+
+          if (rem && add) {
+            const { old: oldSegs, new: newSegs } = highlightLinePair(rem.content, add.content)
+            previewLines.push({ kind: "remove", line: rem, segments: oldSegs })
+            previewLines.push({ kind: "add", line: add, segments: newSegs })
+          } else if (rem) {
+            previewLines.push({ kind: "remove", line: rem, segments: highlightSingleLine(rem.content) })
+          } else if (add) {
+            previewLines.push({ kind: "add", line: add, segments: highlightSingleLine(add.content) })
+          }
+        }
+      }
+
+      if (previewLines.length >= DIFF_MAX_LINES) break
+    }
+  }
+
+  // Count total lines for overflow message
+  const totalLines = parsed.files.reduce(
+    (sum, f) => sum + f.hunks.reduce((hs, h) => hs + h.lines.length, 0),
+    0
+  )
+  const overflow = totalLines - previewLines.filter((l) => l.kind !== "hunk").length
 
   return (
     <box
@@ -92,9 +163,37 @@ function DiffContent({ diff }: { diff: string }) {
       borderColor="#444444"
       style={{ paddingLeft: 1, marginTop: 0 }}
     >
-      {visible.map((line, i) => (
-        <text key={i} fg={diffLineColor(line)}>{line}</text>
-      ))}
+      {previewLines.map((item, i) => {
+        if (item.kind === "hunk") {
+          return <text key={i} fg={diffColors.header}>{item.header}</text>
+        }
+        if (item.kind === "context") {
+          return <text key={i} fg={diffColors.context}>{item.line.content}</text>
+        }
+        if (item.kind === "remove") {
+          return (
+            <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.removeRow }}>
+              <text fg={diffColors.remove}>{"-"}</text>
+              <DiffSegmentedLine
+                segments={item.segments}
+                baseColor={diffColors.remove}
+                highlightBg={diffColors.removeHighlight}
+              />
+            </box>
+          )
+        }
+        // add
+        return (
+          <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.addRow }}>
+            <text fg={diffColors.add}>{"+"}</text>
+            <DiffSegmentedLine
+              segments={item.segments}
+              baseColor={diffColors.add}
+              highlightBg={diffColors.addHighlight}
+            />
+          </box>
+        )
+      })}
       {overflow > 0 ? (
         <text fg="#555555">
           {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
