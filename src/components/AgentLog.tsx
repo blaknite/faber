@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { existsSync, readFileSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
-import { createTextAttributes } from "@opentui/core"
+import { createTextAttributes, SyntaxStyle } from "@opentui/core"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard } from "@opentui/react"
 import { taskOutputPath } from "../lib/state.js"
 import type { Task, TaskStatus } from "../types.js"
+
+const syntaxStyle = SyntaxStyle.create()
 
 interface LogEvent {
   type: string
@@ -65,18 +67,7 @@ function parseEvent(event: LogEvent): LogEntry[] {
     case "text": {
       const text = event.part?.text?.trim()
       if (!text) return []
-      // Split long text into lines, preserving natural newlines
-      const lines = text.split("\n").flatMap((line) => {
-        if (!line.trim()) return []
-        // Wrap lines longer than 110 chars
-        const chunks = line.match(/.{1,110}/g) ?? [line]
-        return chunks.map((chunk): LogEntry => ({
-          kind: "text",
-          timestamp: event.timestamp,
-          text: chunk,
-        }))
-      })
-      return lines
+      return [{ kind: "text", timestamp: event.timestamp, text }]
     }
     case "tool_use": {
       const tool = event.part?.tool
@@ -128,7 +119,11 @@ function TextRow({ entry }: { entry: LogEntry }) {
       <text fg="#333333" style={{ width: 10, flexShrink: 0 }}>
         {formatTimestamp(entry.timestamp)}
       </text>
-      <text fg="#ffffff">{entry.text}</text>
+      <markdown
+        content={entry.text ?? ""}
+        syntaxStyle={syntaxStyle}
+        style={{ flexGrow: 1 }}
+      />
     </box>
   )
 }
