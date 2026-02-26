@@ -150,15 +150,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     if (mode === "input") return
 
     if (key.name === "escape") {
-      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       if (mode === "kill" || mode === "delete") { setMode("normal"); return }
+      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
     }
 
-    if (key.name === "q" || (key.ctrl && key.name === "c")) { onExit(); return }
-
-    // Keys below only apply in the list view
-    if (logPaneTaskId !== null) return
+    if (key.ctrl && key.name === "c") { onExit(); return }
 
     if (mode === "kill") {
       if (key.name === "y") { handleKill(); return }
@@ -180,6 +177,26 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
+    if (key.name === "q") {
+      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
+      onExit()
+      return
+    }
+
+    if (logPaneTaskId !== null) {
+      if (key.name === "x") {
+        if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
+        return
+      }
+      if (key.name === "r") { handleResume(); return }
+      if (key.name === "s") { handleSession(); return }
+      if (key.name === "d") {
+        if (selectedTask) setMode("delete")
+        return
+      }
+      return
+    }
+
     if (key.name === "n") { setMode("input"); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
@@ -198,9 +215,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   })
 
   const normalBindings = logPaneTaskId ? [
-    { key: "esc", label: "back to list" },
-    { key: "PgUp/PgDn", label: "scroll" },
-    { key: "q", label: "quit" },
+    { key: "q", label: "back to list" },
+    { key: "↑↓/PgUp/PgDn", label: "scroll" },
+    { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
+    { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "s", label: "session", disabled: !selectedTask?.sessionId },
+    { key: "d", label: "delete", disabled: !selectedTask },
   ] : [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
