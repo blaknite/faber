@@ -204,10 +204,10 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
 }
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
-  running: "running",
-  done: "done",
-  failed: "failed",
-  unknown: "unknown",
+  running: "Running",
+  done: "Done",
+  failed: "Failed",
+  unknown: "Unknown",
 }
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
