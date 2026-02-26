@@ -1,6 +1,6 @@
 # faber
 
-A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, and it spins up a git worktree and an [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
+A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, it spins up a git worktree and a [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
 
 ![faber TUI screenshot placeholder]
 
@@ -44,22 +44,41 @@ faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
 
 ### TUI keybindings
 
+**Task list**
+
 | Key | Action |
 |-----|--------|
 | `n` | New task |
 | `j` / `k` or arrows | Navigate list |
-| `o` | Copy `opencode -s <sessionId>` to clipboard (to attach to a running session) |
-| `x` | Kill running task |
-| `d` | Delete task and remove its worktree |
+| `enter` | Open task log |
+| `r` | Resume a done or failed task |
+| `c` | Clone task (re-dispatch same prompt) |
+| `s` | Copy `opencode -s <sessionId>` to clipboard |
+| `x` | Kill running task (confirms with y/n) |
+| `d` | Delete task and remove its worktree (confirms with y/n) |
 | `q` / `Ctrl-C` | Quit |
 
-When creating a task, `Tab` cycles through available models and `Enter` submits.
+**Log pane** (after pressing `enter` on a task)
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` or arrows | Scroll |
+| `PgUp` / `PgDn` | Scroll by page |
+| `r` | Resume task |
+| `s` | Copy session ID to clipboard |
+| `x` | Kill running task |
+| `d` | Delete task and worktree |
+| `q` / `Escape` | Back to task list |
+
+When creating a task, `Tab` cycles through models and `Enter` submits. Multi-line prompts are supported with `Shift-Enter`, `Ctrl-Enter`, or `Ctrl-J`.
 
 ### Models
 
-- `anthropic/claude-sonnet-4-6` (default)
-- `anthropic/claude-haiku-4-5`
-- `anthropic/claude-opus-4-6`
+| Label | Model |
+|-------|-------|
+| Smart (default) | `anthropic/claude-sonnet-4-6` |
+| Fast | `anthropic/claude-haiku-4-5` |
+| Deep | `anthropic/claude-opus-4-6` |
 
 ## Development
 
