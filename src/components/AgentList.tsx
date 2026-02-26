@@ -23,6 +23,15 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   unknown: "unknown",
 }
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+const STATUS_SYMBOL: Record<TaskStatus, string> = {
+  running: SPINNER_FRAMES[0],
+  done: "✓",
+  failed: "✗",
+  unknown: "?",
+}
+
 function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {
   const end = completedAt ? new Date(completedAt).getTime() : now
   const elapsed = Math.floor((end - new Date(startedAt).getTime()) / 1000)
@@ -33,18 +42,24 @@ function formatElapsed(startedAt: string, completedAt: string | null, now: numbe
 
 function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   const [now, setNow] = useState(Date.now())
+  const [spinnerFrame, setSpinnerFrame] = useState(0)
 
   useEffect(() => {
     if (task.completedAt) return
-    const interval = setInterval(() => setNow(Date.now()), 1000)
+    const interval = setInterval(() => {
+      setNow(Date.now())
+      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
+    }, 100)
     return () => clearInterval(interval)
   }, [task.completedAt])
+
+  const symbol = task.status === "running" ? SPINNER_FRAMES[spinnerFrame] : STATUS_SYMBOL[task.status]
 
   return (
     <text fg={selected ? "#ffffff" : "#666666"}>
       {selected ? <strong>{task.id.slice(0, 6)}</strong> : task.id.slice(0, 6)}
       {"  "}
-      <span fg={STATUS_COLOR[task.status]}>{STATUS_LABEL[task.status]}</span>
+      <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
       {"  "}
       <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
       {task.sessionId ? <span>{"  "}{task.sessionId}</span> : null}
