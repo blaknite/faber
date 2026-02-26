@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
@@ -18,7 +18,7 @@ const KEY_BINDINGS = [
 ]
 
 const MIN_LINES = 1
-const MAX_LINES = 10
+const MAX_LINES = 6
 
 export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
@@ -26,6 +26,10 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const textareaRef = useRef<TextareaRenderable>(null)
 
   const model = MODELS[modelIdx]!
+
+  useEffect(() => {
+    if (!active) setTextareaHeight(MIN_LINES)
+  }, [active])
 
   const onContentChange = () => {
     const lines = textareaRef.current?.virtualLineCount ?? MIN_LINES
@@ -71,7 +75,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
             focused
           />
           <box style={{ height: 1 }} />
-          <text fg={model.color}>{model.label} {textareaHeight}</text>
+          <text fg={model.color}>{model.label}</text>
         </box>
       )}
     </box>
