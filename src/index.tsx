@@ -15,9 +15,8 @@ async function main() {
   const args = process.argv.slice(2)
 
   // faber --finish <taskId> [exitCode]
-  // Called via command chaining to mark a task done or failed when faber is not running.
-  // Always exits with opencode's exit code so the shell's $? stays meaningful for the
-  // close event handler in agent.ts, which uses it as a fallback if this write fails.
+  // Called via command chaining after opencode exits, passing the real exit code via $?.
+  // This is the single place where task exit status is written to state.
   if (args[0] === "--finish") {
     const taskId = args[1]
     const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
@@ -50,7 +49,6 @@ async function main() {
       })
     } catch (err) {
       // If we can't write the state, log it but still exit with the correct code.
-      // The close handler in agent.ts will catch this and use it as a fallback.
       console.error("Failed to write task status:", (err as Error).message)
     }
     process.exit(exitCode)

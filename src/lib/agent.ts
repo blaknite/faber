@@ -118,29 +118,13 @@ export function spawnAgent(
 
   child.stderr?.resume()
 
-  child.on("close", (code) => {
+  child.on("close", () => {
+    // faber --finish already wrote the final status to disk. Read it back so
+    // in-process listeners (e.g. dispatchHeadless) get notified.
     const current = readState(repoRoot).tasks.find((t) => t.id === task.id)
-    if (current?.status !== "running") return
-
-    const status = code === 0 ? "done" : "failed"
-    const patch: Partial<Task> = {
-      status,
-      exitCode: code,
-      completedAt: new Date().toISOString(),
-      pid: null,
+    if (current && current.status !== "running") {
+      onUpdate({ status: current.status, exitCode: current.exitCode, completedAt: current.completedAt, pid: null })
     }
-
-    if (status === "failed") {
-      logTaskFailure(repoRoot, {
-        taskId: task.id,
-        callSite: "agent.ts:child.on(close)",
-        reason: `Process exited with non-zero exit code`,
-        exitCode: code,
-      })
-    }
-
-    onUpdate(patch)
-    updateTask(repoRoot, task.id, patch)
   })
 
   child.on("error", (err) => {
