@@ -74,7 +74,7 @@ async function main() {
   const state = readState(repoRoot)
   const repoName = basename(repoRoot)
 
-  const renderer = await createCliRenderer({ exitOnCtrlC: false })
+  const renderer = await createCliRenderer({ exitOnCtrlC: false, useMouse: false })
   const root = createRoot(renderer)
 
   root.render(
