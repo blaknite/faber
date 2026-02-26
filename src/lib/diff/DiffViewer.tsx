@@ -87,7 +87,8 @@ function LineRow({ lineNum, color, segments, highlightBg, rowBg, prefix }: {
   return (
     <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
       <text fg={colors.lineNum}>{numStr} </text>
-      {prefix !== undefined && <text fg={color}>{prefix}</text>}
+      {prefix !== undefined && <text fg={color}>{prefix} </text>}
+      {prefix === undefined && <text fg={color}>{" "}</text>}
       <SegmentedLine segments={segments} baseColor={color} highlightBg={highlightBg} />
     </box>
   )
@@ -97,7 +98,7 @@ function LineRow({ lineNum, color, segments, highlightBg, rowBg, prefix }: {
 function EmptyRow({ rowBg }: { rowBg?: string } = {}) {
   return (
     <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
-      <text fg={colors.lineNum}>{"     "}</text>
+      <text fg={colors.lineNum}>{"      "}</text>
     </box>
   )
 }
@@ -108,7 +109,7 @@ function ContextRow({ line }: { line: DiffLine }) {
   return (
     <box style={{ flexDirection: "row" }}>
       <text fg={colors.lineNum}>{numStr} </text>
-      <text fg={colors.context}>{line.content}</text>
+      <text fg={colors.context}>{" "}{line.content}</text>
     </box>
   )
 }
@@ -222,13 +223,13 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
       leftRows.push(
         <box key={`cl-${i}`} style={{ flexDirection: "row" }}>
           <text fg={colors.lineNum}>{numStr} </text>
-          <text fg={colors.context}>{line.content}</text>
+          <text fg={colors.context}>{" "}{line.content}</text>
         </box>
       )
       rightRows.push(
         <box key={`cr-${i}`} style={{ flexDirection: "row" }}>
           <text fg={colors.lineNum}>{newNumStr} </text>
-          <text fg={colors.context}>{line.content}</text>
+          <text fg={colors.context}>{" "}{line.content}</text>
         </box>
       )
       i++
