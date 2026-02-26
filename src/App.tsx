@@ -122,7 +122,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [selectedTask, handleDispatch])
 
   const handleResume = useCallback(() => {
-    if (!selectedTask || selectedTask.status !== "failed" || !selectedTask.sessionId) return
+    if (!selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId) return
     if (selectedTask.pid) killAgent(selectedTask.pid)
     const patch: Partial<Task> = {
       status: "running",
@@ -180,7 +180,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
     { key: "o", label: "open", disabled: !selectedTask?.sessionId },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
-    { key: "r", label: "resume", disabled: !selectedTask || selectedTask.status !== "failed" || !selectedTask.sessionId },
+    { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
