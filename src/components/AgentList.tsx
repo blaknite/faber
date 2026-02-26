@@ -79,10 +79,8 @@ export function AgentList({ tasks, selectedId, width = undefined }: Props) {
     const viewportHeight = scrollbox.viewport.height
     const currentTop = scrollbox.scrollTop
 
-    // The content container has paddingTop and paddingBottom of 1. When
-    // scrolling upward, pull back one extra row so the top padding stays
-    // visible. When scrolling downward, push one extra row so the bottom
-    // padding is included and the scroll bar reaches the end.
+    // Add a small buffer row when scrolling so the first/last item isn't
+    // flush against the viewport edge.
     const CONTENT_PADDING = 1
 
     if (top < currentTop) {
@@ -104,38 +102,40 @@ export function AgentList({ tasks, selectedId, width = undefined }: Props) {
   }
 
   return (
-    <scrollbox ref={scrollRef} style={{ ...containerStyle }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
-      <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-        {tasks.map((task, i) => {
-          const selected = task.id === selectedId
-          return (
-            <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
-              {i > 0 && <box border={["top"]} borderColor="#222222" />}
-              <box
-                style={{
-                  flexDirection: "column",
-                  paddingLeft: 1,
-                  paddingRight: 1,
-                  paddingTop: 1,
-                  paddingBottom: 1,
-                  backgroundColor: selected ? "#222222" : "#111111",
-                }}
-                border={["left"]}
-                borderColor={selected ? "#ff6600" : "#ffffff"}
-              >
-                <TaskRow task={task} selected={selected} />
+    <box style={{ ...containerStyle, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+      <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
+        <box style={{ flexDirection: "column" }}>
+          {tasks.map((task, i) => {
+            const selected = task.id === selectedId
+            return (
+              <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
+                {i > 0 && <box border={["top"]} borderColor="#222222" />}
                 <box
+                  style={{
+                    flexDirection: "column",
+                    paddingLeft: 1,
+                    paddingRight: 1,
+                    paddingTop: 1,
+                    paddingBottom: 1,
+                    backgroundColor: selected ? "#222222" : "#111111",
+                  }}
                   border={["left"]}
-                  borderColor="#ffffff"
-                  style={{ marginTop: 1, paddingLeft: 1 }}
+                  borderColor={selected ? "#ff6600" : "#ffffff"}
                 >
-                  <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt}</text>
+                  <TaskRow task={task} selected={selected} />
+                  <box
+                    border={["left"]}
+                    borderColor="#ffffff"
+                    style={{ marginTop: 1, paddingLeft: 1 }}
+                  >
+                    <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{task.prompt}</text>
+                  </box>
                 </box>
               </box>
-            </box>
-          )
-        })}
-      </box>
-    </scrollbox>
+            )
+          })}
+        </box>
+      </scrollbox>
+    </box>
   )
 }
