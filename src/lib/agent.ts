@@ -58,8 +58,16 @@ export function spawnAgent(
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         agent: { explore: { disable: true }, general: { disable: true } },
         permission: {
+          // Allow tools to reach files in the repo root (outside the worktree cwd).
           external_directory: {
             [`${repoRoot}/**`]: "allow",
+          },
+          // Deny writes outside the worktree. Anything under the worktree is fine
+          // (covered by workspace defaults), but the rest of the repo root should
+          // be read-only from the agent's perspective.
+          edit: {
+            [`${worktreePath}/**`]: "allow",
+            [`${repoRoot}/**`]: "deny",
           },
         },
       }),
