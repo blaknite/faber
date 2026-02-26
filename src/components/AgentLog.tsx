@@ -308,7 +308,7 @@ export function AgentLog({ repoRoot, task }: Props) {
         </box>
       ) : (
         <box style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1, paddingBottom: 1 }}>
-          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom">
+          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }}>
             <box style={{ flexDirection: "column" }}>
               {entries.map((entry, i) => (
                 <LogRow key={i} entry={entry} />
