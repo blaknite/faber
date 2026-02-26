@@ -45,16 +45,16 @@ export function spawnAgent(
     detached: true,
     env: {
       ...process.env,
-      // Disable the explore subagent to prevent indefinite hangs in non-interactive
-      // mode. The explore agent calls the question tool, which blocks waiting for
-      // user input that never arrives. Using OPENCODE_CONFIG_CONTENT with
-      // agent.explore.disable rather than OPENCODE_PERMISSION because the permission
-      // approach is unreliable -- opencode's SessionPrompt.prompt() overwrites the
-      // session permission array when setting up subagent sessions, so task deny
-      // rules get discarded before they're checked. Disabling the agent removes it
-      // from the tool description entirely, so the model won't attempt to invoke it.
+      // Disable all subagents to prevent indefinite hangs in non-interactive mode.
+      // Subagents can call the question tool or stall waiting for user input that
+      // never arrives. Using OPENCODE_CONFIG_CONTENT with agent.<name>.disable rather
+      // than OPENCODE_PERMISSION because the permission approach is unreliable --
+      // opencode's SessionPrompt.prompt() overwrites the session permission array when
+      // setting up subagent sessions, so task deny rules get discarded before they're
+      // checked. Disabling the agents removes them from the tool descriptions entirely,
+      // so the model won't attempt to invoke them.
       // See: https://github.com/sst/opencode/issues/13841
-      OPENCODE_CONFIG_CONTENT: JSON.stringify({ agent: { explore: { disable: true } } }),
+      OPENCODE_CONFIG_CONTENT: JSON.stringify({ agent: { explore: { disable: true }, general: { disable: true } } }),
     },
   })
   child.unref()
