@@ -235,7 +235,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       </box>
 
       <box style={{ flexGrow: 1, flexDirection: "row" }}>
-        <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} />
+        <AgentList tasks={tasks} selectedId={selectedTask?.id ?? null} width={logPaneTaskId ? "40%" : undefined} />
         {logPaneTaskId && (() => {
           const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
           return logTask ? (

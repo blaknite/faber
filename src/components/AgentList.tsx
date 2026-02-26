@@ -6,6 +6,7 @@ import type { Task, TaskStatus } from "../types.js"
 interface Props {
   tasks: Task[]
   selectedId: string | null
+  width?: number | "auto" | `${number}%`
 }
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -51,7 +52,7 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function AgentList({ tasks, selectedId }: Props) {
+export function AgentList({ tasks, selectedId, width = undefined }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -91,9 +92,11 @@ export function AgentList({ tasks, selectedId }: Props) {
     }
   }, [selectedId, tasks])
 
+  const containerStyle = width !== undefined ? { width } : { flexGrow: 1 }
+
   if (tasks.length === 0) {
     return (
-      <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
+      <box style={{ ...containerStyle, alignItems: "center", justifyContent: "center" }}>
         <text fg="#555555">No tasks yet.</text>
         <text fg="#333333">Press [n] to dispatch one.</text>
       </box>
@@ -101,7 +104,7 @@ export function AgentList({ tasks, selectedId }: Props) {
   }
 
   return (
-    <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
+    <scrollbox ref={scrollRef} style={{ ...containerStyle }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
       <box style={{ flexDirection: "column", paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
         {tasks.map((task, i) => {
           const selected = task.id === selectedId
