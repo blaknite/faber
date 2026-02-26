@@ -206,10 +206,11 @@ function InlineHunk({ hunk }: { hunk: Hunk }) {
 
 // Side-by-side hunk: two columns, left=removed right=added
 function SideBySideHunk({ hunk }: { hunk: Hunk }) {
-  // Interleave context lines with paired remove/add blocks.
-  // We need to produce synchronized rows across both columns.
-  const leftRows: React.ReactNode[] = []
-  const rightRows: React.ReactNode[] = []
+  // Build a flat list of paired rows. Each entry has a left cell and a right
+  // cell that get rendered side-by-side in a single horizontal box. This keeps
+  // the two sides vertically synchronized -- matching lines share the same row
+  // and the separator runs the full height of the hunk.
+  const rows: Array<{ key: string; left: React.ReactNode; right: React.ReactNode }> = []
 
   let i = 0
   const lines = hunk.lines
@@ -220,18 +221,21 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
     if (line.type === "context") {
       const numStr = line.oldLineNum !== undefined ? String(line.oldLineNum).padStart(4, " ") : "    "
       const newNumStr = line.newLineNum !== undefined ? String(line.newLineNum).padStart(4, " ") : "    "
-      leftRows.push(
-        <box key={`cl-${i}`} style={{ flexDirection: "row" }}>
-          <text fg={colors.lineNum}>{numStr} </text>
-          <text fg={colors.context}>{" "}{line.content}</text>
-        </box>
-      )
-      rightRows.push(
-        <box key={`cr-${i}`} style={{ flexDirection: "row" }}>
-          <text fg={colors.lineNum}>{newNumStr} </text>
-          <text fg={colors.context}>{" "}{line.content}</text>
-        </box>
-      )
+      rows.push({
+        key: `c-${i}`,
+        left: (
+          <box style={{ flexDirection: "row", flexGrow: 1 }}>
+            <text fg={colors.lineNum}>{numStr} </text>
+            <text fg={colors.context}>{" "}{line.content}</text>
+          </box>
+        ),
+        right: (
+          <box style={{ flexDirection: "row", flexGrow: 1 }}>
+            <text fg={colors.lineNum}>{newNumStr} </text>
+            <text fg={colors.context}>{" "}{line.content}</text>
+          </box>
+        ),
+      })
       i++
       continue
     }
@@ -257,65 +261,74 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
 
       if (rem && add) {
         const { old: oldSegs, new: newSegs } = highlightLinePair(rem.content, add.content)
-        leftRows.push(
-          <LineRow
-            key={`l-${i}-${j}`}
-            lineNum={rem.oldLineNum}
-            color={colors.remove}
-            segments={oldSegs}
-            highlightBg={colors.removeHighlight}
-            rowBg={colors.removeRow}
-          />
-        )
-        rightRows.push(
-          <LineRow
-            key={`r-${i}-${j}`}
-            lineNum={add.newLineNum}
-            color={colors.add}
-            segments={newSegs}
-            highlightBg={colors.addHighlight}
-            rowBg={colors.addRow}
-          />
-        )
+        rows.push({
+          key: `ra-${i}-${j}`,
+          left: (
+            <LineRow
+              lineNum={rem.oldLineNum}
+              color={colors.remove}
+              segments={oldSegs}
+              highlightBg={colors.removeHighlight}
+              rowBg={colors.removeRow}
+            />
+          ),
+          right: (
+            <LineRow
+              lineNum={add.newLineNum}
+              color={colors.add}
+              segments={newSegs}
+              highlightBg={colors.addHighlight}
+              rowBg={colors.addRow}
+            />
+          ),
+        })
       } else if (rem) {
-        leftRows.push(
-          <LineRow
-            key={`l-${i}-${j}`}
-            lineNum={rem.oldLineNum}
-            color={colors.remove}
-            segments={highlightSingleLine(rem.content)}
-            highlightBg={colors.removeHighlight}
-            rowBg={colors.removeRow}
-          />
-        )
-        rightRows.push(<EmptyRow key={`r-${i}-${j}`} rowBg={colors.removeRow} />)
+        rows.push({
+          key: `r-${i}-${j}`,
+          left: (
+            <LineRow
+              lineNum={rem.oldLineNum}
+              color={colors.remove}
+              segments={highlightSingleLine(rem.content)}
+              highlightBg={colors.removeHighlight}
+              rowBg={colors.removeRow}
+            />
+          ),
+          right: <EmptyRow rowBg={colors.removeRow} />,
+        })
       } else if (add) {
-        leftRows.push(<EmptyRow key={`l-${i}-${j}`} rowBg={colors.addRow} />)
-        rightRows.push(
-          <LineRow
-            key={`r-${i}-${j}`}
-            lineNum={add.newLineNum}
-            color={colors.add}
-            segments={highlightSingleLine(add.content)}
-            highlightBg={colors.addHighlight}
-            rowBg={colors.addRow}
-          />
-        )
+        rows.push({
+          key: `a-${i}-${j}`,
+          left: <EmptyRow rowBg={colors.addRow} />,
+          right: (
+            <LineRow
+              lineNum={add.newLineNum}
+              color={colors.add}
+              segments={highlightSingleLine(add.content)}
+              highlightBg={colors.addHighlight}
+              rowBg={colors.addRow}
+            />
+          ),
+        })
       }
     }
   }
 
   return (
-    <box style={styles.sideBySideRow}>
-      <box style={styles.sideBySideColumn}>
-        {leftRows}
-      </box>
-      <box style={{ width: 1, flexShrink: 0 }}>
-        <text fg={colors.separator}>{"│"}</text>
-      </box>
-      <box style={styles.sideBySideColumn}>
-        {rightRows}
-      </box>
+    <box style={{ flexDirection: "column", flexGrow: 1 }}>
+      {rows.map(({ key, left, right }) => (
+        <box key={key} style={styles.sideBySideRow}>
+          <box style={styles.sideBySideColumn}>
+            {left}
+          </box>
+          <box style={{ width: 1, flexShrink: 0 }}>
+            <text fg={colors.separator}>{"│"}</text>
+          </box>
+          <box style={styles.sideBySideColumn}>
+            {right}
+          </box>
+        </box>
+      ))}
     </box>
   )
 }
