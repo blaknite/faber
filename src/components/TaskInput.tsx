@@ -40,8 +40,6 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
         borderColor={model.color}
         style={{ paddingLeft: 1 }}
       >
-        <text><strong>New task</strong></text>
-        <text>{" "}</text>
         <textarea
           ref={textareaRef}
           minHeight={1}
