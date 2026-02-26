@@ -54,6 +54,7 @@ interface LogEntry {
   title?: string
   description?: string
   blockContent?: string
+  blockKind?: "text" | "diff"
   status?: string
   errorMessage?: string
   // step_finish entries
@@ -165,14 +166,16 @@ function parseToolEntry(event: LogEvent): LogEntry | null {
   // edit
   if (toolLower === "edit" || toolLower.includes("_edit") || toolLower.endsWith("edit")) {
     const filePath = normalizePath(str(input.filePath))
-    const diff = str(metadata.diff) || str(metadata.output)
+    const diff = str(metadata.diff)
+    const fallback = str(metadata.output)
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
       tool,
       icon: "←",
       title: `Edit ${filePath}`,
-      blockContent: diff || undefined,
+      blockContent: diff || fallback || undefined,
+      blockKind: diff ? "diff" : "text",
       status,
       errorMessage,
     }
@@ -399,6 +402,47 @@ function BlockContent({ content }: { content: string }) {
   )
 }
 
+const DIFF_MAX_LINES = 10
+
+function diffLineColor(line: string): string {
+  if (line.startsWith("+")) return "#00cc66"
+  if (line.startsWith("-")) return "#cc3333"
+  if (line.startsWith("@@")) return "#559999"
+  return "#666666"
+}
+
+function DiffContent({ diff }: { diff: string }) {
+  // Strip the unified diff file header (Index:, ===, ---, +++ lines)
+  const lines = diff.split("\n").filter((line) => {
+    if (line.startsWith("Index:")) return false
+    if (line.startsWith("===")) return false
+    if (line.startsWith("--- ")) return false
+    if (line.startsWith("+++ ")) return false
+    return true
+  })
+
+  const nonEmpty = lines.filter((l) => l.trim() !== "")
+  const visible = nonEmpty.slice(0, DIFF_MAX_LINES)
+  const overflow = nonEmpty.length - DIFF_MAX_LINES
+
+  return (
+    <box
+      border={["left"]}
+      borderColor="#444444"
+      style={{ paddingLeft: 1, marginLeft: 10, marginTop: 0 }}
+    >
+      {visible.map((line, i) => (
+        <text key={i} fg={diffLineColor(line)}>{line}</text>
+      ))}
+      {overflow > 0 ? (
+        <text fg="#555555">
+          {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
+        </text>
+      ) : null}
+    </box>
+  )
+}
+
 function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
   const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
   return (
@@ -477,7 +521,11 @@ function ToolRow({ entry }: { entry: LogEntry }) {
           </text>
         ) : null}
       </box>
-      {entry.blockContent ? <BlockContent content={entry.blockContent} /> : null}
+      {entry.blockContent && entry.blockKind === "diff" ? (
+        <DiffContent diff={entry.blockContent} />
+      ) : entry.blockContent ? (
+        <BlockContent content={entry.blockContent} />
+      ) : null}
     </box>
   )
 }
