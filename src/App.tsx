@@ -169,6 +169,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         if (!selectedTask) { setMode("normal"); return }
         if (selectedTask.pid) killAgent(selectedTask.pid)
         removeWorktree(repoRoot, selectedTask.id).catch(() => {})
+        if (logPaneTaskId === selectedTask.id) setLogPaneTaskId(null)
         removeTaskFromState(selectedTask.id)
         setMode("normal")
         return
