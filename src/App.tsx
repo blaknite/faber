@@ -7,7 +7,7 @@ import { DiffView } from "./components/DiffView.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, getCurrentBranch } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch, getCurrentBranch, switchBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
 import { createWorktree } from "./lib/worktree.js"
@@ -207,6 +207,16 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setLogPaneTaskId(selectedTask.id)
   }, [selectedTask, repoRoot, updateTaskInState])
 
+  const handleSwitchBranch = useCallback(async () => {
+    if (!selectedTask) return
+    try {
+      await switchBranch(repoRoot, selectedTask.id)
+      showFlash(`Switched to branch ${selectedTask.id}`)
+    } catch (err) {
+      showFlash(`Branch switch failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [selectedTask, repoRoot, showFlash])
+
   const handleMerge = useCallback(async () => {
     if (!selectedTask) { setMode("normal"); return }
     setMode("normal")
@@ -310,6 +320,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
     if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready_to_merge" ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
+    if (key.name === "b") { handleSwitchBranch(); return }
     if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
       if (selectedTask) setMode("delete")
@@ -338,6 +349,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "enter", label: "open", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "b", label: "switch branch", disabled: !selectedTask },
     { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
