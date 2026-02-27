@@ -41,6 +41,19 @@ async function main() {
       })
     }
 
+    // If the task was already marked failed (e.g. the user killed it), don't
+    // overwrite that status. Just record the exit code and clear the pid.
+    const currentState = readState(repoRoot)
+    const currentTask = currentState.tasks.find((t) => t.id === taskId)
+    if (currentTask?.status === "failed") {
+      try {
+        updateTask(repoRoot, taskId, { exitCode, pid: null })
+      } catch (err) {
+        console.error("Failed to write task status:", (err as Error).message)
+      }
+      process.exit(exitCode)
+    }
+
     // If the agent committed work to its branch, surface that so the user knows
     // a merge is waiting. If nothing was committed, it's just done.
     const hasCommits = await worktreeHasCommits(repoRoot, taskId)
