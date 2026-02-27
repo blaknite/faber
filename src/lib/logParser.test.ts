@@ -5,6 +5,7 @@ import {
   formatElapsedMs,
   normalizePath,
   parseEvent,
+  parseReadOutput,
   parseToolEntry,
 } from "./logParser.js"
 import type { LogEvent } from "./logParser.js"
@@ -196,10 +197,19 @@ describe("parseToolEntry", () => {
       expect(entry.title).toBe("Read src/lib/state.ts")
     })
 
-    it("includes extra input params as description", () => {
+    it("shows line range in description when offset and limit are given", () => {
       const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts", offset: 10, limit: 50 }))!
-      expect(entry.description).toContain("offset=10")
-      expect(entry.description).toContain("limit=50")
+      expect(entry.description).toBe("lines 10\u201360")
+    })
+
+    it("shows from-line in description when only offset is given", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts", offset: 100 }))!
+      expect(entry.description).toBe("from line 100")
+    })
+
+    it("omits description when no offset is given", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }))!
+      expect(entry.description).toBeUndefined()
     })
 
     it("includes output as blockContent when present", () => {
@@ -212,15 +222,46 @@ describe("parseToolEntry", () => {
       expect(entry.blockContent).toBeUndefined()
     })
 
-    it("strips XML tags from output when the content looks like XML", () => {
-      const xml = "<root><item>Hello</item><item>World</item></root>"
-      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.xml" }, { output: xml }))!
-      expect(entry.blockContent).toBe("Hello World")
+    it("extracts <content> from MCP read XML output", () => {
+      const xml = "<path>/abs/file.ts</path>\n<type>file</type>\n<content>1: const x = 1\n2: const y = 2</content>"
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/abs/file.ts" }, { output: xml }))!
+      expect(entry.blockContent).toBe("1: const x = 1\n2: const y = 2")
+    })
+
+    it("extracts <entries> from MCP directory read XML output", () => {
+      const xml = "<path>/abs/dir</path>\n<type>directory</type>\n<entries>src/\nREADME.md\n\n(2 entries)</entries>"
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/abs/dir" }, { output: xml }))!
+      expect(entry.blockContent).toBe("src/\nREADME.md\n\n(2 entries)")
     })
 
     it("leaves plain text output unchanged", () => {
       const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }, { output: "const x = 1\n" }))!
       expect(entry.blockContent).toBe("const x = 1\n")
+    })
+  })
+
+  describe("parseReadOutput", () => {
+    it("extracts content from a file read", () => {
+      const xml = "<path>/a/b.ts</path>\n<type>file</type>\n<content>1: hello</content>"
+      expect(parseReadOutput(xml)).toBe("1: hello")
+    })
+
+    it("extracts entries from a directory read", () => {
+      const xml = "<path>/a/b</path>\n<type>directory</type>\n<entries>foo/\nbar.ts</entries>"
+      expect(parseReadOutput(xml)).toBe("foo/\nbar.ts")
+    })
+
+    it("returns the raw string when content is not XML", () => {
+      expect(parseReadOutput("just plain text")).toBe("just plain text")
+    })
+
+    it("returns the raw string when XML has no <content> or <entries> tag", () => {
+      expect(parseReadOutput("<foo>bar</foo>")).toBe("<foo>bar</foo>")
+    })
+
+    it("handles multiline content correctly", () => {
+      const xml = "<path>/f.ts</path>\n<type>file</type>\n<content>1: a\n2: b\n3: c</content>"
+      expect(parseReadOutput(xml)).toBe("1: a\n2: b\n3: c")
     })
   })
 

@@ -101,6 +101,38 @@ export function extractXmlText(content: string): string | null {
   }
 }
 
+// Parse the output from a file/directory read tool. The MCP Read tool wraps
+// output in XML like:
+//
+//   <path>/abs/path</path>
+//   <type>file</type>
+//   <content>1: line one
+//   2: line two</content>
+//
+// or for directories, <entries> instead of <content>. We want to show just
+// the file/directory listing, not the path and type noise that gets mixed in
+// when you strip all tags indiscriminately.
+//
+// Falls back to the raw string if the content doesn't look like this format.
+export function parseReadOutput(raw: string): string {
+  const trimmed = raw.trimStart()
+  if (!trimmed.startsWith("<")) return raw
+  try {
+    const parsed = xmlParser.parse(trimmed) as Record<string, unknown>
+    // The MCP read tool produces sibling tags with no single root element, so
+    // fast-xml-parser wraps them in an object keyed by tag name.
+    const content = parsed["content"]
+    if (typeof content === "string" && content.trim()) return content.trim()
+    if (typeof content === "number" || typeof content === "boolean") return String(content)
+    const entries = parsed["entries"]
+    if (typeof entries === "string" && entries.trim()) return entries.trim()
+    if (typeof entries === "number" || typeof entries === "boolean") return String(entries)
+  } catch {
+    // fall through
+  }
+  return raw
+}
+
 export function normalizePath(input?: string): string {
   if (!input) return ""
   // If it looks like an absolute path, show the last 2-3 segments to keep it readable
@@ -145,13 +177,16 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
   // read
   if (toolLower === "read" || toolLower.includes("_read") || toolLower.endsWith("read")) {
     const filePath = normalizePath(str(input.filePath))
-    const extras = Object.entries(input)
-      .filter(([k]) => k !== "filePath")
-      .filter(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
-      .map(([k, v]) => `${k}=${v}`)
-    const description = extras.length ? `[${extras.join(", ")}]` : undefined
+    const offset = num(input.offset)
+    const limit = num(input.limit)
+    let description: string | undefined
+    if (offset !== undefined && limit !== undefined) {
+      description = `lines ${offset}–${offset + limit}`
+    } else if (offset !== undefined) {
+      description = `from line ${offset}`
+    }
     const rawOutput = str(state?.output)
-    const output = (rawOutput && extractXmlText(rawOutput)) ?? rawOutput
+    const output = rawOutput ? parseReadOutput(rawOutput) : undefined
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
