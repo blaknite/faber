@@ -50,7 +50,7 @@ faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
 |-----|--------|
 | `n` | New task |
 | `j` / `k` or arrows | Navigate list |
-| `enter` | Open task log (or diff view if ready to merge) |
+| `enter` | Open task |
 | `r` | Resume a done or failed task |
 | `c` | Clone task (re-dispatch same prompt) |
 | `s` | Copy `opencode -s <sessionId>` to clipboard |
