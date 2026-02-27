@@ -136,9 +136,9 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
       <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#222222", height: 3 }}>
         <text>
-          <span fg={filterMode === "active" ? "#0088ff" : "#555555"}>active</span>
+          <span fg={filterMode === "active" ? "#ff6600" : "#555555"}>active</span>
           <span fg="#333333">{" / "}</span>
-          <span fg={filterMode === "all" ? "#0088ff" : "#555555"}>all</span>
+          <span fg={filterMode === "all" ? "#ff6600" : "#555555"}>all</span>
           <span fg="#888888">{" [tab]"}</span>
         </text>
       </box>
