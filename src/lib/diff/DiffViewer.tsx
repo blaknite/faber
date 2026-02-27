@@ -294,12 +294,12 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
               rowBg={colors.removeRow}
             />
           ),
-          right: <EmptyRow rowBg={colors.removeRow} />,
+          right: <EmptyRow />,
         })
       } else if (add) {
         rows.push({
           key: `a-${i}-${j}`,
-          left: <EmptyRow rowBg={colors.addRow} />,
+          left: <EmptyRow />,
           right: (
             <LineRow
               lineNum={add.newLineNum}
