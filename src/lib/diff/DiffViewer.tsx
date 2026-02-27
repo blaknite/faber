@@ -416,7 +416,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
   return (
     <box style={styles.root}>
       {!hideHeader && (
-        <box border={["bottom"]} borderColor={colors.border} style={styles.header}>
+        <box style={styles.header}>
           <text fg={colors.meta}>diff</text>
           {!controlledViewMode && (
             <ModeToggle
