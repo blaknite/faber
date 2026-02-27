@@ -10,7 +10,9 @@ import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
 import { removeWorktree, mergeBranch, getCurrentBranch, getCommitsAhead, switchBranch, pushBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
-import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
+import { addTask, readState, removeTask, updateTask, stateFilePath } from "./lib/state.js"
+import { watch, statSync, existsSync } from "node:fs"
+import type { FSWatcher } from "node:fs"
 import { createWorktree } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
@@ -19,7 +21,7 @@ import { TickContext, SPINNER_FRAMES, useTickProvider, useTick } from "./lib/tic
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
-// How many ticks between state/branch refreshes. At TICK_MS=200 this is ~2s.
+// How many ticks between branch refreshes. At TICK_MS=200 this is ~2s.
 const REFRESH_EVERY_N_TICKS = 10
 
 function sortDescending(tasks: Task[]): Task[] {
@@ -78,16 +80,68 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     refreshCommitsAhead()
   }, [repoRoot, refreshCommitsAhead])
 
-  // All periodic work runs off the shared tick so there's only one interval
-  // in the whole app. refreshTasks and getCurrentBranch fire every
-  // REFRESH_EVERY_N_TICKS ticks (~2s); the spinner advances every tick.
+  // Watch state.json for changes and refresh immediately when it's written.
+  // A watchdog runs alongside fs.watch because FSEvents on macOS can silently
+  // stop delivering notifications under high I/O. If the file's mtime has
+  // moved forward since the last refresh but the watcher hasn't fired, the
+  // watchdog calls refreshTasks itself and recreates the watcher.
+  useEffect(() => {
+    const statePath = stateFilePath(repoRoot)
+    let watcher: FSWatcher | null = null
+    let lastRefreshedMtime = 0
+
+    const doRefresh = () => {
+      try {
+        lastRefreshedMtime = existsSync(statePath) ? statSync(statePath).mtimeMs : 0
+      } catch {
+        lastRefreshedMtime = 0
+      }
+      refreshTasks()
+    }
+
+    const startWatching = () => {
+      if (watcher) return
+      try {
+        watcher = watch(statePath, doRefresh)
+        watcher.on("error", () => {
+          watcher?.close()
+          watcher = null
+        })
+      } catch {
+        // watch() failed, watchdog will retry
+      }
+    }
+
+    startWatching()
+
+    const watchdog = setInterval(() => {
+      let currentMtime = 0
+      try {
+        currentMtime = existsSync(statePath) ? statSync(statePath).mtimeMs : 0
+      } catch {
+        return
+      }
+      if (currentMtime > lastRefreshedMtime) {
+        doRefresh()
+        watcher?.close()
+        watcher = null
+      }
+      if (!watcher) startWatching()
+    }, 1000)
+
+    return () => {
+      watcher?.close()
+      clearInterval(watchdog)
+    }
+  }, [repoRoot, refreshTasks])
+
+  // getCurrentBranch has no file to watch, keep it on the tick at ~2s.
   useEffect(() => {
     if (tick === 0) return
     if (tick % REFRESH_EVERY_N_TICKS === 0) {
-      refreshTasks()
       getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
     }
-  }, [tick, repoRoot, refreshTasks])
+  }, [tick, repoRoot])
 
   const runningCount = tasks.filter(t => t.status === "running").length
 

@@ -15,6 +15,10 @@ function statePath(repoRoot: string): string {
   return join(faberDir(repoRoot), STATE_FILE)
 }
 
+export function stateFilePath(repoRoot: string): string {
+  return statePath(repoRoot)
+}
+
 export function taskOutputPath(repoRoot: string, taskId: string): string {
   return join(faberDir(repoRoot), TASKS_DIR, `${taskId}.jsonl`)
 }
