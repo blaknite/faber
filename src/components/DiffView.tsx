@@ -27,25 +27,23 @@ function LastMessage({ repoRoot, task }: { repoRoot: string; task: Task }) {
   if (!lastText) return null
 
   return (
-    <box style={{ paddingLeft: 2, paddingRight: 2, paddingBottom: 1 }}>
-      <box
-        border={["left"]}
-        borderColor="#444444"
-        style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
-      >
-        <markdown
-          content={lastText}
-          syntaxStyle={syntaxStyle}
-          style={{ flexGrow: 1, flexShrink: 1 }}
-          renderNode={(token, context) => {
-            const renderable = context.defaultRender()
-            if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
-              (renderable as any).wrapMode = "word"
-            }
-            return renderable
-          }}
-        />
-      </box>
+    <box
+      border={["left"]}
+      borderColor="#444444"
+      style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+    >
+      <markdown
+        content={lastText}
+        syntaxStyle={syntaxStyle}
+        style={{ flexGrow: 1, flexShrink: 1 }}
+        renderNode={(token, context) => {
+          const renderable = context.defaultRender()
+          if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+            (renderable as any).wrapMode = "word"
+          }
+          return renderable
+        }}
+      />
     </box>
   )
 }
