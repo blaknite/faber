@@ -360,11 +360,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between" }}>
         <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span></text>
         <box style={{ flexDirection: "row", gap: 2 }}>
-          {tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#ff9900">{tasks.filter(t => t.status === "ready_to_merge").length} ready to merge</text>
-          )}
           {tasks.filter(t => t.status === "running").length > 0 && (
             <text fg="#00aaff">{tasks.filter(t => t.status === "running").length} running</text>
+          )}
+          {tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
+            <text fg="#ff9900">{tasks.filter(t => t.status === "ready_to_merge").length} ready to merge</text>
           )}
         </box>
       </box>
