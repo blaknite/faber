@@ -280,13 +280,10 @@ function ToolRow({ entry }: { entry: LogEntry }) {
             </text>
           </>
         ) : null}
-        {isError && entry.errorMessage ? (
-          <text fg="#cc3333" attributes={createTextAttributes({ dim: true })}>
-            {" "}{entry.errorMessage}
-          </text>
-        ) : null}
       </box>
-      {entry.blockContent && entry.blockKind === "diff" ? (
+      {isError && entry.errorMessage ? (
+        <BlockContent content={entry.errorMessage} />
+      ) : entry.blockContent && entry.blockKind === "diff" ? (
         <DiffContent diff={entry.blockContent} />
       ) : entry.blockContent ? (
         <BlockContent content={entry.blockContent} />
