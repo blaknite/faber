@@ -45,6 +45,15 @@ faber start                  # same as above, explicit subcommand
 faber --dir /path/to/repo    # open the TUI in a specific directory
 ```
 
+### Setup
+
+Initialise a repo for use with faber (creates `.faber/`, `.worktrees/`, and updates `.gitignore`):
+
+```bash
+faber setup
+faber setup --dir /path/to/repo
+```
+
 ### Headless run
 
 Fire off a task without opening the TUI:

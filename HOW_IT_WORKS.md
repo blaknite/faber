@@ -127,5 +127,6 @@ The log view uses sticky scroll by default: it follows new output as it arrives.
 ## Entry points
 
 1. `faber` / `faber start` `[--dir path]` - opens the interactive TUI
-2. `faber run "<prompt>"` `[--dir path] [--model model]` - headless task dispatch
-3. `faber finish <taskId> <exitCode>` - called automatically by each agent on exit to write final status
+2. `faber setup` `[--dir path]` - initialises `.faber/`, `.worktrees/`, and `.gitignore`
+3. `faber run "<prompt>"` `[--dir path] [--model model]` - headless task dispatch
+4. `faber finish <taskId> <exitCode>` - called automatically by each agent on exit to write final status
