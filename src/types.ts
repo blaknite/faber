@@ -1,4 +1,4 @@
-export type TaskStatus = "running" | "done" | "failed" | "unknown"
+export type TaskStatus = "running" | "done" | "ready_to_merge" | "failed" | "unknown"
 
 export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"
 

@@ -335,6 +335,7 @@ function LogRow({ entry }: { entry: LogEntry }) {
 const STATUS_COLOR: Record<TaskStatus, string> = {
   running: "#00aaff",
   done: "#00cc66",
+  ready_to_merge: "#ff9900",
   failed: "#cc3333",
   unknown: "#888888",
 }
@@ -342,6 +343,7 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
 const STATUS_LABEL: Record<TaskStatus, string> = {
   running: "Running",
   done: "Done",
+  ready_to_merge: "Ready to merge",
   failed: "Failed",
   unknown: "Unknown",
 }
@@ -351,6 +353,7 @@ const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", 
 const STATUS_SYMBOL: Record<TaskStatus, string> = {
   running: SPINNER_FRAMES[0],
   done: "✓",
+  ready_to_merge: "↑",
   failed: "✗",
   unknown: "?",
 }
