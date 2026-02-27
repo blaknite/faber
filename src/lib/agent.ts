@@ -116,6 +116,12 @@ export function spawnAgent(
 
   child.stderr?.resume()
 
+  // child.unref() detaches the process itself but not its stdio streams.
+  // Unref stdout and stderr so the faber run CLI can exit once the session ID
+  // has been captured, without waiting for opencode to finish.
+  ;(child.stdout as any)?.unref()
+  ;(child.stderr as any)?.unref()
+
   child.on("close", () => {
     // faber finish already wrote the final status to disk. The state.json
     // watcher in App.tsx will pick up that write and refresh the UI.
