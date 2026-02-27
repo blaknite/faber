@@ -86,8 +86,6 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
         </text>
       </box>
 
-      <LastMessage repoRoot={repoRoot} task={task} />
-
       {error != null ? (
         <box style={{ paddingLeft: 2, paddingTop: 1 }}>
           <text fg="#cc3333">{error}</text>
@@ -97,7 +95,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           <text fg="#555555">Loading...</text>
         </box>
       ) : (
-        <DiffViewer diff={diff} viewMode={viewMode} hideHeader />
+        <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} />
       )}
     </box>
   )
