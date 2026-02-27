@@ -4,6 +4,7 @@ import type { CliRenderer } from "@opentui/core"
 import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
+import { BranchInput } from "./components/BranchInput.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
@@ -15,7 +16,7 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "request_changes"
+type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "request_changes" | "switch_branch"
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -207,15 +208,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setLogPaneTaskId(selectedTask.id)
   }, [selectedTask, repoRoot, updateTaskInState])
 
-  const handleSwitchBranch = useCallback(async () => {
-    if (!selectedTask) return
+  const handleSwitchBranch = useCallback(async (branch: string) => {
+    setMode("normal")
     try {
-      await switchBranch(repoRoot, selectedTask.id)
-      showFlash(`Switched to branch ${selectedTask.id}`)
+      await switchBranch(repoRoot, branch)
+      showFlash(`Switched to branch ${branch}`)
     } catch (err) {
       showFlash(`Branch switch failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash])
+  }, [repoRoot, showFlash])
 
   const handleMerge = useCallback(async () => {
     if (!selectedTask) { setMode("normal"); return }
@@ -230,7 +231,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [selectedTask, repoRoot, showFlash, updateTaskInState])
 
   useKeyboard((key) => {
-    if (mode === "input" || mode === "request_changes") return
+    if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
@@ -320,7 +321,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
     if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready_to_merge" ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
-    if (key.name === "b") { handleSwitchBranch(); return }
+    if (key.name === "b") { setMode("switch_branch"); return }
     if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
       if (selectedTask) setMode("delete")
@@ -359,6 +360,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text fg="#ff8800">{flashMessage}</text>
     </box>
+  ) : mode === "switch_branch" ? (
+    <BranchInput
+      onSubmit={(branch) => handleSwitchBranch(branch)}
+      onCancel={() => setMode("normal")}
+    />
   ) : mode === "request_changes" && (diffPaneTaskId || logPaneTaskId) ? (
     <RequestChangesInput
       onSubmit={(prompt) => handleRequestChanges(prompt)}
