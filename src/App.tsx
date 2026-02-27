@@ -8,7 +8,7 @@ import { BranchInput } from "./components/BranchInput.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, getCommitsAhead, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch, hasUnpushedCommits, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask, stateFilePath } from "./lib/state.js"
 import { watch, statSync, existsSync } from "node:fs"
@@ -43,7 +43,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
   const [currentBranch, setCurrentBranch] = useState<string>("")
-  const [commitsAhead, setCommitsAhead] = useState<number>(0)
+  const [isDirty, setIsDirty] = useState<boolean>(false)
   const prevSelectedIdx = useRef(0)
 
   const tick = useTick()
@@ -68,15 +68,15 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setTasks(sortDescending(state.tasks))
   }, [repoRoot])
 
-  const refreshCommitsAhead = useCallback(() => {
-    getCommitsAhead(repoRoot).then(setCommitsAhead).catch(() => {})
+  const refreshDirtyState = useCallback(() => {
+    hasUnpushedCommits(repoRoot).then(setIsDirty).catch(() => {})
   }, [repoRoot])
 
   // Bootstrap on mount
   useEffect(() => {
     setCurrentBranch(readCurrentBranch(repoRoot))
-    refreshCommitsAhead()
-  }, [repoRoot, refreshCommitsAhead])
+    refreshDirtyState()
+  }, [repoRoot, refreshDirtyState])
 
   // Watch state.json for changes and refresh immediately when it's written.
   // A watchdog runs alongside fs.watch because FSEvents on macOS can silently
@@ -148,6 +148,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         lastRefreshedMtime = 0
       }
       setCurrentBranch(readCurrentBranch(repoRoot))
+      refreshDirtyState()
     }
 
     const startWatching = () => {
@@ -184,7 +185,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       watcher?.close()
       clearInterval(watchdog)
     }
-  }, [repoRoot])
+  }, [repoRoot, refreshDirtyState])
 
   const runningCount = tasks.filter(t => t.status === "running").length
 
@@ -315,13 +316,13 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     try {
       await pushBranch(repoRoot)
       showFlash(`Pushed ${currentBranch} to origin`)
-      refreshCommitsAhead()
+      refreshDirtyState()
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setMode("normal")
     }
-  }, [repoRoot, currentBranch, showFlash, refreshCommitsAhead])
+  }, [repoRoot, currentBranch, showFlash, refreshDirtyState])
 
   const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
     if (!task) { setMode("normal"); return }
@@ -330,11 +331,11 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
       showFlash(`Merged ${task.id} into HEAD`)
-      refreshCommitsAhead()
+      refreshDirtyState()
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshCommitsAhead])
+  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState])
 
   useKeyboard((key) => {
     if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
@@ -519,7 +520,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}${commitsAhead > 0 ? ` ↑ ${commitsAhead}` : ""}` : ""}</span></text>
+        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}${isDirty ? " *" : ""}` : ""}</span></text>
         <box style={{ flexDirection: "row", gap: 1 }}>
           {runningCount > 0 && (
             <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]} {runningCount}</text>
