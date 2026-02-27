@@ -42,7 +42,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const borderHeight = textareaHeight + 2
 
   return (
-    <box key={active ? "active" : "inactive"} style={{ backgroundColor: "#111111", height: borderHeight }}>
+    <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, marginTop: 1, marginLeft: 1, marginRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
       {!active ? (
         <box
           border={["left"]}
