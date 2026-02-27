@@ -321,10 +321,7 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
           <box style={styles.sideBySideColumn}>
             {left}
           </box>
-          <box style={{ width: 1, flexShrink: 0 }}>
-            <text fg={colors.separator}>{"│"}</text>
-          </box>
-          <box style={styles.sideBySideColumn}>
+          <box style={styles.sideBySideColumn} border={["left"]} borderColor={colors.separator}>
             {right}
           </box>
         </box>
