@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { CliRenderer } from "@opentui/core"
 import { execa } from "execa"
-import { AgentList } from "./components/AgentList.js"
+import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
@@ -32,13 +32,19 @@ interface Props {
 
 export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [tasks, setTasks] = useState<Task[]>(sortDescending(initialTasks))
+  const [filterMode, setFilterMode] = useState<FilterMode>("active")
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [mode, setMode] = useState<Mode>("normal")
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
   const prevSelectedIdx = useRef(0)
-  const selectedTask = tasks[selectedIdx] ?? null
+
+  const visibleTasks = filterMode === "active"
+    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
+    : tasks
+
+  const selectedTask = visibleTasks[selectedIdx] ?? null
 
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
@@ -58,13 +64,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [repoRoot])
 
   const removeTaskFromState = useCallback((id: string) => {
-    setTasks((prev) => {
-      const next = prev.filter((t) => t.id !== id)
-      setSelectedIdx((i) => Math.min(i, Math.max(0, next.length - 1)))
-      return next
-    })
+    setTasks((prev) => prev.filter((t) => t.id !== id))
     removeTask(repoRoot, id)
   }, [repoRoot])
+
+  // Keep selectedIdx in bounds when visibleTasks changes (filter toggle, task added/removed).
+  useEffect(() => {
+    setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
+  }, [visibleTasks.length])
 
   const showFlash = useCallback((msg: string) => {
     setFlashMessage(msg)
@@ -279,7 +286,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (key.name === "n") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
-    if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(tasks.length - 1, i + 1)); return }
+    if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
     if (key.name === "x") {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
@@ -382,13 +389,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
           ) : null
         })() : (
           <AgentList
-            tasks={tasks}
+            tasks={visibleTasks}
             selectedId={selectedTask?.id ?? null}
+            filterMode={filterMode}
+            onFilterChange={setFilterMode}
             inputActive={mode === "input"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
             onSelectTask={(id) => {
-              const idx = tasks.findIndex((t) => t.id === id)
+              const idx = visibleTasks.findIndex((t) => t.id === id)
               if (idx !== -1) setSelectedIdx(idx)
             }}
           />
