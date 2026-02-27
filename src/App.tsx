@@ -344,6 +344,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     try {
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
+      setDiffPaneTaskId(null)
+      setLogPaneTaskId(null)
       showFlash(`Merged ${task.id} into HEAD`)
       refreshDirtyState()
     } catch (err) {
