@@ -55,13 +55,13 @@ export async function getCurrentBranch(repoRoot: string): Promise<string> {
   return stdout.trim()
 }
 
-export async function getCommitsAhead(repoRoot: string): Promise<number> {
+export async function hasUnpushedCommits(repoRoot: string): Promise<boolean> {
   try {
     const { stdout } = await execa("git", ["rev-list", "--count", "@{u}..HEAD"], { cwd: repoRoot })
-    return parseInt(stdout.trim(), 10) || 0
+    return parseInt(stdout.trim(), 10) > 0
   } catch {
-    // No upstream configured or other git error -- don't show anything
-    return 0
+    // No upstream configured -- treat as unpushed
+    return true
   }
 }
 
