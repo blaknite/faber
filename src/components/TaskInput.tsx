@@ -83,7 +83,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
             focused
           />
           <box style={{ height: 1 }} />
-          <text fg={model.color}>{model.label}</text>
+          <text fg={model.color}>new task  <span fg={model.dimColor}>[enter] submit  [esc] cancel  [tab] model ({model.label})</span></text>
         </box>
       )}
     </box>
