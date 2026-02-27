@@ -97,7 +97,7 @@ function LineRow({ lineNum, color, segments, highlightBg, rowBg, prefix }: {
 // Empty row for side-by-side padding
 function EmptyRow({ rowBg }: { rowBg?: string } = {}) {
   return (
-    <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
+    <box style={{ flexDirection: "row", flexGrow: 1, backgroundColor: rowBg }}>
       <text fg={colors.lineNum}>{"      "}</text>
     </box>
   )
