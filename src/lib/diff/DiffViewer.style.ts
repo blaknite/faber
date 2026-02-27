@@ -62,14 +62,15 @@ export const styles = {
     paddingTop: 1,
     paddingBottom: 0,
   },
-  // Side-by-side: the two columns sit inside a row
+  // Side-by-side: the two columns sit inside a row, each fixed at 50% so the
+  // center divider stays perfectly aligned regardless of content length.
   sideBySideRow: {
     flexDirection: "row" as const,
     flexGrow: 1,
   },
   sideBySideColumn: {
-    flexGrow: 1,
-    flexShrink: 1,
+    width: "50%" as const,
+    flexShrink: 0,
     flexDirection: "column" as const,
     overflow: "hidden" as const,
   },
