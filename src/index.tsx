@@ -1,7 +1,7 @@
 import { createCliRenderer } from "@opentui/core"
 import { createRoot } from "@opentui/react"
-import { resolve, basename } from "node:path"
-import { existsSync } from "node:fs"
+import { resolve, basename, join } from "node:path"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
@@ -85,6 +85,13 @@ async function main() {
     const modelFlag = args.indexOf("--model")
     const model = (modelFlag !== -1 && args[modelFlag + 1] ? args[modelFlag + 1]! : DEFAULT_MODEL) as Task["model"]
     await dispatchHeadless(repoRoot, prompt, model)
+    return
+  }
+
+  // faber setup [path/to/repo]
+  if (args[0] === "setup") {
+    const repoRoot = resolve(args[1] ?? process.cwd())
+    await setup(repoRoot)
     return
   }
 
@@ -181,6 +188,37 @@ async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["m
       }
     })
   })
+}
+
+async function setup(repoRoot: string) {
+  if (!existsSync(join(repoRoot, ".git"))) {
+    console.error(`Not a git repository: ${repoRoot}`)
+    process.exit(1)
+  }
+
+  // Create .faber/ and .worktrees/
+  ensureFaberDir(repoRoot)
+  const worktreesDir = join(repoRoot, ".worktrees")
+  if (!existsSync(worktreesDir)) {
+    mkdirSync(worktreesDir, { recursive: true })
+  }
+
+  // Add .faber/ and .worktrees/ to the repo's .gitignore if not already present
+  const gitignorePath = join(repoRoot, ".gitignore")
+  const existing = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf8") : ""
+  const lines = existing.split("\n")
+
+  const toAdd: string[] = []
+  if (!lines.some((l) => l.trim() === ".faber/")) toAdd.push(".faber/")
+  if (!lines.some((l) => l.trim() === ".worktrees/")) toAdd.push(".worktrees/")
+
+  if (toAdd.length > 0) {
+    const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n" : ""
+    writeFileSync(gitignorePath, existing + separator + toAdd.join("\n") + "\n")
+    console.log(`Added to .gitignore: ${toAdd.join(", ")}`)
+  }
+
+  console.log("Faber setup complete.")
 }
 
 main().catch((err) => {
