@@ -2,9 +2,11 @@ import { describe, expect, it } from "bun:test"
 import {
   formatElapsed,
   formatElapsedMs,
+  looksLikeXml,
   normalizePath,
   parseEvent,
   parseToolEntry,
+  stripXmlTags,
 } from "./logParser.js"
 import type { LogEvent } from "./logParser.js"
 
@@ -209,6 +211,49 @@ describe("parseToolEntry", () => {
     it("omits blockContent when output is absent", () => {
       const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }))!
       expect(entry.blockContent).toBeUndefined()
+    })
+
+    it("strips XML tags from output when the content looks like XML", () => {
+      const xml = "<root><item>Hello</item><item>World</item></root>"
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.xml" }, { output: xml }))!
+      expect(entry.blockContent).toBe("Hello World")
+    })
+
+    it("leaves plain text output unchanged", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }, { output: "const x = 1\n" }))!
+      expect(entry.blockContent).toBe("const x = 1\n")
+    })
+  })
+
+  describe("looksLikeXml", () => {
+    it("returns true for XML content", () => {
+      expect(looksLikeXml("<root><child>text</child></root>")).toBe(true)
+    })
+
+    it("returns true for HTML content", () => {
+      expect(looksLikeXml("<html><body>hello</body></html>")).toBe(true)
+    })
+
+    it("returns false for plain text", () => {
+      expect(looksLikeXml("just some text")).toBe(false)
+    })
+
+    it("returns false for content that starts with < but has no closing tag", () => {
+      expect(looksLikeXml("<not-really-xml")).toBe(false)
+    })
+  })
+
+  describe("stripXmlTags", () => {
+    it("removes all tags", () => {
+      expect(stripXmlTags("<root><child>hello</child></root>")).toBe("hello")
+    })
+
+    it("collapses whitespace", () => {
+      expect(stripXmlTags("<a>foo</a>   <b>bar</b>")).toBe("foo bar")
+    })
+
+    it("trims leading and trailing whitespace", () => {
+      expect(stripXmlTags("  <p>text</p>  ")).toBe("text")
     })
   })
 

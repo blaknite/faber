@@ -55,6 +55,24 @@ export interface LogEntry {
   reasoningText?: string
 }
 
+// Returns true when the content looks like XML or HTML -- starts with a tag
+// and contains at least one closing tag.
+export function looksLikeXml(content: string): boolean {
+  const trimmed = content.trimStart()
+  if (!trimmed.startsWith("<")) return false
+  return /<\/\w/.test(trimmed)
+}
+
+// Strip all XML/HTML tags and collapse whitespace down to single spaces.
+// The result is the raw text content, which is far more readable in a
+// single-line terminal preview than a wall of angle brackets.
+export function stripXmlTags(content: string): string {
+  return content
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 export function normalizePath(input?: string): string {
   if (!input) return ""
   // If it looks like an absolute path, show the last 2-3 segments to keep it readable
@@ -104,7 +122,8 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
       .filter(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
       .map(([k, v]) => `${k}=${v}`)
     const description = extras.length ? `[${extras.join(", ")}]` : undefined
-    const output = str(state?.output)
+    const rawOutput = str(state?.output)
+    const output = rawOutput && looksLikeXml(rawOutput) ? stripXmlTags(rawOutput) : rawOutput
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
