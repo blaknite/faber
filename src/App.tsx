@@ -222,16 +222,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   }, [repoRoot, showFlash])
 
-  const handlePush = useCallback(async (task: Task | null = selectedTask) => {
-    if (!task) { setMode("normal"); return }
+  const handlePush = useCallback(async () => {
     setMode("normal")
     try {
-      await pushBranch(repoRoot, task.id)
-      showFlash(`Pushed ${task.id} to origin`)
+      await pushBranch(repoRoot)
+      showFlash(`Pushed ${currentBranch} to origin`)
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash])
+  }, [repoRoot, currentBranch, showFlash])
 
   const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
     if (!task) { setMode("normal"); return }
@@ -288,7 +287,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (mode === "push") {
-      if (key.name === "y") { handlePush(activeTask); return }
+      if (key.name === "y") { handlePush(); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
@@ -353,7 +352,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
     if (key.name === "p") {
-      if (selectedTask) setMode("push")
+      setMode("push")
       return
     }
   })
@@ -380,7 +379,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "b", label: "switch branch", disabled: !selectedTask },
-    { key: "p", label: "push", disabled: !selectedTask },
+    { key: "p", label: "push" },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
   ]
@@ -411,9 +410,9 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Merge ${(paneTask ?? selectedTask)!.id} into HEAD?`}</strong>{` [y/n]`}</text>
     </box>
-  ) : mode === "push" && selectedTask ? (
+  ) : mode === "push" ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Push ${selectedTask.id} to origin?`}</strong>{` [y/n]`}</text>
+      <text><strong>{`Push ${currentBranch} to origin?`}</strong>{` [y/n]`}</text>
     </box>
   ) : (
     <StatusBar bindings={normalBindings} />
