@@ -45,6 +45,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [currentBranch, setCurrentBranch] = useState<string>("")
   const [commitsAhead, setCommitsAhead] = useState<number>(0)
   const prevSelectedIdx = useRef(0)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const tick = useTick()
   const spinnerFrame = tick % SPINNER_FRAMES.length
@@ -202,8 +203,14 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [visibleTasks.length])
 
   const showFlash = useCallback((msg: string) => {
+    if (flashTimerRef.current !== null) {
+      clearTimeout(flashTimerRef.current)
+    }
     setFlashMessage(msg)
-    setTimeout(() => setFlashMessage(null), 2000)
+    flashTimerRef.current = setTimeout(() => {
+      setFlashMessage(null)
+      flashTimerRef.current = null
+    }, 2000)
   }, [])
 
   const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
