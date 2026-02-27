@@ -18,6 +18,8 @@ import { DEFAULT_MODEL } from "./types.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "request_changes"
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
 }
@@ -38,6 +40,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
+  const [spinnerFrame, setSpinnerFrame] = useState(0)
   const prevSelectedIdx = useRef(0)
 
   const visibleTasks = filterMode === "active"
@@ -55,6 +58,16 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     const interval = setInterval(refreshTasks, 2000)
     return () => clearInterval(interval)
   }, [refreshTasks])
+
+  const runningCount = tasks.filter(t => t.status === "running").length
+
+  useEffect(() => {
+    if (runningCount === 0) return
+    const interval = setInterval(() => {
+      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
+    }, 100)
+    return () => clearInterval(interval)
+  }, [runningCount])
 
   const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
     setTasks((prev) =>
@@ -359,12 +372,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between" }}>
         <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span></text>
-        <box style={{ flexDirection: "row", gap: 2 }}>
-          {tasks.filter(t => t.status === "running").length > 0 && (
-            <text fg="#00aaff">{tasks.filter(t => t.status === "running").length} running</text>
+        <box style={{ flexDirection: "row", gap: 1 }}>
+          {runningCount > 0 && (
+            <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]} {runningCount}</text>
+          )}
+          {runningCount > 0 && tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
+            <text fg="#555555">{"•"}</text>
           )}
           {tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#ff9900">{tasks.filter(t => t.status === "ready_to_merge").length} ready to merge</text>
+            <text fg="#ff9900">{"↑"} {tasks.filter(t => t.status === "ready_to_merge").length}</text>
           )}
         </box>
       </box>
