@@ -1,21 +1,11 @@
 import { useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
+import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 
 interface Props {
   onSubmit: (prompt: string) => void
   onCancel: () => void
 }
-
-const KEY_BINDINGS = [
-  { name: "return", action: "submit" as const },
-  { name: "return", shift: true, action: "newline" as const },
-  { name: "return", ctrl: true, action: "newline" as const },
-  { name: "return", meta: true, action: "newline" as const },
-  { name: "j", ctrl: true, action: "newline" as const },
-]
-
-const MIN_LINES = 1
-const MAX_LINES = 6
 
 export function RequestChangesInput({ onSubmit, onCancel }: Props) {
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)

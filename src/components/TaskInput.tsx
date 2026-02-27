@@ -2,23 +2,13 @@ import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
+import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 
 interface Props {
   active: boolean
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
 }
-
-const KEY_BINDINGS = [
-  { name: "return", action: "submit" as const },
-  { name: "return", shift: true, action: "newline" as const },
-  { name: "return", ctrl: true, action: "newline" as const },
-  { name: "return", meta: true, action: "newline" as const },
-  { name: "j", ctrl: true, action: "newline" as const },
-]
-
-const MIN_LINES = 1
-const MAX_LINES = 6
 
 export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
