@@ -62,7 +62,7 @@ export const styles = {
   fileHeader: {
     paddingLeft: 1,
     paddingTop: 1,
-    paddingBottom: 0,
+    paddingBottom: 1,
   },
   // Side-by-side: the two columns sit inside a row, each fixed at 50% so the
   // center divider stays perfectly aligned regardless of content length.
