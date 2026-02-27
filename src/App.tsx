@@ -16,7 +16,7 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "request_changes" | "switch_branch"
+type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -87,12 +87,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const runningCount = tasks.filter(t => t.status === "running").length
 
   useEffect(() => {
-    if (runningCount === 0) return
+    if (runningCount === 0 && mode !== "pushing") return
     const interval = setInterval(() => {
       setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
     }, 100)
     return () => clearInterval(interval)
-  }, [runningCount])
+  }, [runningCount, mode])
 
   const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
     setTasks((prev) =>
@@ -232,13 +232,15 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [repoRoot, showFlash])
 
   const handlePush = useCallback(async () => {
-    setMode("normal")
+    setMode("pushing")
     try {
       await pushBranch(repoRoot)
       showFlash(`Pushed ${currentBranch} to origin`)
       refreshCommitsAhead()
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setMode("normal")
     }
   }, [repoRoot, currentBranch, showFlash, refreshCommitsAhead])
 
@@ -257,6 +259,8 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   useKeyboard((key) => {
     if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
+
+    if (mode === "pushing") return
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
@@ -424,6 +428,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ) : mode === "push" ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Push ${currentBranch} to origin?`}</strong>{` [y/n]`}</text>
+    </box>
+  ) : mode === "pushing" ? (
+    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
+      <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]}{` Pushing ${currentBranch} to origin...`}</text>
     </box>
   ) : (
     <StatusBar bindings={normalBindings} />
