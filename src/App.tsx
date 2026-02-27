@@ -332,7 +332,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const bottomBar = flashMessage ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text fg="#0088ff">{flashMessage}</text>
+      <text fg="#ff8800">{flashMessage}</text>
     </box>
   ) : mode === "request_changes" && (diffPaneTaskId || logPaneTaskId) ? (
     <RequestChangesInput
