@@ -390,15 +390,16 @@ function TitleBar({ task }: { task: Task }) {
 interface Props {
   repoRoot: string
   task: Task
+  disabled?: boolean
 }
 
-export function AgentLog({ repoRoot, task }: Props) {
+export function AgentLog({ repoRoot, task, disabled }: Props) {
   const taskId = task.id
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [entries, setEntries] = useState<LogEntry[]>(() => readLogEntries(repoRoot, taskId))
 
   useKeyboard((key) => {
-    if (!scrollRef.current) return
+    if (disabled || !scrollRef.current) return
     if (key.name === "up" || key.name === "k") {
       scrollRef.current.scrollBy(-3, "step")
     } else if (key.name === "down" || key.name === "j") {

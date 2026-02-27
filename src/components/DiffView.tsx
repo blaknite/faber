@@ -8,14 +8,16 @@ import type { Task } from "../types.js"
 interface Props {
   repoRoot: string
   task: Task
+  disabled?: boolean
 }
 
-export function DiffView({ repoRoot, task }: Props) {
+export function DiffView({ repoRoot, task, disabled }: Props) {
   const [diff, setDiff] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>("side-by-side")
 
   useKeyboard((key) => {
+    if (disabled) return
     if (key.name === "tab") {
       setViewMode((m) => m === "inline" ? "side-by-side" : "inline")
     }
