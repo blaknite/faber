@@ -8,7 +8,7 @@ import { BranchInput } from "./components/BranchInput.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, getCurrentBranch, switchBranch, pushBranch } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch, getCurrentBranch, getCommitsAhead, switchBranch, pushBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
 import { createWorktree } from "./lib/worktree.js"
@@ -42,6 +42,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
   const [spinnerFrame, setSpinnerFrame] = useState(0)
   const [currentBranch, setCurrentBranch] = useState<string>("")
+  const [commitsAhead, setCommitsAhead] = useState<number>(0)
   const prevSelectedIdx = useRef(0)
 
   const visibleTasks = filterMode === "active"
@@ -74,6 +75,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     const interval = setInterval(refresh, 2000)
     return () => clearInterval(interval)
   }, [repoRoot])
+
+  const refreshCommitsAhead = useCallback(() => {
+    getCommitsAhead(repoRoot).then(setCommitsAhead).catch(() => {})
+  }, [repoRoot])
+
+  useEffect(() => {
+    refreshCommitsAhead()
+  }, [refreshCommitsAhead])
 
   const runningCount = tasks.filter(t => t.status === "running").length
 
@@ -227,10 +236,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     try {
       await pushBranch(repoRoot)
       showFlash(`Pushed ${currentBranch} to origin`)
+      refreshCommitsAhead()
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [repoRoot, currentBranch, showFlash])
+  }, [repoRoot, currentBranch, showFlash, refreshCommitsAhead])
 
   const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
     if (!task) { setMode("normal"); return }
@@ -239,10 +249,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
       showFlash(`Merged ${task.id} into HEAD`)
+      refreshCommitsAhead()
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState])
+  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshCommitsAhead])
 
   useKeyboard((key) => {
     if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
@@ -421,7 +432,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between" }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span>{currentBranch ? <span fg="#555555">{"  •  "}{currentBranch}</span> : null}</text>
+        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span>{currentBranch ? <span fg="#555555">{"  •  "}{currentBranch}{commitsAhead > 0 ? ` ↑${commitsAhead}` : ""}</span> : null}</text>
         <box style={{ flexDirection: "row", gap: 1 }}>
           {runningCount > 0 && (
             <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]} {runningCount}</text>
