@@ -7,6 +7,11 @@ const FABER_DIR = ".faber"
 const STATE_FILE = "state.json"
 const TASKS_DIR = "tasks"
 
+// Separate lock file for per-operation mutual exclusion.
+// The TUI instance lock uses the default `state.json.lock` path; this uses
+// `state.json.op.lock` so the two locks don't interfere with each other.
+const OP_LOCK_SUFFIX = ".op.lock"
+
 function faberDir(repoRoot: string): string {
   return join(repoRoot, FABER_DIR)
 }
@@ -53,24 +58,64 @@ export function writeState(repoRoot: string, state: State): void {
   writeFileSync(statePath(repoRoot), JSON.stringify(state, null, 2))
 }
 
+// Wraps a read-modify-write cycle in a short-lived per-operation lock so
+// concurrent callers (e.g. two agents finishing at the same time) don't
+// overwrite each other's updates.
+//
+// lockSync doesn't support retries, so we implement a simple spin-wait: try
+// to acquire the lock up to `maxAttempts` times with a short sleep between
+// each attempt. Each operation should complete in well under a millisecond so
+// a 200 ms total budget with 20 ms sleeps is more than enough headroom.
+function withOpLock(repoRoot: string, fn: () => void): void {
+  const path = statePath(repoRoot)
+  const lockfilePath = path + OP_LOCK_SUFFIX
+
+  const maxAttempts = 10
+  const sleepMs = 20
+
+  let release: (() => void) | null = null
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      release = lockfile.lockSync(path, { lockfilePath, stale: 5000 })
+      break
+    } catch (err: any) {
+      if (err?.code !== "ELOCKED" || attempt === maxAttempts - 1) throw err
+      // Busy-wait using a shared buffer so we don't need async.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, sleepMs)
+    }
+  }
+
+  try {
+    fn()
+  } finally {
+    release?.()
+  }
+}
+
 export function addTask(repoRoot: string, task: Task): void {
-  const state = readState(repoRoot)
-  state.tasks.push(task)
-  writeState(repoRoot, state)
+  withOpLock(repoRoot, () => {
+    const state = readState(repoRoot)
+    state.tasks.push(task)
+    writeState(repoRoot, state)
+  })
 }
 
 export function updateTask(repoRoot: string, id: string, patch: Partial<Task>): void {
-  const state = readState(repoRoot)
-  const idx = state.tasks.findIndex((t) => t.id === id)
-  if (idx === -1) return
-  state.tasks[idx] = { ...state.tasks[idx]!, ...patch }
-  writeState(repoRoot, state)
+  withOpLock(repoRoot, () => {
+    const state = readState(repoRoot)
+    const idx = state.tasks.findIndex((t) => t.id === id)
+    if (idx === -1) return
+    state.tasks[idx] = { ...state.tasks[idx]!, ...patch }
+    writeState(repoRoot, state)
+  })
 }
 
 export function removeTask(repoRoot: string, id: string): void {
-  const state = readState(repoRoot)
-  state.tasks = state.tasks.filter((t) => t.id !== id)
-  writeState(repoRoot, state)
+  withOpLock(repoRoot, () => {
+    const state = readState(repoRoot)
+    state.tasks = state.tasks.filter((t) => t.id !== id)
+    writeState(repoRoot, state)
+  })
 
   const logPath = taskOutputPath(repoRoot, id)
   if (existsSync(logPath)) {
@@ -94,21 +139,23 @@ export async function acquireLock(repoRoot: string): Promise<() => Promise<void>
 
 // On startup, check any "running" tasks whose PID is no longer alive.
 export function reconcileRunningTasks(repoRoot: string): void {
-  const state = readState(repoRoot)
-  let changed = false
-  for (const task of state.tasks) {
-    if (task.status === "running" && task.pid !== null) {
-      const alive = isPidAlive(task.pid)
-      if (!alive) {
-        task.status = "unknown"
-        task.completedAt = new Date().toISOString()
-        task.exitCode = null
-        task.pid = null
-        changed = true
+  withOpLock(repoRoot, () => {
+    const state = readState(repoRoot)
+    let changed = false
+    for (const task of state.tasks) {
+      if (task.status === "running" && task.pid !== null) {
+        const alive = isPidAlive(task.pid)
+        if (!alive) {
+          task.status = "unknown"
+          task.completedAt = new Date().toISOString()
+          task.exitCode = null
+          task.pid = null
+          changed = true
+        }
       }
     }
-  }
-  if (changed) writeState(repoRoot, state)
+    if (changed) writeState(repoRoot, state)
+  })
 }
 
 // Walk up from `startDir` until we find a directory containing `.faber/state.json`.
