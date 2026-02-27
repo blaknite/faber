@@ -148,7 +148,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
           <text fg="#333333">{filterMode === "active" ? "No active tasks." : "No tasks yet."}</text>
         </box>
       ) : (
-        <box style={{ flexGrow: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
+        <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column", paddingRight: 1 }}>
               {tasks.map((task, i) => {
