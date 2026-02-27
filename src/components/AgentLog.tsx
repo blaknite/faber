@@ -206,25 +206,29 @@ function DiffContent({ diff }: { diff: string }) {
 function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
   const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
   return (
-    <box
-      border={["left"]}
-      borderColor={modelDef.color}
-      style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
-    >
-      <markdown
-        content={prompt}
-        syntaxStyle={syntaxStyle}
-        style={{ flexGrow: 1, flexShrink: 1 }}
-        renderNode={(token, context) => {
-          const renderable = context.defaultRender()
-          if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
-            (renderable as any).wrapMode = "word"
-          }
-          return renderable
-        }}
-      />
-      <text> </text>
-      <text fg={modelDef.color}>{modelDef.label}</text>
+    <box style={{ paddingBottom: 1 }}>
+      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+        <box
+          border={["left"]}
+          borderColor={modelDef.color}
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+        >
+          <markdown
+            content={prompt}
+            syntaxStyle={syntaxStyle}
+            style={{ flexGrow: 1, flexShrink: 1 }}
+            renderNode={(token, context) => {
+              const renderable = context.defaultRender()
+              if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+                (renderable as any).wrapMode = "word"
+              }
+              return renderable
+            }}
+          />
+          <text> </text>
+          <text fg={modelDef.color}>{modelDef.label}</text>
+        </box>
+      </box>
     </box>
   )
 }
