@@ -54,11 +54,10 @@ faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
 
 | Key | Action |
 |-----|--------|
-| `n` | New task |
+| `n` / `c` | New task |
 | `j` / `k` or arrows | Navigate list |
 | `enter` | Open task |
 | `r` | Resume a done or failed task |
-| `c` | Clone task (re-dispatch same prompt) |
 | `s` | Copy `opencode -s <sessionId>` to clipboard |
 | `x` | Kill running task (confirms with y/n) |
 | `d` | Delete task and remove its worktree (confirms with y/n) |
