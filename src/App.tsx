@@ -300,7 +300,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
-    if (key.name === "o" || key.name === "return") { handleOpenLog(); return }
+    if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready_to_merge" ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
