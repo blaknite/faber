@@ -179,7 +179,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
-      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); return }
+      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
     }
@@ -214,7 +214,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (key.name === "q") {
-      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); return }
+      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       onExit()
       return
