@@ -12,6 +12,12 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
+// Single exit point for the process. Everything routes through here so it's
+// easy to find all the places we terminate and to add any future cleanup.
+function exit(code: number): never {
+  process.exit(code)
+}
+
 // Parse --dir <path> from an args array, returning the resolved path or null.
 function parseDirFlag(args: string[]): string | null {
   const i = args.indexOf("--dir")
@@ -31,13 +37,13 @@ async function main() {
     const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
     if (!taskId) {
       console.error("Usage: faber finish <taskId> <exitCode>")
-      process.exit(1)
+      exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd())
     if (!repoRoot) {
       console.error("Could not find faber state file from current directory")
-      process.exit(exitCode)
+      exit(exitCode)
     }
     // Always mark the task as done (or ready_to_merge) so intermittent non-zero
     // exit codes from the agent process don't permanently flip a completed task to
@@ -61,7 +67,7 @@ async function main() {
       } catch (err) {
         console.error("Failed to write task status:", (err as Error).message)
       }
-      process.exit(exitCode)
+      exit(exitCode)
     }
 
     // If the agent committed work to its branch, surface that so the user knows
@@ -80,7 +86,7 @@ async function main() {
       // If we can't write the state, log it but still exit with the correct code.
       console.error("Failed to write task status:", (err as Error).message)
     }
-    process.exit(exitCode)
+    exit(exitCode)
   }
 
   // faber run "<prompt>" [--dir <repo>] [--model <provider/model>]
@@ -88,7 +94,7 @@ async function main() {
     const prompt = args[1]
     if (!prompt) {
       console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <provider/model>]')
-      process.exit(1)
+      exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? resolve(process.cwd())
@@ -113,7 +119,7 @@ async function main() {
 
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
-    process.exit(1)
+    exit(1)
   }
 
   ensureFaberDir(repoRoot)
@@ -124,7 +130,7 @@ async function main() {
     releaseLock = await acquireLock(repoRoot)
   } catch (err: any) {
     console.error(err.message)
-    process.exit(1)
+    exit(1)
   }
 
   const state = readState(repoRoot)
@@ -143,7 +149,7 @@ async function main() {
         root.unmount()
         await releaseLock?.()
         renderer.destroy()
-        process.exit(0)
+        exit(0)
       }}
     />
   )
@@ -154,7 +160,7 @@ async function main() {
 async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
-    process.exit(1)
+    exit(1)
   }
 
   ensureFaberDir(repoRoot)
@@ -189,7 +195,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
       error: err.message,
     })
     updateTask(repoRoot, slug, { status: "failed", completedAt: new Date().toISOString(), exitCode: -1 })
-    process.exit(1)
+    throw err
   }
 
   spawnAgent(task, repoRoot)
@@ -199,7 +205,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
 async function setup(repoRoot: string) {
   if (!existsSync(join(repoRoot, ".git"))) {
     console.error(`Not a git repository: ${repoRoot}`)
-    process.exit(1)
+    exit(1)
   }
 
   // Create .faber/ and .worktrees/
@@ -229,5 +235,5 @@ async function setup(repoRoot: string) {
 
 main().catch((err) => {
   console.error(err)
-  process.exit(1)
+  exit(1)
 })
