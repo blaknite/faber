@@ -8,7 +8,8 @@ export function spawnAgent(
   task: Task,
   repoRoot: string,
   onUpdate: (patch: Partial<Task>) => void,
-  resumeSessionId?: string
+  resumeSessionId?: string,
+  resumePrompt?: string
 ): void {
   const opencodebin = (() => {
     try { return execaSync("which", ["opencode"]).stdout.trim() }
@@ -27,8 +28,8 @@ export function spawnAgent(
 
   const opencodeCmd = resumeSessionId
     ? (() => {
-        const resumePrompt = "The task was interrupted. Please continue where you left off."
-        const prompt = resumePrompt.replace(/'/g, `'\\''`)
+        const message = resumePrompt ?? "The task was interrupted. Please continue where you left off."
+        const prompt = message.replace(/'/g, `'\\''`)
         return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} --fork '${prompt}'`
       })()
     : (() => {

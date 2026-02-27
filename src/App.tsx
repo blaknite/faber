@@ -5,6 +5,7 @@ import { execa } from "execa"
 import { AgentList } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
+import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
 import { removeWorktree, mergeBranch } from "./lib/worktree.js"
@@ -15,7 +16,7 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
-type Mode = "normal" | "input" | "delete" | "kill" | "merge"
+type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "request_changes"
 
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -163,6 +164,24 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setDiffPaneTaskId(selectedTask.id)
   }, [selectedTask])
 
+  const handleRequestChanges = useCallback((prompt: string) => {
+    if (!selectedTask || !selectedTask.sessionId) return
+    setMode("normal")
+    if (selectedTask.pid) killAgent(selectedTask.pid)
+    const patch: Partial<Task> = {
+      status: "running",
+      completedAt: null,
+      exitCode: null,
+    }
+    updateTaskInState(selectedTask.id, patch)
+    const task = { ...selectedTask, ...patch }
+    spawnAgent(task, repoRoot, (p) => {
+      updateTaskInState(selectedTask.id, p)
+    }, selectedTask.sessionId, prompt)
+    setDiffPaneTaskId(null)
+    setLogPaneTaskId(selectedTask.id)
+  }, [selectedTask, repoRoot, updateTaskInState])
+
   const handleMerge = useCallback(async () => {
     if (!selectedTask) { setMode("normal"); return }
     setMode("normal")
@@ -178,7 +197,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     if (mode === "input") return
 
     if (key.name === "escape") {
-      if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
+      if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "request_changes") { setMode("normal"); return }
       if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
@@ -221,6 +240,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (diffPaneTaskId !== null) {
+      if (mode === "request_changes") return
+      if (key.name === "c") {
+        if (selectedTask && selectedTask.sessionId) setMode("request_changes")
+        return
+      }
       if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
       if (key.name === "m") {
         if (selectedTask) setMode("merge")
@@ -268,6 +292,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
+    { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
     { key: "l", label: "log", disabled: !selectedTask },
     { key: "m", label: "merge into HEAD", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
@@ -295,6 +320,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text fg="#0088ff">{flashMessage}</text>
     </box>
+  ) : mode === "request_changes" && diffPaneTaskId ? (
+    <RequestChangesInput
+      onSubmit={(prompt) => handleRequestChanges(prompt)}
+      onCancel={() => setMode("normal")}
+    />
   ) : mode === "kill" && selectedTask ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Kill ${selectedTask.id}?`}</strong>{` [y/n]`}</text>
