@@ -508,15 +508,15 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
-    { key: "n", label: "new task" },
+    { key: "q", label: "quit" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
     { key: "enter", label: "open", disabled: !selectedTask },
+    { key: "n", label: "new task" },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "d", label: "delete", disabled: !selectedTask },
     { key: "b", label: "switch branch", disabled: !selectedTask },
     { key: "p", label: "push", disabled: !isDirty },
-    { key: "d", label: "delete", disabled: !selectedTask },
-    { key: "q", label: "quit" },
   ]
 
   const bottomBar = flashMessage ? (
