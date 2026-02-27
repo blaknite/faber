@@ -133,7 +133,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
 
   return (
     <box style={{ ...containerStyle, flexDirection: "column" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111", height: 3 }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, marginBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111", height: 3 }}>
         <text>
           <span fg={filterMode === "active" ? "#ff6600" : "#555555"}>active</span>
           <span fg="#333333">{" / "}</span>
