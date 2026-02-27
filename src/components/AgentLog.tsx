@@ -44,10 +44,10 @@ function toolColor(tool: string): string {
 
 const BLOCK_MAX_LINES = 5
 
-function BlockContent({ content }: { content: string }) {
+function BlockContent({ content, unlimited = false }: { content: string; unlimited?: boolean }) {
   const lines = content.split("\n")
-  const visible = lines.slice(0, BLOCK_MAX_LINES)
-  const overflow = lines.length - BLOCK_MAX_LINES
+  const visible = unlimited ? lines : lines.slice(0, BLOCK_MAX_LINES)
+  const overflow = unlimited ? 0 : lines.length - BLOCK_MAX_LINES
 
   return (
     <box
@@ -286,7 +286,7 @@ function ToolRow({ entry }: { entry: LogEntry }) {
       ) : entry.blockContent && entry.blockKind === "diff" ? (
         <DiffContent diff={entry.blockContent} />
       ) : entry.blockContent ? (
-        <BlockContent content={entry.blockContent} />
+        <BlockContent content={entry.blockContent} unlimited={entry.tool === "todowrite"} />
       ) : null}
     </box>
   )
