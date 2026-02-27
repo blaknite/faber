@@ -40,9 +40,9 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           <span fg="#888888">diff vs HEAD</span>
         </text>
         <text>
-          <span fg={viewMode === "inline" ? "#0088ff" : "#555555"}>inline</span>
+          <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
           <span fg="#333333">{" / "}</span>
-          <span fg={viewMode === "side-by-side" ? "#0088ff" : "#555555"}>side-by-side</span>
+          <span fg={viewMode === "side-by-side" ? "#ff6600" : "#555555"}>side-by-side</span>
           <span fg="#888888">{" [tab]"}</span>
         </text>
       </box>

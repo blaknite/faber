@@ -18,7 +18,7 @@ export const colors = {
   border: "#555555",
   background: "#000000",
   chrome: "#222222",
-  modeActive: "#0088ff",
+  modeActive: "#ff6600",
   modeInactive: "#555555",
   separator: "#333333",
 } as const
