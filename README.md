@@ -107,6 +107,19 @@ When an agent finishes with commits on its branch, the task is marked "ready to 
 4. When you're happy with the changes, press `m`. You'll get a `[y/n]` confirmation prompt, then faber runs `git merge --no-ff {branch}` from the repo root. The `--no-ff` flag forces a merge commit so the history clearly records that these commits came from an agent task. If the merge fails (conflicts, etc.), faber automatically aborts and leaves your repo clean.
 5. After merging, the task moves to "done". The worktree and branch are still there so you can review the log or diff again. When you're done with them, press `d` to delete the worktree and branch in one go.
 
+## Working with feature branches
+
+Faber works just as well when your repo is on a feature branch. Agents will branch off whatever `HEAD` points to, so all their worktrees and merges stay scoped to that branch.
+
+The typical flow:
+
+1. Launch faber in your repo as usual.
+2. Switch to your feature branch (`git checkout feature-branch` in another terminal, or before launching faber).
+3. Create tasks as normal. Each agent branches off the feature branch tip, isolated from both `main` and each other.
+4. Review and merge each task into the feature branch using the diff view (`f` then `m`), same as any other task.
+
+When you're happy with the feature branch as a whole, merge it into `main` yourself outside of faber.
+
 ## Development
 
 ```bash
