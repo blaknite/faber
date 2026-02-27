@@ -132,14 +132,14 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
   // write
   if (toolLower === "write" || toolLower.includes("_write") || toolLower.endsWith("write")) {
     const filePath = normalizePath(str(input.filePath))
-    const output = str(state?.output)
+    const content = str(input.content)
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
       tool,
       icon: "←",
       title: `Write ${filePath}`,
-      blockContent: output || undefined,
+      blockContent: content || undefined,
       status,
       errorMessage,
     }
