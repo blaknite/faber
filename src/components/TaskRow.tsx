@@ -1,39 +1,9 @@
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable } from "@opentui/core"
-import type { Task, TaskStatus } from "../types.js"
-import { useSpinnerFrame, SPINNER_FRAMES } from "../lib/tick.js"
-
-const STATUS_COLOR: Record<TaskStatus, string> = {
-  running: "#00aaff",
-  done: "#00cc66",
-  ready_to_merge: "#ff9900",
-  failed: "#cc3333",
-  unknown: "#888888",
-}
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  running: "Running",
-  done: "Done",
-  ready_to_merge: "Ready to merge",
-  failed: "Failed",
-  unknown: "Unknown",
-}
-
-const STATUS_SYMBOL: Record<TaskStatus, string> = {
-  running: SPINNER_FRAMES[0]!,
-  done: "✓",
-  ready_to_merge: "↑",
-  failed: "✗",
-  unknown: "?",
-}
-
-function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {
-  const end = completedAt ? new Date(completedAt).getTime() : now
-  const elapsed = Math.floor((end - new Date(startedAt).getTime()) / 1000)
-  const mins = Math.floor(elapsed / 60)
-  const secs = elapsed % 60
-  return `${mins}m ${String(secs).padStart(2, "0")}s`
-}
+import type { Task } from "../types.js"
+import { useSpinnerFrame } from "../lib/tick.js"
+import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
+import { formatElapsed } from "../lib/logParser.js"
 
 function RunningStatus({ task, selected }: { task: Task; selected: boolean }) {
   const frame = useSpinnerFrame()

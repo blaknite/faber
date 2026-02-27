@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useSpinnerFrame, SPINNER_FRAMES as TICK_SPINNER_FRAMES } from "../lib/tick.js"
+import { useSpinnerFrame } from "../lib/tick.js"
+import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
 import { existsSync, statSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes, SyntaxStyle } from "@opentui/core"
@@ -13,7 +14,7 @@ import {
 } from "../lib/logParser.js"
 import type { LogEntry } from "../lib/logParser.js"
 import { MODELS } from "../types.js"
-import type { Task, TaskStatus } from "../types.js"
+import type { Task } from "../types.js"
 import { parseDiff, highlightLinePair, highlightSingleLine } from "../lib/diff/index.js"
 import type { DiffLine, Segment } from "../lib/diff/index.js"
 import { colors as diffColors } from "../lib/diff/DiffViewer.style.js"
@@ -334,29 +335,6 @@ function LogRow({ entry }: { entry: LogEntry }) {
   return <TextRow entry={entry} />
 }
 
-const STATUS_COLOR: Record<TaskStatus, string> = {
-  running: "#00aaff",
-  done: "#00cc66",
-  ready_to_merge: "#ff9900",
-  failed: "#cc3333",
-  unknown: "#888888",
-}
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  running: "Running",
-  done: "Done",
-  ready_to_merge: "Ready to merge",
-  failed: "Failed",
-  unknown: "Unknown",
-}
-
-const STATUS_SYMBOL: Record<TaskStatus, string> = {
-  running: TICK_SPINNER_FRAMES[0]!,
-  done: "✓",
-  ready_to_merge: "↑",
-  failed: "✗",
-  unknown: "?",
-}
 
 function RunningStatus({ task }: { task: Task }) {
   const frame = useSpinnerFrame()
