@@ -529,7 +529,6 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
             <PromptRow prompt={task.prompt} model={task.model} />
-            <box border={["bottom"]} borderColor="#444444" style={{ marginLeft: 1, marginRight: 1 }} />
             {entries.length === 0 ? (
               <text fg="#555555">No output yet.</text>
             ) : (
