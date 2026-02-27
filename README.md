@@ -17,7 +17,7 @@ For this to work, the skill needs to be available in your agent's environment.
 ## Prerequisites
 
 - [Bun](https://bun.sh)
-- [opencode](https://opencode.ai) on your `PATH`
+- [opencode](https://opencode.ai) on your `PATH`, connected to Claude via a Pro/Max subscription or an Anthropic API key
 - A git repository to work in
 
 ## Installation
