@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSpinnerFrame } from "../lib/tick.js"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
-import { existsSync, statSync, watch } from "node:fs"
-import type { FSWatcher } from "node:fs"
+import { useFileWatch } from "../lib/useFileWatch.js"
 import { createTextAttributes, SyntaxStyle } from "@opentui/core"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard } from "@opentui/react"
@@ -407,98 +406,9 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
     setEntries(readLogEntries(repoRoot, taskId))
   }, [repoRoot, taskId])
 
-  // Watch the log file for changes while the task is running.
-  // Falls back to polling if the file doesn't exist yet when the effect fires.
-  //
-  // fs.watch() (FSEvents on macOS) can silently stop delivering notifications
-  // under high I/O load or after rapid successive writes. To guard against
-  // that, a watchdog interval runs alongside the watcher. If the file's mtime
-  // has moved forward since the last time we refreshed but the watcher hasn't
-  // fired, the watchdog calls refresh() itself and tears down the dead watcher
-  // so it can be recreated on the next tick.
-  useEffect(() => {
-    const logPath = taskOutputPath(repoRoot, taskId)
-    let watcher: FSWatcher | null = null
-    let pollInterval: ReturnType<typeof setInterval> | null = null
-    let watchdogInterval: ReturnType<typeof setInterval> | null = null
-    let lastRefreshedMtime = 0
-
-    const doRefresh = () => {
-      try {
-        lastRefreshedMtime = existsSync(logPath) ? statSync(logPath).mtimeMs : 0
-      } catch {
-        lastRefreshedMtime = 0
-      }
-      refresh()
-    }
-
-    const startWatching = () => {
-      if (watcher) return
-      try {
-        watcher = watch(logPath, doRefresh)
-        watcher.on("error", () => {
-          // Watcher died -- close it and let the watchdog recreate it
-          watcher?.close()
-          watcher = null
-        })
-      } catch {
-        // watch() call itself failed, keep polling
-      }
-    }
-
-    const startWatchdog = () => {
-      if (watchdogInterval) return
-      watchdogInterval = setInterval(() => {
-        if (!existsSync(logPath)) return
-
-        let currentMtime = 0
-        try {
-          currentMtime = statSync(logPath).mtimeMs
-        } catch {
-          return
-        }
-
-        // If the file has changed but the watcher hasn't fired since our last
-        // refresh, the watcher is probably stuck. Refresh manually and
-        // recreate the watcher.
-        if (currentMtime > lastRefreshedMtime) {
-          doRefresh()
-          if (watcher) {
-            watcher.close()
-            watcher = null
-          }
-          startWatching()
-        }
-
-        // If the watcher is missing for any reason, recreate it.
-        if (!watcher) {
-          startWatching()
-        }
-      }, 1000)
-    }
-
-    if (existsSync(logPath)) {
-      startWatching()
-    } else {
-      // File doesn't exist yet -- poll until it appears, then switch to watch
-      pollInterval = setInterval(() => {
-        doRefresh()
-        if (existsSync(logPath)) {
-          if (pollInterval) clearInterval(pollInterval)
-          pollInterval = null
-          startWatching()
-        }
-      }, 500)
-    }
-
-    startWatchdog()
-
-    return () => {
-      watcher?.close()
-      if (pollInterval) clearInterval(pollInterval)
-      if (watchdogInterval) clearInterval(watchdogInterval)
-    }
-  }, [repoRoot, taskId, refresh])
+  // Watch the log file for changes while the task is running. Uses pollUntilExists
+  // because the log file may not exist when the component first mounts.
+  useFileWatch(taskOutputPath(repoRoot, taskId), refresh, { pollUntilExists: true })
 
   return (
     <box

@@ -11,8 +11,7 @@ import { spawnAgent, killAgent } from "./lib/agent.js"
 import { removeWorktree, mergeBranch, hasUnpushedCommits, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask, stateFilePath } from "./lib/state.js"
-import { watch, statSync, existsSync } from "node:fs"
-import type { FSWatcher } from "node:fs"
+import { useFileWatch } from "./lib/useFileWatch.js"
 import { createWorktree } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
@@ -87,114 +86,16 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     refreshDirtyState()
   }, [repoRoot, refreshDirtyState])
 
-  // Watch state.json for changes and refresh immediately when it's written.
-  // A watchdog runs alongside fs.watch because FSEvents on macOS can silently
-  // stop delivering notifications under high I/O. If the file's mtime has
-  // moved forward since the last refresh but the watcher hasn't fired, the
-  // watchdog calls refreshTasks itself and recreates the watcher.
-  useEffect(() => {
-    const statePath = stateFilePath(repoRoot)
-    let watcher: FSWatcher | null = null
-    let lastRefreshedMtime = 0
-
-    const doRefresh = () => {
-      try {
-        lastRefreshedMtime = existsSync(statePath) ? statSync(statePath).mtimeMs : 0
-      } catch {
-        lastRefreshedMtime = 0
-      }
-      refreshTasks()
-    }
-
-    const startWatching = () => {
-      if (watcher) return
-      try {
-        watcher = watch(statePath, doRefresh)
-        watcher.on("error", () => {
-          watcher?.close()
-          watcher = null
-        })
-      } catch {
-        // watch() failed, watchdog will retry
-      }
-    }
-
-    startWatching()
-
-    const watchdog = setInterval(() => {
-      let currentMtime = 0
-      try {
-        currentMtime = existsSync(statePath) ? statSync(statePath).mtimeMs : 0
-      } catch {
-        return
-      }
-      if (currentMtime > lastRefreshedMtime) {
-        doRefresh()
-        watcher?.close()
-        watcher = null
-      }
-      if (!watcher) startWatching()
-    }, 1000)
-
-    return () => {
-      watcher?.close()
-      clearInterval(watchdog)
-    }
-  }, [repoRoot, refreshTasks])
+  // Watch state.json for changes and refresh when it's written.
+  useFileWatch(stateFilePath(repoRoot), refreshTasks)
 
   // Watch .git/HEAD for branch changes and read the branch name directly
-  // from the file rather than spawning a subprocess. Same watchdog pattern
-  // as the state.json watcher.
-  useEffect(() => {
-    const headPath = gitHeadPath(repoRoot)
-    let watcher: FSWatcher | null = null
-    let lastRefreshedMtime = 0
-
-    const doRefresh = () => {
-      try {
-        lastRefreshedMtime = existsSync(headPath) ? statSync(headPath).mtimeMs : 0
-      } catch {
-        lastRefreshedMtime = 0
-      }
-      setCurrentBranch(readCurrentBranch(repoRoot))
-      refreshDirtyState()
-    }
-
-    const startWatching = () => {
-      if (watcher) return
-      try {
-        watcher = watch(headPath, doRefresh)
-        watcher.on("error", () => {
-          watcher?.close()
-          watcher = null
-        })
-      } catch {
-        // watch() failed, watchdog will retry
-      }
-    }
-
-    startWatching()
-
-    const watchdog = setInterval(() => {
-      let currentMtime = 0
-      try {
-        currentMtime = existsSync(headPath) ? statSync(headPath).mtimeMs : 0
-      } catch {
-        return
-      }
-      if (currentMtime > lastRefreshedMtime) {
-        doRefresh()
-        watcher?.close()
-        watcher = null
-      }
-      if (!watcher) startWatching()
-    }, 1000)
-
-    return () => {
-      watcher?.close()
-      clearInterval(watchdog)
-    }
+  // from the file rather than spawning a subprocess.
+  const refreshBranchState = useCallback(() => {
+    setCurrentBranch(readCurrentBranch(repoRoot))
+    refreshDirtyState()
   }, [repoRoot, refreshDirtyState])
+  useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
 
   const runningCount = tasks.filter(t => t.status === "running").length
 
