@@ -167,11 +167,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setMode("normal")
   }, [selectedTask, updateTaskInState])
 
-  const handleClone = useCallback(() => {
-    if (!selectedTask) return
-    handleDispatch(selectedTask.prompt, selectedTask.model)
-  }, [selectedTask, handleDispatch])
-
   const handleResume = useCallback((task: Task | null = selectedTask) => {
     if (!task || (task.status !== "failed" && task.status !== "done") || !task.sessionId) return
     if (task.pid) killAgent(task.pid)
@@ -323,7 +318,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
-    if (key.name === "n") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
+    if (key.name === "n" || key.name === "c") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
     if (key.name === "x") {
@@ -333,7 +328,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready_to_merge" ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "b") { setMode("switch_branch"); return }
-    if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
       if (selectedTask) setMode("delete")
       return
@@ -362,7 +356,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "b", label: "switch branch", disabled: !selectedTask },
-    { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
   ]
