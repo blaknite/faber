@@ -195,10 +195,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [selectedTask, repoRoot, showFlash, updateTaskInState])
 
   useKeyboard((key) => {
-    if (mode === "input") return
+    if (mode === "input" || mode === "request_changes") return
 
     if (key.name === "escape") {
-      if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "request_changes") { setMode("normal"); return }
+      if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
       if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
@@ -241,7 +241,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (diffPaneTaskId !== null) {
-      if (mode === "request_changes") return
       if (key.name === "c") {
         if (selectedTask && selectedTask.sessionId) setMode("request_changes")
         return
@@ -363,6 +362,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <DiffView
               repoRoot={repoRoot}
               task={diffTask}
+              disabled={mode === "request_changes"}
             />
           ) : null
         })() : logPaneTaskId ? (() => {
@@ -371,6 +371,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <AgentLog
               repoRoot={repoRoot}
               task={logTask}
+              disabled={mode === "request_changes"}
             />
           ) : null
         })() : (
