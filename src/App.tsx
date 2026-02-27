@@ -306,9 +306,9 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
+    { key: "l", label: "back to log", disabled: !selectedTask },
     { key: "↑↓", label: "scroll" },
     { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
-    { key: "l", label: "log", disabled: !selectedTask },
     { key: "m", label: "merge into HEAD", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
   ] : logPaneTaskId ? [
