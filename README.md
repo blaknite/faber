@@ -2,7 +2,11 @@
 
 A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, it spins up a git worktree and a [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
 
-<img width="1211" height="1344" alt="Screenshot 2026-02-26 at 11 58 29 pm" src="https://github.com/user-attachments/assets/9f007317-9617-4397-8952-3f35b0d9162c" />
+<img width="1297" height="298" alt="Screenshot 2026-02-27 at 1 16 51 pm" src="https://github.com/user-attachments/assets/f669a614-34f9-429a-b82d-70207ad3aa01" />
+
+<img width="1298" height="398" alt="Screenshot 2026-02-27 at 1 17 04 pm" src="https://github.com/user-attachments/assets/f4f2f45e-2c95-4a24-8805-791571254f5e" />
+
+<img width="1297" height="508" alt="Screenshot 2026-02-27 at 1 17 20 pm" src="https://github.com/user-attachments/assets/326b51e7-41a2-4d54-a75a-a21437bc5a21" />
 
 ## How it works
 
