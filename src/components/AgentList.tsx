@@ -86,8 +86,8 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
         </box>
       ) : (
         <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
-          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
-            <box style={{ flexDirection: "column", paddingRight: 1 }}>
+          <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
+            <box style={{ flexDirection: "column" }}>
               {tasks.map((task, i) => (
                 <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} />
               ))}
