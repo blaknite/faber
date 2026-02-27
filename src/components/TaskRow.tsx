@@ -1,7 +1,7 @@
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus } from "../types.js"
-import { useTick, SPINNER_FRAMES } from "../lib/tick.js"
+import { useSpinnerFrame, SPINNER_FRAMES } from "../lib/tick.js"
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
   running: "#00aaff",
@@ -35,6 +35,18 @@ function formatElapsed(startedAt: string, completedAt: string | null, now: numbe
   return `${mins}m ${String(secs).padStart(2, "0")}s`
 }
 
+function RunningStatus({ task, selected }: { task: Task; selected: boolean }) {
+  const frame = useSpinnerFrame()
+  const elapsed = formatElapsed(task.startedAt, null, Date.now())
+  return (
+    <>
+      <span fg={STATUS_COLOR[task.status]}>{selected ? <strong>{frame} {STATUS_LABEL[task.status]}</strong> : <>{frame} {STATUS_LABEL[task.status]}</>}</span>
+      {"  "}
+      <span>{elapsed}</span>
+    </>
+  )
+}
+
 interface Props {
   task: Task
   index: number
@@ -42,32 +54,19 @@ interface Props {
   cardRef: (el: BoxRenderable | null) => void
 }
 
-function RunningTaskRow({ task, index, selected, cardRef }: Props) {
-  const tick = useTick()
-  const now = Date.now()
-  const spinnerFrame = tick % SPINNER_FRAMES.length
-  const symbol = SPINNER_FRAMES[spinnerFrame]!
-
-  return (
-    <TaskRowInner task={task} index={index} selected={selected} cardRef={cardRef} symbol={symbol} now={now} />
-  )
-}
-
-function StaticTaskRow({ task, index, selected, cardRef }: Props) {
-  const now = new Date(task.completedAt!).getTime()
+function StaticStatus({ task, selected }: { task: Task; selected: boolean }) {
   const symbol = STATUS_SYMBOL[task.status]!
-
+  const elapsed = formatElapsed(task.startedAt, task.completedAt, new Date(task.completedAt!).getTime())
   return (
-    <TaskRowInner task={task} index={index} selected={selected} cardRef={cardRef} symbol={symbol} now={now} />
+    <>
+      <span fg={STATUS_COLOR[task.status]}>{selected ? <strong>{symbol} {STATUS_LABEL[task.status]}</strong> : <>{symbol} {STATUS_LABEL[task.status]}</>}</span>
+      {"  "}
+      <span>{elapsed}</span>
+    </>
   )
 }
 
-interface InnerProps extends Props {
-  symbol: string
-  now: number
-}
-
-function TaskRowInner({ task, index, selected, cardRef, symbol, now }: InnerProps) {
+export function TaskRow({ task, index, selected, cardRef }: Props) {
   return (
     <box key={task.id} ref={cardRef} style={{ flexDirection: "column" }}>
       {index > 0 && <box border={["top"]} borderColor="#222222" />}
@@ -87,9 +86,9 @@ function TaskRowInner({ task, index, selected, cardRef, symbol, now }: InnerProp
           <text fg={selected ? "#ffffff" : "#666666"}>
             {selected ? <strong>{task.id.slice(0, 6)}</strong> : task.id.slice(0, 6)}
             {"  "}
-            <span fg={STATUS_COLOR[task.status]}>{selected ? <strong>{symbol} {STATUS_LABEL[task.status]}</strong> : <>{symbol} {STATUS_LABEL[task.status]}</>}</span>
-            {"  "}
-            <span>{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+            {task.completedAt
+              ? <StaticStatus task={task} selected={selected} />
+              : <RunningStatus task={task} selected={selected} />}
           </text>
           {task.sessionId ? <text fg={selected ? "#555555" : "#333333"}>{task.sessionId}</text> : null}
         </box>
@@ -103,10 +102,4 @@ function TaskRowInner({ task, index, selected, cardRef, symbol, now }: InnerProp
       </box>
     </box>
   )
-}
-
-export function TaskRow(props: Props) {
-  return props.task.completedAt
-    ? <StaticTaskRow {...props} />
-    : <RunningTaskRow {...props} />
 }

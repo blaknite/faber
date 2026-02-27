@@ -17,7 +17,7 @@ import { createWorktree } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
-import { TickContext, useTickProvider, useSpinnerFrame } from "./lib/tick.js"
+import { TickProvider, useSpinnerFrame } from "./lib/tick.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
@@ -616,10 +616,9 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
 }
 
 export function App(props: Props) {
-  const tickValue = useTickProvider()
   return (
-    <TickContext.Provider value={tickValue}>
+    <TickProvider>
       <AppInner {...props} />
-    </TickContext.Provider>
+    </TickProvider>
   )
 }

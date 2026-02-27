@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useTick, SPINNER_FRAMES as TICK_SPINNER_FRAMES } from "../lib/tick.js"
+import { useSpinnerFrame, SPINNER_FRAMES as TICK_SPINNER_FRAMES } from "../lib/tick.js"
 import { existsSync, statSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes, SyntaxStyle } from "@opentui/core"
@@ -358,38 +358,43 @@ const STATUS_SYMBOL: Record<TaskStatus, string> = {
   unknown: "?",
 }
 
-function TitleBarInner({ task, symbol, now }: { task: Task; symbol: string; now: number }) {
+function RunningStatus({ task }: { task: Task }) {
+  const frame = useSpinnerFrame()
+  const elapsed = formatElapsed(task.startedAt, null, Date.now())
+  return (
+    <>
+      <span fg={STATUS_COLOR[task.status]}>{frame} {STATUS_LABEL[task.status]}</span>
+      {"  "}
+      <span fg="#555555">{elapsed}</span>
+    </>
+  )
+}
+
+function StaticStatus({ task }: { task: Task }) {
+  const symbol = STATUS_SYMBOL[task.status]!
+  const elapsed = formatElapsed(task.startedAt, task.completedAt, new Date(task.completedAt!).getTime())
+  return (
+    <>
+      <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
+      {"  "}
+      <span fg="#555555">{elapsed}</span>
+    </>
+  )
+}
+
+function TitleBar({ task }: { task: Task }) {
   return (
     <box style={{ flexDirection: "row", justifyContent: "space-between", flexGrow: 1 }}>
       <text>
         <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
         {"  "}
-        <span fg={STATUS_COLOR[task.status]}>{symbol} {STATUS_LABEL[task.status]}</span>
-        {"  "}
-        <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, now)}</span>
+        {task.completedAt
+          ? <StaticStatus task={task} />
+          : <RunningStatus task={task} />}
       </text>
       {task.sessionId ? <text fg="#666666">{task.sessionId}</text> : null}
     </box>
   )
-}
-
-function RunningTitleBar({ task }: { task: Task }) {
-  const tick = useTick()
-  const now = Date.now()
-  const symbol = TICK_SPINNER_FRAMES[tick % TICK_SPINNER_FRAMES.length]!
-  return <TitleBarInner task={task} symbol={symbol} now={now} />
-}
-
-function StaticTitleBar({ task }: { task: Task }) {
-  const now = new Date(task.completedAt!).getTime()
-  const symbol = STATUS_SYMBOL[task.status]!
-  return <TitleBarInner task={task} symbol={symbol} now={now} />
-}
-
-function TitleBar({ task }: { task: Task }) {
-  return task.completedAt
-    ? <StaticTitleBar task={task} />
-    : <RunningTitleBar task={task} />
 }
 
 interface Props {

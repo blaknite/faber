@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 
 // The global tick interval in milliseconds. All timed behaviour in the app is
 // derived from multiples of this value so there is only ever one setInterval
@@ -29,9 +29,10 @@ export function useSpinnerFrame(): string {
   return SPINNER_FRAMES[tick % SPINNER_FRAMES.length]!
 }
 
-// Hook for the provider component. Owns the single setInterval and exposes
-// the tick value for the context.
-export function useTickProvider(): TickContextValue {
+// Provider component that owns the single setInterval. Accepts children as a
+// prop so that the tick state change only re-renders context consumers, not the
+// entire subtree.
+export function TickProvider({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -39,5 +40,5 @@ export function useTickProvider(): TickContextValue {
     return () => clearInterval(id)
   }, [])
 
-  return { tick }
+  return <TickContext.Provider value={{ tick }}>{children}</TickContext.Provider>
 }
