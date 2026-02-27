@@ -15,10 +15,12 @@ import { createWorktree } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
+import { TickContext, SPINNER_FRAMES, useTickProvider, useTick } from "./lib/tick.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+// How many ticks between state/branch refreshes. At TICK_MS=200 this is ~2s.
+const REFRESH_EVERY_N_TICKS = 10
 
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -32,7 +34,7 @@ interface Props {
   onExit: () => void
 }
 
-export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
+function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [tasks, setTasks] = useState<Task[]>(sortDescending(initialTasks))
   const [filterMode, setFilterMode] = useState<FilterMode>("active")
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -40,10 +42,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
-  const [spinnerFrame, setSpinnerFrame] = useState(0)
   const [currentBranch, setCurrentBranch] = useState<string>("")
   const [commitsAhead, setCommitsAhead] = useState<number>(0)
   const prevSelectedIdx = useRef(0)
+
+  const tick = useTick()
+  const spinnerFrame = tick % SPINNER_FRAMES.length
 
   const visibleTasks = filterMode === "active"
     ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
@@ -64,35 +68,28 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setTasks(sortDescending(state.tasks))
   }, [repoRoot])
 
-  useEffect(() => {
-    const interval = setInterval(refreshTasks, 2000)
-    return () => clearInterval(interval)
-  }, [refreshTasks])
-
-  useEffect(() => {
-    const refresh = () => getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
-    refresh()
-    const interval = setInterval(refresh, 2000)
-    return () => clearInterval(interval)
-  }, [repoRoot])
-
   const refreshCommitsAhead = useCallback(() => {
     getCommitsAhead(repoRoot).then(setCommitsAhead).catch(() => {})
   }, [repoRoot])
 
+  // Bootstrap on mount
   useEffect(() => {
+    getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
     refreshCommitsAhead()
-  }, [refreshCommitsAhead])
+  }, [repoRoot, refreshCommitsAhead])
+
+  // All periodic work runs off the shared tick so there's only one interval
+  // in the whole app. refreshTasks and getCurrentBranch fire every
+  // REFRESH_EVERY_N_TICKS ticks (~2s); the spinner advances every tick.
+  useEffect(() => {
+    if (tick === 0) return
+    if (tick % REFRESH_EVERY_N_TICKS === 0) {
+      refreshTasks()
+      getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
+    }
+  }, [tick, repoRoot, refreshTasks])
 
   const runningCount = tasks.filter(t => t.status === "running").length
-
-  useEffect(() => {
-    if (runningCount === 0 && mode !== "pushing") return
-    const interval = setInterval(() => {
-      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
-    }, 100)
-    return () => clearInterval(interval)
-  }, [runningCount, mode])
 
   const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
     setTasks((prev) =>
@@ -492,5 +489,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
       {bottomBar}
     </box>
+  )
+}
+
+export function App(props: Props) {
+  const tickValue = useTickProvider()
+  return (
+    <TickContext.Provider value={tickValue}>
+      <AppInner {...props} />
+    </TickContext.Provider>
   )
 }

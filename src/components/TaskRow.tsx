@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react"
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus } from "../types.js"
+import { useTick, SPINNER_FRAMES } from "../lib/tick.js"
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
   running: "#00aaff",
@@ -19,10 +19,8 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   unknown: "Unknown",
 }
 
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-
 const STATUS_SYMBOL: Record<TaskStatus, string> = {
-  running: SPINNER_FRAMES[0],
+  running: SPINNER_FRAMES[0]!,
   done: "✓",
   ready_to_merge: "↑",
   failed: "✗",
@@ -44,21 +42,32 @@ interface Props {
   cardRef: (el: BoxRenderable | null) => void
 }
 
-export function TaskRow({ task, index, selected, cardRef }: Props) {
-  const [now, setNow] = useState(Date.now())
-  const [spinnerFrame, setSpinnerFrame] = useState(0)
+function RunningTaskRow({ task, index, selected, cardRef }: Props) {
+  const tick = useTick()
+  const now = Date.now()
+  const spinnerFrame = tick % SPINNER_FRAMES.length
+  const symbol = SPINNER_FRAMES[spinnerFrame]!
 
-  useEffect(() => {
-    if (task.completedAt) return
-    const interval = setInterval(() => {
-      setNow(Date.now())
-      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
-    }, 100)
-    return () => clearInterval(interval)
-  }, [task.completedAt])
+  return (
+    <TaskRowInner task={task} index={index} selected={selected} cardRef={cardRef} symbol={symbol} now={now} />
+  )
+}
 
-  const symbol = task.status === "running" ? SPINNER_FRAMES[spinnerFrame] : STATUS_SYMBOL[task.status]
+function StaticTaskRow({ task, index, selected, cardRef }: Props) {
+  const now = new Date(task.completedAt!).getTime()
+  const symbol = STATUS_SYMBOL[task.status]!
 
+  return (
+    <TaskRowInner task={task} index={index} selected={selected} cardRef={cardRef} symbol={symbol} now={now} />
+  )
+}
+
+interface InnerProps extends Props {
+  symbol: string
+  now: number
+}
+
+function TaskRowInner({ task, index, selected, cardRef, symbol, now }: InnerProps) {
   return (
     <box key={task.id} ref={cardRef} style={{ flexDirection: "column" }}>
       {index > 0 && <box border={["top"]} borderColor="#222222" />}
@@ -94,4 +103,10 @@ export function TaskRow({ task, index, selected, cardRef }: Props) {
       </box>
     </box>
   )
+}
+
+export function TaskRow(props: Props) {
+  return props.task.completedAt
+    ? <StaticTaskRow {...props} />
+    : <RunningTaskRow {...props} />
 }

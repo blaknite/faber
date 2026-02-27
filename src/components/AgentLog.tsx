@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTick, SPINNER_FRAMES as TICK_SPINNER_FRAMES } from "../lib/tick.js"
 import { existsSync, statSync, watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { createTextAttributes, SyntaxStyle } from "@opentui/core"
@@ -352,31 +353,15 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   unknown: "Unknown",
 }
 
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-
 const STATUS_SYMBOL: Record<TaskStatus, string> = {
-  running: SPINNER_FRAMES[0],
+  running: TICK_SPINNER_FRAMES[0]!,
   done: "✓",
   ready_to_merge: "↑",
   failed: "✗",
   unknown: "?",
 }
 
-function TitleBar({ task }: { task: Task }) {
-  const [now, setNow] = useState(Date.now())
-  const [spinnerFrame, setSpinnerFrame] = useState(0)
-
-  useEffect(() => {
-    if (task.completedAt) return
-    const interval = setInterval(() => {
-      setNow(Date.now())
-      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length)
-    }, 100)
-    return () => clearInterval(interval)
-  }, [task.completedAt])
-
-  const symbol = task.status === "running" ? SPINNER_FRAMES[spinnerFrame] : STATUS_SYMBOL[task.status]
-
+function TitleBarInner({ task, symbol, now }: { task: Task; symbol: string; now: number }) {
   return (
     <box style={{ flexDirection: "row", justifyContent: "space-between", flexGrow: 1 }}>
       <text>
@@ -389,6 +374,25 @@ function TitleBar({ task }: { task: Task }) {
       {task.sessionId ? <text fg="#666666">{task.sessionId}</text> : null}
     </box>
   )
+}
+
+function RunningTitleBar({ task }: { task: Task }) {
+  const tick = useTick()
+  const now = Date.now()
+  const symbol = TICK_SPINNER_FRAMES[tick % TICK_SPINNER_FRAMES.length]!
+  return <TitleBarInner task={task} symbol={symbol} now={now} />
+}
+
+function StaticTitleBar({ task }: { task: Task }) {
+  const now = new Date(task.completedAt!).getTime()
+  const symbol = STATUS_SYMBOL[task.status]!
+  return <TitleBarInner task={task} symbol={symbol} now={now} />
+}
+
+function TitleBar({ task }: { task: Task }) {
+  return task.completedAt
+    ? <StaticTitleBar task={task} />
+    : <RunningTitleBar task={task} />
 }
 
 interface Props {
