@@ -76,12 +76,13 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     return () => clearInterval(interval)
   }, [repoRoot])
 
-  useEffect(() => {
-    const refresh = () => getCommitsAhead(repoRoot).then(setCommitsAhead).catch(() => {})
-    refresh()
-    const interval = setInterval(refresh, 2000)
-    return () => clearInterval(interval)
+  const refreshCommitsAhead = useCallback(() => {
+    getCommitsAhead(repoRoot).then(setCommitsAhead).catch(() => {})
   }, [repoRoot])
+
+  useEffect(() => {
+    refreshCommitsAhead()
+  }, [refreshCommitsAhead])
 
   const runningCount = tasks.filter(t => t.status === "running").length
 
@@ -235,10 +236,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     try {
       await pushBranch(repoRoot)
       showFlash(`Pushed ${currentBranch} to origin`)
+      refreshCommitsAhead()
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [repoRoot, currentBranch, showFlash])
+  }, [repoRoot, currentBranch, showFlash, refreshCommitsAhead])
 
   const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
     if (!task) { setMode("normal"); return }
@@ -247,10 +249,11 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
       showFlash(`Merged ${task.id} into HEAD`)
+      refreshCommitsAhead()
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState])
+  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshCommitsAhead])
 
   useKeyboard((key) => {
     if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
