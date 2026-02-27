@@ -187,11 +187,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setMode("normal")
     try {
       await mergeBranch(repoRoot, selectedTask.id)
+      updateTaskInState(selectedTask.id, { status: "done" })
       showFlash(`Merged ${selectedTask.id} into HEAD`)
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [selectedTask, repoRoot, showFlash])
+  }, [selectedTask, repoRoot, showFlash, updateTaskInState])
 
   useKeyboard((key) => {
     if (mode === "input") return
