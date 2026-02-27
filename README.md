@@ -8,6 +8,18 @@ A terminal UI for running multiple autonomous coding agents in parallel. Give it
 
 Each task gets its own git worktree at `.worktrees/<task-slug>`. An `opencode` agent runs inside that worktree, so tasks are fully isolated from each other and from your working directory. State is persisted to `.faber/state.json`, so you can close and reopen faber without losing track of what's running.
 
+## Getting the best results
+
+For best results, load the `working-in-faber` skill at the start of your prompt. It tells the agent about its environment (git worktrees, branch isolation, sibling agents) and how it should complete and commit its work.
+
+If you're using Claude Code or Amp as your agent, you can load it like this:
+
+```
+Load the skill `working-in-faber`, then <your task here>
+```
+
+The skill sets expectations around committing in logical units, writing meaningful commit messages, and not pushing - all the things that make agent output easier to review and merge.
+
 ## Prerequisites
 
 - [Bun](https://bun.sh)
