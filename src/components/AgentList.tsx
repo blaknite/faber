@@ -147,7 +147,7 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
   return (
     <box style={{ ...containerStyle, flexDirection: "column" }}>
       <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
-      <box border={["top"]} borderColor="#222222" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end" }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111" }}>
         <text>
           <span fg={filterMode === "active" ? "#0088ff" : "#555555"}>active</span>
           <span fg="#333333">{" / "}</span>
