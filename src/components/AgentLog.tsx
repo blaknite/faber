@@ -14,7 +14,7 @@ import {
 import type { LogEntry } from "../lib/logParser.js"
 import { MODELS } from "../types.js"
 import type { Task } from "../types.js"
-import { parseDiff, highlightLinePair, highlightSingleLine } from "../lib/diff/index.js"
+import { parseDiff, highlightLinePair, highlightSingleLine, SegmentedLine } from "../lib/diff/index.js"
 import type { DiffLine, Segment } from "../lib/diff/index.js"
 import { colors as diffColors } from "../lib/diff/DiffViewer.style.js"
 
@@ -69,24 +69,6 @@ function BlockContent({ content, unlimited = false }: { content: string; unlimit
 
 const DIFF_MAX_LINES = 10
 
-function DiffSegmentedLine({ segments, baseColor, highlightBg }: {
-  segments: Segment[]
-  baseColor: string
-  highlightBg: string
-}) {
-  if (segments.length === 0) return <text fg={baseColor}>{" "}</text>
-  return (
-    <text fg={baseColor}>
-      {segments.map((seg, i) =>
-        seg.isChanged ? (
-          <span key={i} fg={baseColor} bg={highlightBg}>{seg.text || " "}</span>
-        ) : (
-          <span key={i} fg={baseColor}>{seg.text || " "}</span>
-        )
-      )}
-    </text>
-  )
-}
 
 function DiffContent({ diff }: { diff: string }) {
   const parsed = parseDiff(diff)
@@ -175,7 +157,7 @@ function DiffContent({ diff }: { diff: string }) {
           return (
             <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.removeRow }}>
               <text fg={diffColors.remove}>{"-"}</text>
-              <DiffSegmentedLine
+              <SegmentedLine
                 segments={item.segments}
                 baseColor={diffColors.remove}
                 highlightBg={diffColors.removeHighlight}
@@ -187,7 +169,7 @@ function DiffContent({ diff }: { diff: string }) {
         return (
           <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.addRow }}>
             <text fg={diffColors.add}>{"+"}</text>
-            <DiffSegmentedLine
+            <SegmentedLine
               segments={item.segments}
               baseColor={diffColors.add}
               highlightBg={diffColors.addHighlight}
