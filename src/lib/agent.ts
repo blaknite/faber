@@ -106,6 +106,12 @@ export function spawnAgent(
           sessionIdCaptured = true
           updateTask(repoRoot, task.id, { sessionId: event.sessionID })
           lineBuffer = ""
+          // Unref stdout now that we've captured the session ID. This allows
+          // the faber run CLI to exit without waiting for opencode to finish.
+          // We defer until here so we don't drop the pipe before tee has had
+          // a chance to start draining -- an unconditional unref would stall
+          // opencode via pipe backpressure.
+          ;(child.stdout as any)?.unref()
           break
         }
       } catch {
@@ -115,11 +121,6 @@ export function spawnAgent(
   })
 
   child.stderr?.resume()
-
-  // child.unref() detaches the process itself but not its stdio streams.
-  // Unref stdout and stderr so the faber run CLI can exit once the session ID
-  // has been captured, without waiting for opencode to finish.
-  ;(child.stdout as any)?.unref()
   ;(child.stderr as any)?.unref()
 
   child.on("close", () => {
