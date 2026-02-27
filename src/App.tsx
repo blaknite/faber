@@ -56,6 +56,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [isDirty, setIsDirty] = useState<boolean>(false)
   const prevSelectedIdx = useRef(0)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevTaskStatusesRef = useRef<Map<string, Task["status"]>>(new Map())
 
   const visibleTasks = filterMode === "active"
     ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
@@ -209,6 +210,29 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   useEffect(() => {
     setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
   }, [visibleTasks.length])
+
+  // When a task transitions to ready_to_merge, switch immediately from the log
+  // view to the diff view. Only fires on the state transition itself -- not
+  // every render while the task is already ready_to_merge.
+  useEffect(() => {
+    const prev = prevTaskStatusesRef.current
+    for (const task of tasks) {
+      const previousStatus = prev.get(task.id)
+      if (
+        previousStatus !== undefined &&
+        previousStatus !== "ready_to_merge" &&
+        task.status === "ready_to_merge" &&
+        logPaneTaskId === task.id &&
+        diffPaneTaskId === null
+      ) {
+        setDiffPaneTaskId(task.id)
+        setLogPaneTaskId(null)
+      }
+    }
+    const next = new Map<string, Task["status"]>()
+    for (const task of tasks) next.set(task.id, task.status)
+    prevTaskStatusesRef.current = next
+  }, [tasks, logPaneTaskId, diffPaneTaskId])
 
   const showFlash = useCallback((msg: string) => {
     if (flashTimerRef.current !== null) {
