@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useKeyboard } from "@opentui/react"
+import { useKeyboard, useTerminalDimensions } from "@opentui/react"
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus, Model } from "../types.js"
@@ -129,11 +129,17 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
     }
   }, [selectedId, tasks])
 
+  const { height: terminalHeight } = useTerminalDimensions()
+
+  // Top bar and bottom bar each consume 1 content row + 1 padding top + 1 padding bottom = 3 rows each.
+  const BAR_HEIGHT = 3
+  const listHeight = Math.ceil(terminalHeight - BAR_HEIGHT * 2)
+
   const containerStyle = width !== undefined ? { width } : { flexGrow: 1 }
 
   return (
-    <box style={{ ...containerStyle, flexDirection: "column" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, marginBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111", height: 3 }}>
+    <box style={{ ...containerStyle, flexDirection: "column", height: listHeight }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111", height: 3 }}>
         <text>
           <span fg={filterMode === "active" ? "#ff6600" : "#555555"}>active</span>
           <span fg="#333333">{" / "}</span>
