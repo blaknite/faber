@@ -36,7 +36,7 @@ export function spawnAgent(
         const prompt = fullPrompt.replace(/'/g, `'\\''`)
         return `${opencodebin} run --format json --model ${task.model} '${prompt}'`
       })()
-  const finishCmd = `; ${faberCmd} --finish ${task.id} $?`
+  const finishCmd = `; ${faberCmd} finish ${task.id} $?`
   // pipefail ensures $? reflects opencode's exit code, not tee's.
   const shellCmd = `set -o pipefail; ${opencodeCmd} | tee -a "${outputFile}"${finishCmd}`
 
@@ -117,7 +117,7 @@ export function spawnAgent(
   child.stderr?.resume()
 
   child.on("close", () => {
-    // faber --finish already wrote the final status to disk. The state.json
+    // faber finish already wrote the final status to disk. The state.json
     // watcher in App.tsx will pick up that write and refresh the UI.
   })
 

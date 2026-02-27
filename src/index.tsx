@@ -12,20 +12,29 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
+// Parse --dir <path> from an args array, returning the resolved path or null.
+function parseDirFlag(args: string[]): string | null {
+  const i = args.indexOf("--dir")
+  if (i !== -1 && args[i + 1]) return resolve(args[i + 1]!)
+  return null
+}
+
 async function main() {
   const args = process.argv.slice(2)
+  const command = args[0]
 
-  // faber --finish <taskId> [exitCode]
+  // faber finish <taskId> <exitCode>
   // Called via command chaining after opencode exits, passing the real exit code via $?.
   // This is the single place where task exit status is written to state.
-  if (args[0] === "--finish") {
+  if (command === "finish") {
     const taskId = args[1]
     const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
     if (!taskId) {
-      console.error("Usage: faber --finish <taskId> [exitCode]")
-      process.exit(exitCode)
+      console.error("Usage: faber finish <taskId> <exitCode>")
+      process.exit(1)
     }
-    const repoRoot = findRepoRoot(process.cwd())
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
     if (!repoRoot) {
       console.error("Could not find faber state file from current directory")
       process.exit(exitCode)
@@ -36,7 +45,7 @@ async function main() {
     if (exitCode !== 0) {
       logTaskFailure(repoRoot, {
         taskId,
-        callSite: "index.tsx:--finish",
+        callSite: "index.tsx:finish",
         reason: "Process exited with non-zero exit code",
         exitCode,
       })
@@ -74,30 +83,33 @@ async function main() {
     process.exit(exitCode)
   }
 
-  // faber dispatch "prompt" [--dir /path/to/repo] [--model provider/model]
-  if (args[0] === "dispatch") {
+  // faber run "<prompt>" [--dir <repo>] [--model <provider/model>]
+  if (command === "run") {
     const prompt = args[1]
     if (!prompt) {
-      console.error("Usage: faber dispatch \"<prompt>\" [--dir <repo>] [--model <provider/model>]")
+      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <provider/model>]')
       process.exit(1)
     }
-    const dirFlag = args.indexOf("--dir")
-    const repoRoot = resolve(dirFlag !== -1 && args[dirFlag + 1] ? args[dirFlag + 1]! : process.cwd())
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? resolve(process.cwd())
     const modelFlag = args.indexOf("--model")
     const model = (modelFlag !== -1 && args[modelFlag + 1] ? args[modelFlag + 1]! : DEFAULT_MODEL) as Task["model"]
-    await dispatchHeadless(repoRoot, prompt, model)
+    await runHeadless(repoRoot, prompt, model)
     return
   }
 
-  // faber setup [path/to/repo]
-  if (args[0] === "setup") {
-    const repoRoot = resolve(args[1] ?? process.cwd())
+  // faber setup [--dir <repo>]
+  if (command === "setup") {
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? resolve(process.cwd())
     await setup(repoRoot)
     return
   }
 
-  // faber [path/to/repo]
-  const repoRoot = resolve(args[0] ?? process.cwd())
+  // faber [start] [--dir <repo>]
+  // "start" is an optional explicit subcommand; bare "faber" does the same thing.
+  const dirArg = parseDirFlag(args)
+  const repoRoot = dirArg ?? resolve(process.cwd())
 
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
@@ -139,7 +151,7 @@ async function main() {
   renderer.start()
 }
 
-async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL) {
+async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     process.exit(1)
@@ -171,7 +183,7 @@ async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["m
     console.error(`Failed to create worktree: ${err.message}`)
     logTaskFailure(repoRoot, {
       taskId: slug,
-      callSite: "index.tsx:dispatchHeadless",
+      callSite: "index.tsx:runHeadless",
       reason: "Failed to create git worktree",
       exitCode: -1,
       error: err.message,
