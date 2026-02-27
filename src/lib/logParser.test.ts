@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test"
 import {
-  extractXmlText,
   formatElapsed,
   formatElapsedMs,
   normalizePath,
@@ -263,31 +262,14 @@ describe("parseToolEntry", () => {
       const xml = "<path>/f.ts</path>\n<type>file</type>\n<content>1: a\n2: b\n3: c</content>"
       expect(parseReadOutput(xml)).toBe("1: a\n2: b\n3: c")
     })
-  })
 
-  describe("extractXmlText", () => {
-    it("returns text content from valid XML", () => {
-      expect(extractXmlText("<root><child>hello</child></root>")).toBe("hello")
-    })
-
-    it("returns text content from multiple sibling elements", () => {
-      expect(extractXmlText("<root><a>foo</a><b>bar</b></root>")).toBe("foo bar")
-    })
-
-    it("collapses extra whitespace", () => {
-      expect(extractXmlText("<a>foo</a>   <b>bar</b>")).toBe("foo bar")
-    })
-
-    it("handles nested elements", () => {
-      expect(extractXmlText("<outer><inner><deep>text</deep></inner></outer>")).toBe("text")
-    })
-
-    it("returns null for plain text (no leading <)", () => {
-      expect(extractXmlText("just some text")).toBeNull()
-    })
-
-    it("returns null for malformed XML", () => {
-      expect(extractXmlText("<unclosed")).toBeNull()
+    it("handles file content containing JSX/HTML tags", () => {
+      const xml =
+        "<path>/f.tsx</path>\n<type>file</type>\n" +
+        "<content>1: function Foo() {\n2:   return <box><text>hi</text></box>\n3: }</content>"
+      expect(parseReadOutput(xml)).toBe(
+        "1: function Foo() {\n2:   return <box><text>hi</text></box>\n3: }"
+      )
     })
   })
 
