@@ -357,7 +357,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <text fg="#ff9900">{tasks.filter(t => t.status === "ready_to_merge").length} ready to merge</text>
           )}
           {tasks.filter(t => t.status === "running").length > 0 && (
-            <text fg="#ff6600">{tasks.filter(t => t.status === "running").length} running</text>
+            <text fg="#00aaff">{tasks.filter(t => t.status === "running").length} running</text>
           )}
         </box>
       </box>
