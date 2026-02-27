@@ -33,7 +33,7 @@ export function RequestChangesInput({ onSubmit, onCancel }: Props) {
     <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
       <box
         border={["left"]}
-        borderColor="#0088ff"
+        borderColor="#666666"
         style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
       >
         <textarea
