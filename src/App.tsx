@@ -387,6 +387,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
             inputActive={mode === "input"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
+            onSelectTask={(id) => {
+              const idx = tasks.findIndex((t) => t.id === id)
+              if (idx !== -1) setSelectedIdx(idx)
+            }}
           />
         )}
       </box>
