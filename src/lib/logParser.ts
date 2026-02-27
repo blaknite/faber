@@ -101,6 +101,20 @@ export function extractXmlText(content: string): string | null {
   }
 }
 
+// Extract the text content of a single top-level XML tag by name using
+// simple string search. This avoids re-parsing the XML, which breaks when
+// file content contains JSX/HTML tags that the parser treats as XML elements.
+function extractTagContent(xml: string, tagName: string): string | null {
+  const openTag = `<${tagName}`
+  const closeTag = `</${tagName}>`
+  const start = xml.indexOf(openTag)
+  if (start === -1) return null
+  const contentStart = xml.indexOf(">", start) + 1
+  const contentEnd = xml.lastIndexOf(closeTag)
+  if (contentEnd <= contentStart) return null
+  return xml.slice(contentStart, contentEnd)
+}
+
 // Parse the output from a file/directory read tool. The MCP Read tool wraps
 // output in XML like:
 //
@@ -113,23 +127,17 @@ export function extractXmlText(content: string): string | null {
 // the file/directory listing, not the path and type noise that gets mixed in
 // when you strip all tags indiscriminately.
 //
+// We use plain string extraction rather than XML parsing here because file
+// content often contains JSX/HTML tags that confuse the XML parser.
+//
 // Falls back to the raw string if the content doesn't look like this format.
 export function parseReadOutput(raw: string): string {
   const trimmed = raw.trimStart()
   if (!trimmed.startsWith("<")) return raw
-  try {
-    const parsed = xmlParser.parse(trimmed) as Record<string, unknown>
-    // The MCP read tool produces sibling tags with no single root element, so
-    // fast-xml-parser wraps them in an object keyed by tag name.
-    const content = parsed["content"]
-    if (typeof content === "string" && content.trim()) return content.trim()
-    if (typeof content === "number" || typeof content === "boolean") return String(content)
-    const entries = parsed["entries"]
-    if (typeof entries === "string" && entries.trim()) return entries.trim()
-    if (typeof entries === "number" || typeof entries === "boolean") return String(entries)
-  } catch {
-    // fall through
-  }
+  const content = extractTagContent(trimmed, "content")
+  if (content !== null && content.trim()) return content.trim()
+  const entries = extractTagContent(trimmed, "entries")
+  if (entries !== null && entries.trim()) return entries.trim()
   return raw
 }
 

@@ -263,6 +263,15 @@ describe("parseToolEntry", () => {
       const xml = "<path>/f.ts</path>\n<type>file</type>\n<content>1: a\n2: b\n3: c</content>"
       expect(parseReadOutput(xml)).toBe("1: a\n2: b\n3: c")
     })
+
+    it("handles file content containing JSX/HTML tags", () => {
+      const xml =
+        "<path>/f.tsx</path>\n<type>file</type>\n" +
+        "<content>1: function Foo() {\n2:   return <box><text>hi</text></box>\n3: }</content>"
+      expect(parseReadOutput(xml)).toBe(
+        "1: function Foo() {\n2:   return <box><text>hi</text></box>\n3: }"
+      )
+    })
   })
 
   describe("extractXmlText", () => {
