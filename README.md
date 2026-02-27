@@ -10,15 +10,9 @@ Each task gets its own git worktree at `.worktrees/<task-slug>`. An `opencode` a
 
 ## Getting the best results
 
-For best results, load the `working-in-faber` skill at the start of your prompt. It tells the agent about its environment (git worktrees, branch isolation, sibling agents) and how it should complete and commit its work.
+Faber automatically injects the `working-in-faber` skill into every agent prompt. The skill tells the agent about its environment (git worktrees, branch isolation, sibling agents) and sets expectations around committing in logical units, writing meaningful commit messages, and not pushing.
 
-If you're using Claude Code or Amp as your agent, you can load it like this:
-
-```
-Load the skill `working-in-faber`, then <your task here>
-```
-
-The skill sets expectations around committing in logical units, writing meaningful commit messages, and not pushing - all the things that make agent output easier to review and merge.
+For this to work, the skill needs to be available in your agent's environment. If you're using Claude Code or Amp, make sure the skill is installed and accessible.
 
 ## Prerequisites
 
