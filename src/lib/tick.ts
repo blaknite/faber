@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 // The global tick interval in milliseconds. All timed behaviour in the app is
 // derived from multiples of this value so there is only ever one setInterval
 // running regardless of how many components are mounted.
-export const TICK_MS = 80
+export const TICK_MS = 100
 
 // Number of spinner frames -- kept here so components can compute the current
 // frame without importing a separate constant.
