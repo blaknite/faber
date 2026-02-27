@@ -43,6 +43,7 @@ export const styles = {
     backgroundColor: colors.chrome,
     flexDirection: "row" as const,
     justifyContent: "space-between" as const,
+    marginBottom: 1,
   },
   scrollArea: {
     flexGrow: 1,
