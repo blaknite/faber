@@ -337,7 +337,7 @@ function FileSection({ file, viewMode, fileIndex }: {
 }) {
   return (
     <box key={fileIndex} style={{ flexDirection: "column" }}>
-      <box style={styles.fileHeader}>
+      <box style={styles.fileHeader} border={["bottom"]} borderColor={colors.separator}>
         <text fg={colors.meta}>{file.oldPath !== file.newPath
           ? `${file.oldPath} -> ${file.newPath}`
           : file.newPath || file.oldPath}</text>
