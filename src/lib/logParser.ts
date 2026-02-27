@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs"
 import { taskOutputPath } from "./state.js"
+import { XMLParser } from "fast-xml-parser"
 
 export interface ToolStatePart {
   input?: Record<string, unknown>
@@ -55,6 +56,51 @@ export interface LogEntry {
   reasoningText?: string
 }
 
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  parseAttributeValue: true,
+  trimValues: true,
+  // Preserve text nodes so we can walk them below.
+  parseTagValue: true,
+})
+
+// Walk a parsed XML value and collect all text content into a flat list.
+function collectText(node: unknown, out: string[]): void {
+  if (typeof node === "string" || typeof node === "number" || typeof node === "boolean") {
+    const s = String(node).trim()
+    if (s) out.push(s)
+    return
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) collectText(child, out)
+    return
+  }
+  if (node !== null && typeof node === "object") {
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      // Skip attributes (prefixed with "@_" by fast-xml-parser)
+      if (key.startsWith("@_")) continue
+      // "#text" is the text node key
+      collectText(value, out)
+    }
+  }
+}
+
+// Try to parse `content` as XML. Returns the extracted text content on
+// success, or null if the content is not valid XML.
+export function extractXmlText(content: string): string | null {
+  const trimmed = content.trimStart()
+  if (!trimmed.startsWith("<")) return null
+  try {
+    const parsed = xmlParser.parse(trimmed) as unknown
+    const parts: string[] = []
+    collectText(parsed, parts)
+    const result = parts.join(" ").replace(/\s+/g, " ").trim()
+    return result || null
+  } catch {
+    return null
+  }
+}
+
 export function normalizePath(input?: string): string {
   if (!input) return ""
   // If it looks like an absolute path, show the last 2-3 segments to keep it readable
@@ -104,7 +150,8 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
       .filter(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
       .map(([k, v]) => `${k}=${v}`)
     const description = extras.length ? `[${extras.join(", ")}]` : undefined
-    const output = str(state?.output)
+    const rawOutput = str(state?.output)
+    const output = (rawOutput && extractXmlText(rawOutput)) ?? rawOutput
     return {
       kind: "tool_use",
       timestamp: event.timestamp,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
+  extractXmlText,
   formatElapsed,
   formatElapsedMs,
   normalizePath,
@@ -209,6 +210,43 @@ describe("parseToolEntry", () => {
     it("omits blockContent when output is absent", () => {
       const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }))!
       expect(entry.blockContent).toBeUndefined()
+    })
+
+    it("strips XML tags from output when the content looks like XML", () => {
+      const xml = "<root><item>Hello</item><item>World</item></root>"
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.xml" }, { output: xml }))!
+      expect(entry.blockContent).toBe("Hello World")
+    })
+
+    it("leaves plain text output unchanged", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }, { output: "const x = 1\n" }))!
+      expect(entry.blockContent).toBe("const x = 1\n")
+    })
+  })
+
+  describe("extractXmlText", () => {
+    it("returns text content from valid XML", () => {
+      expect(extractXmlText("<root><child>hello</child></root>")).toBe("hello")
+    })
+
+    it("returns text content from multiple sibling elements", () => {
+      expect(extractXmlText("<root><a>foo</a><b>bar</b></root>")).toBe("foo bar")
+    })
+
+    it("collapses extra whitespace", () => {
+      expect(extractXmlText("<a>foo</a>   <b>bar</b>")).toBe("foo bar")
+    })
+
+    it("handles nested elements", () => {
+      expect(extractXmlText("<outer><inner><deep>text</deep></inner></outer>")).toBe("text")
+    })
+
+    it("returns null for plain text (no leading <)", () => {
+      expect(extractXmlText("just some text")).toBeNull()
+    })
+
+    it("returns null for malformed XML", () => {
+      expect(extractXmlText("<unclosed")).toBeNull()
     })
   })
 
