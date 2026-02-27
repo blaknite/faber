@@ -17,6 +17,7 @@
     "@opentui/core": "^0.1.82",
     "@opentui/react": "^0.1.82",
     "execa": "^9.5.2",
+    "fast-xml-parser": "^5.4.1",
     "marked": "^15.0.12",
     "marked-terminal": "^7.3.0",
     "proper-lockfile": "^4.1.2",

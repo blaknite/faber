@@ -1,12 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import {
+  extractXmlText,
   formatElapsed,
   formatElapsedMs,
-  looksLikeXml,
   normalizePath,
   parseEvent,
   parseToolEntry,
-  stripXmlTags,
 } from "./logParser.js"
 import type { LogEvent } from "./logParser.js"
 
@@ -225,35 +224,29 @@ describe("parseToolEntry", () => {
     })
   })
 
-  describe("looksLikeXml", () => {
-    it("returns true for XML content", () => {
-      expect(looksLikeXml("<root><child>text</child></root>")).toBe(true)
+  describe("extractXmlText", () => {
+    it("returns text content from valid XML", () => {
+      expect(extractXmlText("<root><child>hello</child></root>")).toBe("hello")
     })
 
-    it("returns true for HTML content", () => {
-      expect(looksLikeXml("<html><body>hello</body></html>")).toBe(true)
+    it("returns text content from multiple sibling elements", () => {
+      expect(extractXmlText("<root><a>foo</a><b>bar</b></root>")).toBe("foo bar")
     })
 
-    it("returns false for plain text", () => {
-      expect(looksLikeXml("just some text")).toBe(false)
+    it("collapses extra whitespace", () => {
+      expect(extractXmlText("<a>foo</a>   <b>bar</b>")).toBe("foo bar")
     })
 
-    it("returns false for content that starts with < but has no closing tag", () => {
-      expect(looksLikeXml("<not-really-xml")).toBe(false)
-    })
-  })
-
-  describe("stripXmlTags", () => {
-    it("removes all tags", () => {
-      expect(stripXmlTags("<root><child>hello</child></root>")).toBe("hello")
+    it("handles nested elements", () => {
+      expect(extractXmlText("<outer><inner><deep>text</deep></inner></outer>")).toBe("text")
     })
 
-    it("collapses whitespace", () => {
-      expect(stripXmlTags("<a>foo</a>   <b>bar</b>")).toBe("foo bar")
+    it("returns null for plain text (no leading <)", () => {
+      expect(extractXmlText("just some text")).toBeNull()
     })
 
-    it("trims leading and trailing whitespace", () => {
-      expect(stripXmlTags("  <p>text</p>  ")).toBe("text")
+    it("returns null for malformed XML", () => {
+      expect(extractXmlText("<unclosed")).toBeNull()
     })
   })
 
