@@ -188,10 +188,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [selectedTask])
 
   const handleOpenDiff = useCallback(() => {
-    const taskId = logPaneTaskId ?? selectedTask?.id
-    if (!taskId) return
-    setDiffPaneTaskId(taskId)
-  }, [logPaneTaskId, selectedTask])
+    const task = paneTask ?? selectedTask
+    if (!task || task.status !== "ready_to_merge") return
+    setDiffPaneTaskId(task.id)
+  }, [paneTask, selectedTask])
 
   const handleRequestChanges = useCallback((prompt: string) => {
     const task = paneTask
@@ -306,7 +306,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         return
       }
       if (key.name === "r") { handleResume(paneTask); return }
-      if (key.name === "f") { handleOpenDiff(); return }
+      if (key.name === "f") {
+        if (paneTask && paneTask.status === "ready_to_merge") handleOpenDiff()
+        return
+      }
       if (key.name === "c") {
         if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
         return
@@ -346,7 +349,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "scroll" },
     { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
-    { key: "f", label: "diff", disabled: !paneTask },
+    { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready_to_merge" },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
