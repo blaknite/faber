@@ -262,12 +262,11 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   const isError = entry.status === "error"
 
   const titleAttr = createTextAttributes({ bold: !isDone })
-  const iconAttr = undefined
 
   return (
     <box style={{ flexDirection: "column" }}>
       <box style={{ flexDirection: "row", paddingBottom: 0 }}>
-        <text fg={color} attributes={iconAttr} style={{ flexShrink: 0 }}>
+        <text fg={color} style={{ flexShrink: 0 }}>
           {icon}{" "}
         </text>
         <text fg={color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>

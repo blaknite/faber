@@ -50,11 +50,6 @@ export function readCurrentBranch(repoRoot: string): string {
   }
 }
 
-export async function getCurrentBranch(repoRoot: string): Promise<string> {
-  const { stdout } = await execa("git", ["branch", "--show-current"], { cwd: repoRoot })
-  return stdout.trim()
-}
-
 export async function hasUnpushedCommits(repoRoot: string): Promise<boolean> {
   try {
     const { stdout } = await execa("git", ["rev-list", "--count", "@{u}..HEAD"], { cwd: repoRoot })
@@ -100,14 +95,4 @@ export async function switchBranch(repoRoot: string, slug: string): Promise<void
   }
 }
 
-export async function listWorktrees(repoRoot: string): Promise<string[]> {
-  const { stdout } = await execa("git", ["worktree", "list", "--porcelain"], { cwd: repoRoot })
-  return stdout
-    .split("\n\n")
-    .filter(Boolean)
-    .map((block) => {
-      const match = block.match(/^worktree (.+)/)
-      return match ? match[1]! : null
-    })
-    .filter((p): p is string => p !== null)
-}
+
