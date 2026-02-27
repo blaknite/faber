@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { CliRenderer } from "@opentui/core"
-import { execa } from "execa"
 import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
@@ -146,14 +145,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setMode("normal")
   }, [selectedTask])
 
-  const handleSession = useCallback(() => {
-    if (!selectedTask) return
-    if (!selectedTask.sessionId) { showFlash("No session ID yet -- task may still be starting."); return }
-    const cmd = `opencode -s ${selectedTask.sessionId}`
-    execa("pbcopy", { input: cmd }).catch(() => {})
-    showFlash(`Run \`${cmd}\` (copied to clipboard)`)
-  }, [selectedTask, showFlash])
-
   const handleClone = useCallback(() => {
     if (!selectedTask) return
     handleDispatch(selectedTask.prompt, selectedTask.model)
@@ -285,7 +276,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
         return
       }
       if (key.name === "r") { handleResume(); return }
-      if (key.name === "s") { handleSession(); return }
       if (key.name === "f") { handleOpenDiff(); return }
       if (key.name === "c") {
         if (selectedTask && selectedTask.sessionId) setMode("request_changes")
@@ -306,7 +296,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
     if (key.name === "o" || key.name === "return") { handleOpenLog(); return }
-    if (key.name === "s") { handleSession(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "c") { handleClone(); return }
     if (key.name === "d") {
@@ -327,7 +316,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "scroll" },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
-    { key: "s", label: "session", disabled: !selectedTask?.sessionId },
     { key: "f", label: "diff", disabled: !selectedTask },
     { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
     { key: "d", label: "delete", disabled: !selectedTask },
@@ -337,7 +325,6 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "enter", label: "open", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
-    { key: "s", label: "session", disabled: !selectedTask?.sessionId },
     { key: "c", label: "clone", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
