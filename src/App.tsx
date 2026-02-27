@@ -50,6 +50,14 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const selectedTask = visibleTasks[selectedIdx] ?? null
 
+  // When viewing a log or diff pane, actions must operate on the task being
+  // viewed, not on selectedTask (which is position-based in the filtered list).
+  // If the filter hides a task after it's killed, selectedTask silently shifts
+  // to whatever lands at that index -- paneTask prevents that mismatch.
+  const paneTask = (diffPaneTaskId ?? logPaneTaskId)
+    ? tasks.find((t) => t.id === (diffPaneTaskId ?? logPaneTaskId)) ?? null
+    : null
+
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
     setTasks(sortDescending(state.tasks))
@@ -148,10 +156,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     })
   }, [repoRoot, updateTaskInState])
 
-  const handleKill = useCallback(() => {
-    if (!selectedTask || selectedTask.status !== "running" || !selectedTask.pid) return
-    killAgent(selectedTask.pid)
-    updateTaskInState(selectedTask.id, {
+  const handleKill = useCallback((task: Task | null = selectedTask) => {
+    if (!task || task.status !== "running" || !task.pid) return
+    killAgent(task.pid)
+    updateTaskInState(task.id, {
       status: "failed",
       completedAt: new Date().toISOString(),
       pid: null,
@@ -164,19 +172,19 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     handleDispatch(selectedTask.prompt, selectedTask.model)
   }, [selectedTask, handleDispatch])
 
-  const handleResume = useCallback(() => {
-    if (!selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId) return
-    if (selectedTask.pid) killAgent(selectedTask.pid)
+  const handleResume = useCallback((task: Task | null = selectedTask) => {
+    if (!task || (task.status !== "failed" && task.status !== "done") || !task.sessionId) return
+    if (task.pid) killAgent(task.pid)
     const patch: Partial<Task> = {
       status: "running",
       completedAt: null,
       exitCode: null,
     }
-    updateTaskInState(selectedTask.id, patch)
-    const task = { ...selectedTask, ...patch }
-    spawnAgent(task, repoRoot, (p) => {
-      updateTaskInState(selectedTask.id, p)
-    }, selectedTask.sessionId)
+    updateTaskInState(task.id, patch)
+    const updated = { ...task, ...patch }
+    spawnAgent(updated, repoRoot, (p) => {
+      updateTaskInState(task.id, p)
+    }, task.sessionId)
   }, [selectedTask, repoRoot, updateTaskInState])
 
   const handleOpenLog = useCallback(() => {
@@ -191,22 +199,23 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [logPaneTaskId, selectedTask])
 
   const handleRequestChanges = useCallback((prompt: string) => {
-    if (!selectedTask || !selectedTask.sessionId) return
+    const task = paneTask
+    if (!task || !task.sessionId) return
     setMode("normal")
-    if (selectedTask.pid) killAgent(selectedTask.pid)
+    if (task.pid) killAgent(task.pid)
     const patch: Partial<Task> = {
       status: "running",
       completedAt: null,
       exitCode: null,
     }
-    updateTaskInState(selectedTask.id, patch)
-    const task = { ...selectedTask, ...patch }
-    spawnAgent(task, repoRoot, (p) => {
-      updateTaskInState(selectedTask.id, p)
-    }, selectedTask.sessionId, prompt)
+    updateTaskInState(task.id, patch)
+    const updated = { ...task, ...patch }
+    spawnAgent(updated, repoRoot, (p) => {
+      updateTaskInState(task.id, p)
+    }, task.sessionId, prompt)
     setDiffPaneTaskId(null)
-    setLogPaneTaskId(selectedTask.id)
-  }, [selectedTask, repoRoot, updateTaskInState])
+    setLogPaneTaskId(task.id)
+  }, [paneTask, repoRoot, updateTaskInState])
 
   const handleSwitchBranch = useCallback(async (branch: string) => {
     setMode("normal")
@@ -218,13 +227,13 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   }, [repoRoot, showFlash])
 
-  const handleMerge = useCallback(async () => {
-    if (!selectedTask) { setMode("normal"); return }
+  const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
+    if (!task) { setMode("normal"); return }
     setMode("normal")
     try {
-      await mergeBranch(repoRoot, selectedTask.id)
-      updateTaskInState(selectedTask.id, { status: "done" })
-      showFlash(`Merged ${selectedTask.id} into HEAD`)
+      await mergeBranch(repoRoot, task.id)
+      updateTaskInState(task.id, { status: "done" })
+      showFlash(`Merged ${task.id} into HEAD`)
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -242,20 +251,23 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (key.ctrl && key.name === "c") { onExit(); return }
 
+    // When in a pane, actions operate on the viewed task, not selectedTask.
+    const activeTask = paneTask ?? selectedTask
+
     if (mode === "kill") {
-      if (key.name === "y") { handleKill(); return }
+      if (key.name === "y") { handleKill(activeTask); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
 
     if (mode === "delete") {
       if (key.name === "y") {
-        if (!selectedTask) { setMode("normal"); return }
-        if (selectedTask.pid) killAgent(selectedTask.pid)
-        removeWorktree(repoRoot, selectedTask.id).catch(() => {})
-        if (logPaneTaskId === selectedTask.id) setLogPaneTaskId(null)
-        if (diffPaneTaskId === selectedTask.id) setDiffPaneTaskId(null)
-        removeTaskFromState(selectedTask.id)
+        if (!activeTask) { setMode("normal"); return }
+        if (activeTask.pid) killAgent(activeTask.pid)
+        removeWorktree(repoRoot, activeTask.id).catch(() => {})
+        if (logPaneTaskId === activeTask.id) setLogPaneTaskId(null)
+        if (diffPaneTaskId === activeTask.id) setDiffPaneTaskId(null)
+        removeTaskFromState(activeTask.id)
         setMode("normal")
         return
       }
@@ -264,7 +276,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (mode === "merge") {
-      if (key.name === "y") { handleMerge(); return }
+      if (key.name === "y") { handleMerge(activeTask); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
@@ -278,35 +290,34 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (diffPaneTaskId !== null) {
       if (key.name === "c") {
-        if (selectedTask && selectedTask.sessionId) setMode("request_changes")
+        if (paneTask && paneTask.sessionId) setMode("request_changes")
         return
       }
       if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
       if (key.name === "m") {
-        if (selectedTask) setMode("merge")
+        if (paneTask) setMode("merge")
         return
       }
       if (key.name === "d") {
-        if (selectedTask) setMode("delete")
+        if (paneTask) setMode("delete")
         return
       }
       return
     }
 
     if (logPaneTaskId !== null) {
-      if (mode === "request_changes") return
       if (key.name === "x") {
-        if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
+        if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
         return
       }
-      if (key.name === "r") { handleResume(); return }
+      if (key.name === "r") { handleResume(paneTask); return }
       if (key.name === "f") { handleOpenDiff(); return }
       if (key.name === "c") {
-        if (selectedTask && selectedTask.sessionId) setMode("request_changes")
+        if (paneTask && paneTask.sessionId) setMode("request_changes")
         return
       }
       if (key.name === "d") {
-        if (selectedTask) setMode("delete")
+        if (paneTask) setMode("delete")
         return
       }
       return
@@ -331,19 +342,19 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
-    { key: "l", label: "back to log", disabled: !selectedTask },
+    { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
-    { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
-    { key: "m", label: "merge into HEAD", disabled: !selectedTask },
-    { key: "d", label: "delete", disabled: !selectedTask },
+    { key: "c", label: "request changes", disabled: !paneTask?.sessionId },
+    { key: "m", label: "merge into HEAD", disabled: !paneTask },
+    { key: "d", label: "delete", disabled: !paneTask },
   ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
-    { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
-    { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
-    { key: "f", label: "diff", disabled: !selectedTask },
-    { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
-    { key: "d", label: "delete", disabled: !selectedTask },
+    { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
+    { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
+    { key: "f", label: "diff", disabled: !paneTask },
+    { key: "c", label: "request changes", disabled: !paneTask?.sessionId },
+    { key: "d", label: "delete", disabled: !paneTask },
   ] : [
     { key: "n", label: "new task" },
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
@@ -370,17 +381,17 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       onSubmit={(prompt) => handleRequestChanges(prompt)}
       onCancel={() => setMode("normal")}
     />
-  ) : mode === "kill" && selectedTask ? (
+  ) : mode === "kill" && (paneTask ?? selectedTask) ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Kill ${selectedTask.id}?`}</strong>{` [y/n]`}</text>
+      <text><strong>{`Kill ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
     </box>
-  ) : mode === "delete" && selectedTask ? (
+  ) : mode === "delete" && (paneTask ?? selectedTask) ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Delete ${selectedTask.id}?`}</strong>{` [y/n]`}</text>
+      <text><strong>{`Delete ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
     </box>
-  ) : mode === "merge" && selectedTask ? (
+  ) : mode === "merge" && (paneTask ?? selectedTask) ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Merge ${selectedTask.id} into HEAD?`}</strong>{` [y/n]`}</text>
+      <text><strong>{`Merge ${(paneTask ?? selectedTask)!.id} into HEAD?`}</strong>{` [y/n]`}</text>
     </box>
   ) : (
     <StatusBar bindings={normalBindings} />
