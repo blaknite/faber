@@ -55,6 +55,18 @@ export async function mergeBranch(repoRoot: string, slug: string): Promise<void>
   }
 }
 
+export async function switchBranch(repoRoot: string, slug: string): Promise<void> {
+  // Check if the branch already exists
+  try {
+    await execa("git", ["rev-parse", "--verify", slug], { cwd: repoRoot })
+    // Branch exists, switch to it
+    await execa("git", ["checkout", slug], { cwd: repoRoot })
+  } catch {
+    // Branch does not exist, create it from the current HEAD
+    await execa("git", ["checkout", "-b", slug], { cwd: repoRoot })
+  }
+}
+
 export async function listWorktrees(repoRoot: string): Promise<string[]> {
   const { stdout } = await execa("git", ["worktree", "list", "--porcelain"], { cwd: repoRoot })
   return stdout
