@@ -189,14 +189,10 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const runningCount = tasks.filter(t => t.status === "running").length
 
   const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...patch } : t))
-    )
     updateTask(repoRoot, id, patch)
   }, [repoRoot])
 
   const removeTaskFromState = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id))
     removeTask(repoRoot, id)
   }, [repoRoot])
 
@@ -229,11 +225,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       exitCode: null,
     }
 
-    setTasks((prev) => {
-      const next = [task, ...prev]
-      setSelectedIdx(0)
-      return next
-    })
     addTask(repoRoot, task)
 
     try {
@@ -254,9 +245,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
 
-    spawnAgent(task, repoRoot, (patch) => {
-      updateTaskInState(slug, patch)
-    })
+    spawnAgent(task, repoRoot)
   }, [repoRoot, updateTaskInState])
 
   const handleKill = useCallback((task: Task | null = selectedTask) => {
@@ -280,9 +269,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, (p) => {
-      updateTaskInState(task.id, p)
-    }, task.sessionId)
+    spawnAgent(updated, repoRoot, task.sessionId)
   }, [selectedTask, repoRoot, updateTaskInState])
 
   const handleOpenLog = useCallback(() => {
@@ -308,9 +295,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, (p) => {
-      updateTaskInState(task.id, p)
-    }, task.sessionId, prompt)
+    spawnAgent(updated, repoRoot, task.sessionId, prompt)
     setDiffPaneTaskId(null)
     setLogPaneTaskId(task.id)
   }, [paneTask, repoRoot, updateTaskInState])

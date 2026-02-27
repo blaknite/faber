@@ -1,13 +1,12 @@
 import { spawn } from "node:child_process"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
-import { readState, updateTask, taskOutputPath } from "./state.js"
+import { updateTask, taskOutputPath } from "./state.js"
 import { logTaskFailure } from "./failureLog.js"
 
 export function spawnAgent(
   task: Task,
   repoRoot: string,
-  onUpdate: (patch: Partial<Task>) => void,
   resumeSessionId?: string,
   resumePrompt?: string
 ): void {
@@ -81,7 +80,7 @@ export function spawnAgent(
         const opencodePid = parseInt(result.stdout.trim(), 10)
         if (opencodePid) {
           clearInterval(poll)
-          onUpdate({ pid: opencodePid })
+          updateTask(repoRoot, task.id, { pid: opencodePid })
         }
       } catch {
         // not found yet
@@ -105,9 +104,7 @@ export function spawnAgent(
         const event = JSON.parse(line) as { sessionID?: string }
         if (event.sessionID) {
           sessionIdCaptured = true
-          const patch = { sessionId: event.sessionID }
-          onUpdate(patch)
-          updateTask(repoRoot, task.id, patch)
+          updateTask(repoRoot, task.id, { sessionId: event.sessionID })
           lineBuffer = ""
           break
         }
@@ -120,12 +117,8 @@ export function spawnAgent(
   child.stderr?.resume()
 
   child.on("close", () => {
-    // faber --finish already wrote the final status to disk. Read it back so
-    // in-process listeners (e.g. dispatchHeadless) get notified.
-    const current = readState(repoRoot).tasks.find((t) => t.id === task.id)
-    if (current && current.status !== "running") {
-      onUpdate({ status: current.status, exitCode: current.exitCode, completedAt: current.completedAt, pid: null })
-    }
+    // faber --finish already wrote the final status to disk. The state.json
+    // watcher in App.tsx will pick up that write and refresh the UI.
   })
 
   child.on("error", (err) => {
@@ -137,14 +130,12 @@ export function spawnAgent(
       error: err.message,
     })
 
-    const patch: Partial<Task> = {
+    updateTask(repoRoot, task.id, {
       status: "failed",
       exitCode: -1,
       completedAt: new Date().toISOString(),
       pid: null,
-    }
-    onUpdate(patch)
-    updateTask(repoRoot, task.id, patch)
+    })
   })
 }
 

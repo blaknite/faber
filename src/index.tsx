@@ -179,15 +179,8 @@ async function dispatchHeadless(repoRoot: string, prompt: string, model: Task["m
     process.exit(1)
   }
 
-  await new Promise<void>((resolve) => {
-    spawnAgent(task, repoRoot, (patch) => {
-      updateTask(repoRoot, slug, patch)
-      if (patch.status === "done" || patch.status === "failed") {
-        console.log(`Task ${slug} ${patch.status} (exit ${patch.exitCode})`)
-        resolve()
-      }
-    })
-  })
+  spawnAgent(task, repoRoot)
+  console.log(`Task ${slug} running`)
 }
 
 async function setup(repoRoot: string) {
