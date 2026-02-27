@@ -91,6 +91,16 @@ When creating a task, `Tab` cycles through models and `Enter` submits. Multi-lin
 | Fast | `anthropic/claude-haiku-4-5` |
 | Deep | `anthropic/claude-opus-4-6` |
 
+## Reviewing and merging agent work
+
+When an agent finishes with commits on its branch, the task is marked "ready to merge" and the pending count appears in the top bar. The typical flow from there:
+
+1. Select the task and press `enter` to open the log, or go straight to `f` for the diff view.
+2. The diff view runs `git diff HEAD...{branch}` (three-dot syntax), so you see exactly what the agent changed relative to the point where work began, regardless of anything that landed on `HEAD` in the meantime.
+3. The diff renders with character-level highlighting and two layout modes: side-by-side (default) and inline. Press `Tab` to switch between them.
+4. When you're happy with the changes, press `m`. You'll get a `[y/n]` confirmation prompt, then faber runs `git merge --no-ff {branch}` from the repo root. The `--no-ff` flag forces a merge commit so the history clearly records that these commits came from an agent task. If the merge fails (conflicts, etc.), faber automatically aborts and leaves your repo clean.
+5. After merging, the task moves to "done". The worktree and branch are still there so you can review the log or diff again. When you're done with them, press `d` to delete the worktree and branch in one go.
+
 ## Development
 
 ```bash
