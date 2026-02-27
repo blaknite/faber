@@ -37,7 +37,17 @@ export async function getDiff(repoRoot: string, slug: string): Promise<string> {
 }
 
 export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
-  await execa("git", ["merge", "--no-ff", slug], { cwd: repoRoot })
+  try {
+    await execa("git", ["merge", "--no-ff", slug], { cwd: repoRoot })
+  } catch (err) {
+    // Clean up any partial merge state so the repo isn't left dirty
+    try {
+      await execa("git", ["merge", "--abort"], { cwd: repoRoot })
+    } catch {
+      // If abort fails there's nothing more we can do
+    }
+    throw err
+  }
 }
 
 export async function listWorktrees(repoRoot: string): Promise<string[]> {
