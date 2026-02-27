@@ -33,7 +33,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }}>
-      <box border={["bottom"]} borderColor="#555555" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#000000", flexDirection: "row", justifyContent: "space-between" }}>
+      <box border={["bottom"]} borderColor="#555555" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#111111", flexDirection: "row", justifyContent: "space-between" }}>
         <text>
           <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
           {"  "}
