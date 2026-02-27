@@ -5,13 +5,15 @@ import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus, Model } from "../types.js"
 import { TaskInput } from "./TaskInput.js"
 
-type FilterMode = "active" | "all"
+export type FilterMode = "active" | "all"
 
-const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
+export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
 
 interface Props {
   tasks: Task[]
   selectedId: string | null
+  filterMode: FilterMode
+  onFilterChange: (mode: FilterMode) => void
   width?: number | "auto" | `${number}%`
   inputActive: boolean
   onSubmit: (prompt: string, model: Model) => void
@@ -82,10 +84,9 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function AgentList({ tasks, selectedId, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
+export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
-  const [filterMode, setFilterMode] = useState<FilterMode>("active")
 
   const setCardRef = useCallback((id: string) => (el: BoxRenderable | null) => {
     if (el) {
@@ -95,26 +96,12 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
     }
   }, [])
 
-  const visibleTasks = filterMode === "active"
-    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
-    : tasks
-
   useKeyboard((key) => {
     if (inputActive) return
     if (key.name === "tab") {
-      setFilterMode((m) => m === "active" ? "all" : "active")
+      onFilterChange(filterMode === "active" ? "all" : "active")
     }
   })
-
-  // When the filter changes and the current selection is no longer visible,
-  // snap to the first task in the filtered list.
-  useEffect(() => {
-    if (!selectedId) return
-    const isVisible = visibleTasks.some((t) => t.id === selectedId)
-    if (!isVisible && visibleTasks.length > 0) {
-      onSelectTask(visibleTasks[0].id)
-    }
-  }, [filterMode, visibleTasks, selectedId, onSelectTask])
 
   useEffect(() => {
     if (!scrollRef.current || !selectedId) return
@@ -140,7 +127,7 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
     } else if (bottom > currentTop + viewportHeight) {
       scrollbox.scrollTo(bottom - viewportHeight + CONTENT_PADDING)
     }
-  }, [selectedId, visibleTasks])
+  }, [selectedId, tasks])
 
   const containerStyle = width !== undefined ? { width } : { flexGrow: 1 }
 
@@ -156,7 +143,7 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
         </text>
       </box>
 
-      {visibleTasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
           <text fg="#333333">{filterMode === "active" ? "No active tasks." : "No tasks yet."}</text>
         </box>
@@ -164,7 +151,7 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
         <box style={{ flexGrow: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column", paddingRight: 1 }}>
-              {visibleTasks.map((task, i) => {
+              {tasks.map((task, i) => {
                 const selected = task.id === selectedId
                 return (
                   <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
