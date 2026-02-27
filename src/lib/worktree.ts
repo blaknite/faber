@@ -36,6 +36,16 @@ export async function getCurrentBranch(repoRoot: string): Promise<string> {
   return stdout.trim()
 }
 
+export async function getCommitsAhead(repoRoot: string): Promise<number> {
+  try {
+    const { stdout } = await execa("git", ["rev-list", "--count", "@{u}..HEAD"], { cwd: repoRoot })
+    return parseInt(stdout.trim(), 10) || 0
+  } catch {
+    // No upstream configured or other git error -- don't show anything
+    return 0
+  }
+}
+
 export async function getDiff(repoRoot: string, slug: string): Promise<string> {
   const { stdout } = await execa("git", ["diff", `HEAD...${slug}`], { cwd: repoRoot })
   return stdout
