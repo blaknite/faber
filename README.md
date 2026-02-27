@@ -40,16 +40,19 @@ bun run dev
 ## Usage
 
 ```bash
-faber [path/to/repo]   # opens the TUI in the current directory or a specified one
+faber                        # open the TUI in the current directory
+faber start                  # same as above, explicit subcommand
+faber --dir /path/to/repo    # open the TUI in a specific directory
 ```
 
-### Headless dispatch
+### Headless run
 
 Fire off a task without opening the TUI:
 
 ```bash
-faber dispatch "fix the login bug" --dir /path/to/repo
-faber dispatch "add tests for UserService" --model anthropic/claude-haiku-4-5
+faber run "fix the login bug"
+faber run "fix the login bug" --dir /path/to/repo
+faber run "add tests for UserService" --model anthropic/claude-haiku-4-5
 ```
 
 ### TUI keybindings
