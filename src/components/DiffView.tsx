@@ -1,14 +1,53 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useKeyboard } from "@opentui/react"
+import { SyntaxStyle } from "@opentui/core"
 import { getDiff } from "../lib/worktree.js"
 import { DiffViewer } from "../lib/diff/index.js"
 import type { ViewMode } from "../lib/diff/index.js"
+import { readLogEntries } from "../lib/logParser.js"
 import type { Task } from "../types.js"
+
+const syntaxStyle = SyntaxStyle.create()
 
 interface Props {
   repoRoot: string
   task: Task
   disabled?: boolean
+}
+
+function LastMessage({ repoRoot, task }: { repoRoot: string; task: Task }) {
+  const entries = useMemo(() => readLogEntries(repoRoot, task.id), [repoRoot, task.id])
+  const lastText = useMemo(() => {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (entries[i]!.kind === "text" && entries[i]!.text) return entries[i]!.text!
+    }
+    return null
+  }, [entries])
+
+  if (!lastText) return null
+
+  return (
+    <box style={{ paddingLeft: 2, paddingRight: 2, paddingBottom: 1 }}>
+      <box
+        border={["left"]}
+        borderColor="#444444"
+        style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+      >
+        <markdown
+          content={lastText}
+          syntaxStyle={syntaxStyle}
+          style={{ flexGrow: 1, flexShrink: 1 }}
+          renderNode={(token, context) => {
+            const renderable = context.defaultRender()
+            if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+              (renderable as any).wrapMode = "word"
+            }
+            return renderable
+          }}
+        />
+      </box>
+    </box>
+  )
 }
 
 export function DiffView({ repoRoot, task, disabled }: Props) {
@@ -46,6 +85,8 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           <span fg="#888888">{" [tab]"}</span>
         </text>
       </box>
+
+      <LastMessage repoRoot={repoRoot} task={task} />
 
       {error != null ? (
         <box style={{ paddingLeft: 2, paddingTop: 1 }}>
