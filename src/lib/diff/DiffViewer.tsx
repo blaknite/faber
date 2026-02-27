@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo } from "react"
+import type React from "react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard } from "@opentui/react"
 import { parseDiff } from "./parser.js"
@@ -13,6 +14,7 @@ export interface DiffViewerProps {
   diff: string
   viewMode?: ViewMode
   hideHeader?: boolean
+  headerContent?: React.ReactNode
 }
 
 // Pair up removed/added lines within a hunk for character-level highlighting.
@@ -372,7 +374,7 @@ function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () =
   )
 }
 
-export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false }: DiffViewerProps) {
+export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent }: DiffViewerProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [internalViewMode, setInternalViewMode] = useState<ViewMode>(controlledViewMode ?? "side-by-side")
 
@@ -438,6 +440,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
           viewportOptions={{ maxHeight: "100%" }}
         >
           <box style={styles.scrollContent}>
+            {headerContent}
             {isEmpty ? (
               <text fg={colors.context}>No diff -- branch is identical to HEAD.</text>
             ) : (
