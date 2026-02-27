@@ -221,7 +221,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (diffPaneTaskId !== null) {
-      if (key.name === "o" || key.name === "return") { handleOpenLog(); setDiffPaneTaskId(null); return }
+      if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
       if (key.name === "m") {
         if (selectedTask) setMode("merge")
         return
@@ -269,7 +269,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
-    { key: "o", label: "log", disabled: !selectedTask },
+    { key: "l", label: "log", disabled: !selectedTask },
     { key: "m", label: "merge into HEAD", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
   ] : logPaneTaskId ? [
