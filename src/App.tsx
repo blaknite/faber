@@ -142,8 +142,13 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const handleKill = useCallback(() => {
     if (!selectedTask || selectedTask.status !== "running" || !selectedTask.pid) return
     killAgent(selectedTask.pid)
+    updateTaskInState(selectedTask.id, {
+      status: "failed",
+      completedAt: new Date().toISOString(),
+      pid: null,
+    })
     setMode("normal")
-  }, [selectedTask])
+  }, [selectedTask, updateTaskInState])
 
   const handleClone = useCallback(() => {
     if (!selectedTask) return
