@@ -85,7 +85,7 @@ function LineRow({ lineNum, color, segments, highlightBg, rowBg, prefix }: {
 }) {
   const numStr = lineNum !== undefined ? String(lineNum).padStart(4, " ") : "    "
   return (
-    <box style={{ flexDirection: "row", backgroundColor: rowBg }}>
+    <box style={{ flexDirection: "row", flexGrow: 1, backgroundColor: rowBg }}>
       <text fg={colors.lineNum}>{numStr} </text>
       {prefix !== undefined && <text fg={color}>{prefix} </text>}
       {prefix === undefined && <text fg={color}>{" "}</text>}
@@ -224,13 +224,13 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
       rows.push({
         key: `c-${i}`,
         left: (
-          <box style={{ flexDirection: "row", flexGrow: 1 }}>
+          <box style={{ flexDirection: "row", flexGrow: 1, alignSelf: "stretch" }}>
             <text fg={colors.lineNum}>{numStr} </text>
             <text fg={colors.context}>{" "}{line.content}</text>
           </box>
         ),
         right: (
-          <box style={{ flexDirection: "row", flexGrow: 1 }}>
+          <box style={{ flexDirection: "row", flexGrow: 1, alignSelf: "stretch" }}>
             <text fg={colors.lineNum}>{newNumStr} </text>
             <text fg={colors.context}>{" "}{line.content}</text>
           </box>
