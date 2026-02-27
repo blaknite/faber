@@ -22,6 +22,15 @@ export async function removeWorktree(repoRoot: string, slug: string): Promise<vo
   }
 }
 
+export async function worktreeHasCommits(repoRoot: string, slug: string): Promise<boolean> {
+  try {
+    const { stdout } = await execa("git", ["log", "--oneline", `HEAD..${slug}`], { cwd: repoRoot })
+    return stdout.trim().length > 0
+  } catch {
+    return false
+  }
+}
+
 export async function getDiff(repoRoot: string, slug: string): Promise<string> {
   const { stdout } = await execa("git", ["diff", `HEAD...${slug}`], { cwd: repoRoot })
   return stdout

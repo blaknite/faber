@@ -5,7 +5,7 @@ import { existsSync } from "node:fs"
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
-import { createWorktree } from "./lib/worktree.js"
+import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
@@ -29,9 +29,9 @@ async function main() {
       console.error("Could not find faber state file from current directory")
       process.exit(exitCode)
     }
-    // Always mark the task as done so intermittent non-zero exit codes from the
-    // agent process don't permanently flip a completed task to "failed". The
-    // exit code is still recorded for diagnostics.
+    // Always mark the task as done (or ready_to_merge) so intermittent non-zero
+    // exit codes from the agent process don't permanently flip a completed task to
+    // "failed". The exit code is still recorded for diagnostics.
     if (exitCode !== 0) {
       logTaskFailure(repoRoot, {
         taskId,
@@ -41,9 +41,14 @@ async function main() {
       })
     }
 
+    // If the agent committed work to its branch, surface that so the user knows
+    // a merge is waiting. If nothing was committed, it's just done.
+    const hasCommits = await worktreeHasCommits(repoRoot, taskId)
+    const status = hasCommits ? "ready_to_merge" : "done"
+
     try {
       updateTask(repoRoot, taskId, {
-        status: "done",
+        status,
         exitCode,
         completedAt: new Date().toISOString(),
         pid: null,
