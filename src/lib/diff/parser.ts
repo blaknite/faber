@@ -46,7 +46,7 @@ export function parseDiff(raw: string): ParsedDiff {
   let newLineNum = 1
 
   for (const line of lines) {
-    // New file diff header
+    // New file diff header (git format: "diff --git a/... b/...")
     if (line.startsWith("diff ")) {
       if (currentHunk && currentFile) {
         currentFile.hunks.push(currentHunk)
@@ -57,6 +57,30 @@ export function parseDiff(raw: string): ParsedDiff {
       }
       currentFile = { oldPath: "", newPath: "", hunks: [] }
       continue
+    }
+
+    // New file diff header (SVN/patch format: "Index: /path/to/file")
+    if (line.startsWith("Index: ")) {
+      if (currentHunk && currentFile) {
+        currentFile.hunks.push(currentHunk)
+        currentHunk = null
+      }
+      if (currentFile) {
+        files.push(currentFile)
+      }
+      currentFile = { oldPath: "", newPath: "", hunks: [] }
+      continue
+    }
+
+    // Skip the "===" separator line that follows "Index:" in SVN/patch format
+    if (line.startsWith("=======") || line.startsWith("===")) {
+      continue
+    }
+
+    // If we haven't started a file yet but we hit "---", start one implicitly.
+    // This handles bare unified diffs with no header at all.
+    if (currentFile === null && line.startsWith("--- ")) {
+      currentFile = { oldPath: "", newPath: "", hunks: [] }
     }
 
     if (currentFile === null) continue
