@@ -461,7 +461,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       return
     }
     if (key.name === "p") {
-      setMode("push")
+      if (isDirty) setMode("push")
       return
     }
   })
@@ -488,7 +488,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "b", label: "switch branch", disabled: !selectedTask },
-    { key: "p", label: "push" },
+    { key: "p", label: "push", disabled: !isDirty },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
   ]
@@ -534,7 +534,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}${isDirty ? " *" : ""}` : ""}</span></text>
+        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}` : ""}</span>{isDirty && <span fg="#ff6600">{" *"}</span>}</text>
         <box style={{ flexDirection: "row", gap: 1 }}>
           {runningCount > 0 && (
             <RunningCountSpinner count={runningCount} />
