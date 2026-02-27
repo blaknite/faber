@@ -46,6 +46,38 @@ rename to new.ts
 +world
 `
 
+// SVN/patch format - what opencode actually emits
+const INDEX_FORMAT_DIFF = `Index: /path/to/src/foo.ts
+===================================================================
+--- /path/to/src/foo.ts
++++ /path/to/src/foo.ts
+@@ -1,4 +1,4 @@
+ import { something } from "./bar"
+-const x = 1
++const x = 2
+ 
+ export { x }
+`
+
+const INDEX_FORMAT_MULTI_FILE_DIFF = `Index: /path/to/src/a.ts
+===================================================================
+--- /path/to/src/a.ts
++++ /path/to/src/a.ts
+@@ -1,2 +1,2 @@
+-old line
++new line
+ context
+Index: /path/to/src/b.ts
+===================================================================
+--- /path/to/src/b.ts
++++ /path/to/src/b.ts
+@@ -3,3 +3,4 @@
+ line a
++inserted
+ line b
+ line c
+`
+
 describe("parseDiff", () => {
   describe("simple single-file diff", () => {
     it("parses into one file", () => {
@@ -161,6 +193,50 @@ describe("parseDiff", () => {
     it("preserves the raw diff in metadata", () => {
       const result = parseDiff(SIMPLE_DIFF)
       expect(result.metadata.raw).toBe(SIMPLE_DIFF)
+    })
+  })
+
+  describe("Index: format (SVN/patch - what opencode emits)", () => {
+    it("parses into one file", () => {
+      const result = parseDiff(INDEX_FORMAT_DIFF)
+      expect(result.files).toHaveLength(1)
+    })
+
+    it("extracts the file path from --- line", () => {
+      const { files } = parseDiff(INDEX_FORMAT_DIFF)
+      expect(files[0]!.newPath).toBe("/path/to/src/foo.ts")
+      expect(files[0]!.oldPath).toBe("/path/to/src/foo.ts")
+    })
+
+    it("identifies removed lines", () => {
+      const { files } = parseDiff(INDEX_FORMAT_DIFF)
+      const removed = files[0]!.hunks[0]!.lines.filter((l) => l.type === "remove")
+      expect(removed).toHaveLength(1)
+      expect(removed[0]!.content).toBe("const x = 1")
+    })
+
+    it("identifies added lines", () => {
+      const { files } = parseDiff(INDEX_FORMAT_DIFF)
+      const added = files[0]!.hunks[0]!.lines.filter((l) => l.type === "add")
+      expect(added).toHaveLength(1)
+      expect(added[0]!.content).toBe("const x = 2")
+    })
+
+    it("parses multi-file Index: diffs", () => {
+      const result = parseDiff(INDEX_FORMAT_MULTI_FILE_DIFF)
+      expect(result.files).toHaveLength(2)
+    })
+
+    it("second file in multi-file Index: diff has correct path", () => {
+      const { files } = parseDiff(INDEX_FORMAT_MULTI_FILE_DIFF)
+      expect(files[1]!.newPath).toBe("/path/to/src/b.ts")
+    })
+
+    it("second file in multi-file Index: diff has an insertion", () => {
+      const { files } = parseDiff(INDEX_FORMAT_MULTI_FILE_DIFF)
+      const added = files[1]!.hunks[0]!.lines.filter((l) => l.type === "add")
+      expect(added).toHaveLength(1)
+      expect(added[0]!.content).toBe("inserted")
     })
   })
 })
