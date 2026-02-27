@@ -42,50 +42,52 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const borderHeight = textareaHeight + 2
 
   return (
-    <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, marginTop: 1, marginLeft: 1, marginRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
-      {!active ? (
-        <box
-          border={["left"]}
-          borderColor={model.dimColor}
-          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
-        >
-          <text fg="#444444">Press [n] to create a new task</text>
-          <box style={{ height: 1 }} />
-          <text fg={model.dimColor}>{model.label}</text>
-        </box>
-      ) : (
-        <box
-          border={["left"]}
-          borderColor={model.color}
-          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
-        >
-          <textarea
-            ref={textareaRef}
-            minHeight={MIN_LINES}
-            maxHeight={MAX_LINES}
-            keyBindings={KEY_BINDINGS}
-            onContentChange={onContentChange}
-            onSubmit={() => {
-              const trimmed = textareaRef.current?.plainText.trim()
-              if (trimmed) onSubmit(trimmed, modelRef.current.value)
-            }}
-            onKeyDown={(key) => {
-              if (key.name === "escape") {
-                onCancel()
-                key.preventDefault()
-                return
-              }
-              if (key.name === "tab") {
-                setModelIdx((i) => (i + 1) % MODELS.length)
-                key.preventDefault()
-              }
-            }}
-            focused
-          />
-          <box style={{ height: 1 }} />
-          <text fg={model.color}>{model.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] model</span></text>
-        </box>
-      )}
+    <box style={{ paddingTop: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+      <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, height: borderHeight + 2 }}>
+        {!active ? (
+          <box
+            border={["left"]}
+            borderColor={model.dimColor}
+            style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
+          >
+            <text fg="#444444">Press [n] to create a new task</text>
+            <box style={{ height: 1 }} />
+            <text fg={model.dimColor}>{model.label}</text>
+          </box>
+        ) : (
+          <box
+            border={["left"]}
+            borderColor={model.color}
+            style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
+          >
+            <textarea
+              ref={textareaRef}
+              minHeight={MIN_LINES}
+              maxHeight={MAX_LINES}
+              keyBindings={KEY_BINDINGS}
+              onContentChange={onContentChange}
+              onSubmit={() => {
+                const trimmed = textareaRef.current?.plainText.trim()
+                if (trimmed) onSubmit(trimmed, modelRef.current.value)
+              }}
+              onKeyDown={(key) => {
+                if (key.name === "escape") {
+                  onCancel()
+                  key.preventDefault()
+                  return
+                }
+                if (key.name === "tab") {
+                  setModelIdx((i) => (i + 1) % MODELS.length)
+                  key.preventDefault()
+                }
+              }}
+              focused
+            />
+            <box style={{ height: 1 }} />
+            <text fg={model.color}>{model.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] model</span></text>
+          </box>
+        )}
+      </box>
     </box>
   )
 }
