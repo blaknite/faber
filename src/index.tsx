@@ -1,6 +1,7 @@
 import { createCliRenderer } from "@opentui/core"
 import { createRoot } from "@opentui/react"
-import { resolve, basename, join } from "node:path"
+import { resolve, join } from "node:path"
+import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot } from "./lib/state.js"
@@ -115,7 +116,7 @@ async function main() {
   }
 
   const state = readState(repoRoot)
-  const repoName = basename(repoRoot)
+  const repoName = repoRoot.replace(homedir(), "~")
 
   const renderer = await createCliRenderer({ exitOnCtrlC: false, useMouse: false })
   const root = createRoot(renderer)

@@ -519,7 +519,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}</span>{currentBranch ? <span fg="#555555">{"  •  "}{currentBranch}{commitsAhead > 0 ? ` ↑ ${commitsAhead}` : ""}</span> : null}</text>
+        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}${commitsAhead > 0 ? ` ↑ ${commitsAhead}` : ""}` : ""}</span></text>
         <box style={{ flexDirection: "row", gap: 1 }}>
           {runningCount > 0 && (
             <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]} {runningCount}</text>
