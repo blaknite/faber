@@ -297,6 +297,21 @@ describe("parseToolEntry", () => {
       expect(entry.icon).toBe("#")
       expect(entry.title).toBe("Todos")
     })
+
+    it("formats todo items as blockContent", () => {
+      const todos = [
+        { content: "Fix the bug", status: "completed", priority: "high" },
+        { content: "Write tests", status: "in_progress", priority: "medium" },
+        { content: "Update docs", status: "pending", priority: "low" },
+      ]
+      const entry = parseToolEntry(makeToolEvent("todowrite", { todos }))!
+      expect(entry.blockContent).toBe("[x] Fix the bug\n[~] Write tests\n[ ] Update docs")
+    })
+
+    it("omits blockContent when there are no todos", () => {
+      const entry = parseToolEntry(makeToolEvent("todowrite", { todos: [] }))!
+      expect(entry.blockContent).toBeUndefined()
+    })
   })
 
   describe("skill", () => {
