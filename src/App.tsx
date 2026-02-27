@@ -17,13 +17,23 @@ import { createWorktree } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
-import { TickContext, SPINNER_FRAMES, useTickProvider, useTick } from "./lib/tick.js"
+import { TickContext, useTickProvider, useSpinnerFrame } from "./lib/tick.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
 
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+}
+
+function RunningCountSpinner({ count }: { count: number }) {
+  const frame = useSpinnerFrame()
+  return <text fg="#00aaff">{frame} {count}</text>
+}
+
+function PushingSpinner({ branch }: { branch: string }) {
+  const frame = useSpinnerFrame()
+  return <text fg="#00aaff">{frame}{` Pushing ${branch} to origin...`}</text>
 }
 
 interface Props {
@@ -45,9 +55,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const [currentBranch, setCurrentBranch] = useState<string>("")
   const [commitsAhead, setCommitsAhead] = useState<number>(0)
   const prevSelectedIdx = useRef(0)
-
-  const tick = useTick()
-  const spinnerFrame = tick % SPINNER_FRAMES.length
 
   const visibleTasks = filterMode === "active"
     ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
@@ -510,7 +517,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     </box>
   ) : mode === "pushing" ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]}{` Pushing ${currentBranch} to origin...`}</text>
+      <PushingSpinner branch={currentBranch} />
     </box>
   ) : (
     <StatusBar bindings={normalBindings} />
@@ -522,7 +529,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}${commitsAhead > 0 ? ` ↑ ${commitsAhead}` : ""}` : ""}</span></text>
         <box style={{ flexDirection: "row", gap: 1 }}>
           {runningCount > 0 && (
-            <text fg="#00aaff">{SPINNER_FRAMES[spinnerFrame]} {runningCount}</text>
+            <RunningCountSpinner count={runningCount} />
           )}
           {runningCount > 0 && tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
             <text fg="#555555">{"•"}</text>
