@@ -12,6 +12,8 @@ export const colors = {
   // Row-level background for whole add/remove lines
   addRow: "#002914",
   removeRow: "#2e0b0b",
+  // Empty row in side-by-side view (no corresponding line on this side)
+  emptyRow: "#111111",
   // UI chrome
   border: "#555555",
   background: "#000000",
