@@ -200,6 +200,16 @@ describe("parseToolEntry", () => {
       expect(entry.description).toContain("offset=10")
       expect(entry.description).toContain("limit=50")
     })
+
+    it("includes output as blockContent when present", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }, { output: "line 1\nline 2\n" }))!
+      expect(entry.blockContent).toBe("line 1\nline 2\n")
+    })
+
+    it("omits blockContent when output is absent", () => {
+      const entry = parseToolEntry(makeToolEvent("read", { filePath: "/file.ts" }))!
+      expect(entry.blockContent).toBeUndefined()
+    })
   })
 
   describe("write", () => {

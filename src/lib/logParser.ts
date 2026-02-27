@@ -104,6 +104,7 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
       .filter(([, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
       .map(([k, v]) => `${k}=${v}`)
     const description = extras.length ? `[${extras.join(", ")}]` : undefined
+    const output = str(state?.output)
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
@@ -111,6 +112,7 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
       icon: "→",
       title: `Read ${filePath}`,
       description,
+      blockContent: output || undefined,
       status,
       errorMessage,
     }
