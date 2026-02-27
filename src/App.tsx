@@ -167,9 +167,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   }, [selectedTask])
 
   const handleOpenDiff = useCallback(() => {
-    if (!selectedTask) return
-    setDiffPaneTaskId(selectedTask.id)
-  }, [selectedTask])
+    const taskId = logPaneTaskId ?? selectedTask?.id
+    if (!taskId) return
+    setDiffPaneTaskId(taskId)
+  }, [logPaneTaskId, selectedTask])
 
   const handleRequestChanges = useCallback((prompt: string) => {
     if (!selectedTask || !selectedTask.sessionId) return
