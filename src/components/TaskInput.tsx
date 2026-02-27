@@ -42,7 +42,7 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
   const borderHeight = textareaHeight + 2
 
   return (
-    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, height: borderHeight + 2 }}>
+    <box style={{ paddingBottom: 1, paddingLeft: 1, paddingRight: 1, height: borderHeight + 2 }}>
       <box key={active ? "active" : "inactive"} style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, height: borderHeight + 2, backgroundColor: "#111111" }}>
         {!active ? (
           <box
