@@ -12,7 +12,7 @@ Each task gets its own git worktree at `.worktrees/<task-slug>`. An `opencode` a
 
 Faber automatically injects the `working-in-faber` skill into every agent prompt. The skill tells the agent about its environment (git worktrees, branch isolation, sibling agents) and sets expectations around committing in logical units, writing meaningful commit messages, and not pushing.
 
-For this to work, the skill needs to be available in your agent's environment. If you're using Claude Code or Amp, make sure the skill is installed and accessible.
+For this to work, the skill needs to be available in your agent's environment.
 
 ## Prerequisites
 
