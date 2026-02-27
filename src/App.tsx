@@ -8,7 +8,7 @@ import { BranchInput } from "./components/BranchInput.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, getCurrentBranch, switchBranch } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch, getCurrentBranch, switchBranch, pushBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask } from "./lib/state.js"
 import { createWorktree } from "./lib/worktree.js"
@@ -16,7 +16,7 @@ import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task, Model } from "./types.js"
 import { DEFAULT_MODEL } from "./types.js"
 
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "request_changes" | "switch_branch"
+type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "request_changes" | "switch_branch"
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -222,6 +222,17 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   }, [repoRoot, showFlash])
 
+  const handlePush = useCallback(async (task: Task | null = selectedTask) => {
+    if (!task) { setMode("normal"); return }
+    setMode("normal")
+    try {
+      await pushBranch(repoRoot, task.id)
+      showFlash(`Pushed ${task.id} to origin`)
+    } catch (err) {
+      showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [selectedTask, repoRoot, showFlash])
+
   const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
     if (!task) { setMode("normal"); return }
     setMode("normal")
@@ -238,7 +249,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
 
     if (key.name === "escape") {
-      if (mode === "kill" || mode === "delete" || mode === "merge") { setMode("normal"); return }
+      if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
       if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
       if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
       return
@@ -272,6 +283,12 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (mode === "merge") {
       if (key.name === "y") { handleMerge(activeTask); return }
+      if (key.name === "n" || key.name === "q") { setMode("normal"); return }
+      return
+    }
+
+    if (mode === "push") {
+      if (key.name === "y") { handlePush(activeTask); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
@@ -335,6 +352,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (selectedTask) setMode("delete")
       return
     }
+    if (key.name === "p") {
+      if (selectedTask) setMode("push")
+      return
+    }
   })
 
   const normalBindings = diffPaneTaskId ? [
@@ -359,6 +380,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "b", label: "switch branch", disabled: !selectedTask },
+    { key: "p", label: "push", disabled: !selectedTask },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "q", label: "quit" },
   ]
@@ -388,6 +410,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ) : mode === "merge" && (paneTask ?? selectedTask) ? (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text><strong>{`Merge ${(paneTask ?? selectedTask)!.id} into HEAD?`}</strong>{` [y/n]`}</text>
+    </box>
+  ) : mode === "push" && selectedTask ? (
+    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
+      <text><strong>{`Push ${selectedTask.id} to origin?`}</strong>{` [y/n]`}</text>
     </box>
   ) : (
     <StatusBar bindings={normalBindings} />

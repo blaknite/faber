@@ -55,6 +55,10 @@ export async function mergeBranch(repoRoot: string, slug: string): Promise<void>
   }
 }
 
+export async function pushBranch(repoRoot: string, slug: string): Promise<void> {
+  await execa("git", ["push", "--set-upstream", "origin", slug], { cwd: worktreePath(repoRoot, slug) })
+}
+
 export async function switchBranch(repoRoot: string, slug: string): Promise<void> {
   // Check if the branch already exists
   try {
