@@ -120,12 +120,21 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
 
   // todowrite -- must come before the generic write check because "todowrite".endsWith("write")
   if (toolLower === "todowrite") {
+    const todos = Array.isArray(input.todos) ? input.todos : []
+    const todoLines = todos.map((todo: unknown) => {
+      const t = todo as Record<string, unknown>
+      const content = str(t.content)
+      const todoStatus = str(t.status)
+      const marker = todoStatus === "completed" ? "✓" : todoStatus === "in_progress" ? "~" : " "
+      return `[${marker}] ${content}`
+    })
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
       tool,
       icon: "#",
       title: "Todos",
+      blockContent: todoLines.length ? todoLines.join("\n") : undefined,
       status,
       errorMessage,
     }
