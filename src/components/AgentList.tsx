@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useKeyboard } from "@opentui/react"
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
 import type { Task, TaskStatus, Model } from "../types.js"
 import { TaskInput } from "./TaskInput.js"
+
+type FilterMode = "active" | "all"
+
+const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
 
 interface Props {
   tasks: Task[]
@@ -11,6 +16,7 @@ interface Props {
   inputActive: boolean
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
+  onSelectTask: (id: string) => void
 }
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -76,9 +82,10 @@ function TaskRow({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function AgentList({ tasks, selectedId, width = undefined, inputActive, onSubmit, onCancel }: Props) {
+export function AgentList({ tasks, selectedId, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
+  const [filterMode, setFilterMode] = useState<FilterMode>("active")
 
   const setCardRef = useCallback((id: string) => (el: BoxRenderable | null) => {
     if (el) {
@@ -87,6 +94,27 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
       cardRefs.current.delete(id)
     }
   }, [])
+
+  const visibleTasks = filterMode === "active"
+    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
+    : tasks
+
+  useKeyboard((key) => {
+    if (inputActive) return
+    if (key.name === "tab") {
+      setFilterMode((m) => m === "active" ? "all" : "active")
+    }
+  })
+
+  // When the filter changes and the current selection is no longer visible,
+  // snap to the first task in the filtered list.
+  useEffect(() => {
+    if (!selectedId) return
+    const isVisible = visibleTasks.some((t) => t.id === selectedId)
+    if (!isVisible && visibleTasks.length > 0) {
+      onSelectTask(visibleTasks[0].id)
+    }
+  }, [filterMode, visibleTasks, selectedId, onSelectTask])
 
   useEffect(() => {
     if (!scrollRef.current || !selectedId) return
@@ -112,24 +140,31 @@ export function AgentList({ tasks, selectedId, width = undefined, inputActive, o
     } else if (bottom > currentTop + viewportHeight) {
       scrollbox.scrollTo(bottom - viewportHeight + CONTENT_PADDING)
     }
-  }, [selectedId, tasks])
+  }, [selectedId, visibleTasks])
 
   const containerStyle = width !== undefined ? { width } : { flexGrow: 1 }
 
   return (
     <box style={{ ...containerStyle, flexDirection: "column" }}>
       <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
-      <box border={["top"]} borderColor="#222222" />
+      <box border={["top"]} borderColor="#222222" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, flexDirection: "row", justifyContent: "flex-end" }}>
+        <text>
+          <span fg={filterMode === "active" ? "#0088ff" : "#555555"}>active</span>
+          <span fg="#333333">{" / "}</span>
+          <span fg={filterMode === "all" ? "#0088ff" : "#555555"}>all</span>
+          <span fg="#888888">{" [tab]"}</span>
+        </text>
+      </box>
 
-      {tasks.length === 0 ? (
+      {visibleTasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="#333333">No tasks yet.</text>
+          <text fg="#333333">{filterMode === "active" ? "No active tasks." : "No tasks yet."}</text>
         </box>
       ) : (
         <box style={{ flexGrow: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column", paddingRight: 1 }}>
-              {tasks.map((task, i) => {
+              {visibleTasks.map((task, i) => {
                 const selected = task.id === selectedId
                 return (
                   <box key={task.id} ref={setCardRef(task.id)} style={{ flexDirection: "column" }}>
