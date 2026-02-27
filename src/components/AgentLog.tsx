@@ -517,7 +517,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
     <box
       style={{ flexDirection: "column", flexGrow: 1, paddingBottom: 1 }}
     >
-      <box border={["bottom"]} borderColor="#555555" style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#111111" }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#111111" }}>
         <TitleBar task={task} />
       </box>
 
