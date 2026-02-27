@@ -305,7 +305,7 @@ describe("parseToolEntry", () => {
         { content: "Update docs", status: "pending", priority: "low" },
       ]
       const entry = parseToolEntry(makeToolEvent("todowrite", { todos }))!
-      expect(entry.blockContent).toBe("[x] Fix the bug\n[~] Write tests\n[ ] Update docs")
+      expect(entry.blockContent).toBe("[✓] Fix the bug\n[~] Write tests\n[ ] Update docs")
     })
 
     it("omits blockContent when there are no todos", () => {

@@ -123,7 +123,7 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
       const t = todo as Record<string, unknown>
       const content = str(t.content)
       const todoStatus = str(t.status)
-      const marker = todoStatus === "completed" ? "x" : todoStatus === "in_progress" ? "~" : " "
+      const marker = todoStatus === "completed" ? "✓" : todoStatus === "in_progress" ? "~" : " "
       return `[${marker}] ${content}`
     })
     return {
