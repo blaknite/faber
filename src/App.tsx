@@ -259,6 +259,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
 
     if (logPaneTaskId !== null) {
+      if (mode === "request_changes") return
       if (key.name === "x") {
         if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
         return
@@ -266,6 +267,10 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (key.name === "r") { handleResume(); return }
       if (key.name === "s") { handleSession(); return }
       if (key.name === "f") { handleOpenDiff(); return }
+      if (key.name === "c") {
+        if (selectedTask && selectedTask.sessionId) setMode("request_changes")
+        return
+      }
       if (key.name === "d") {
         if (selectedTask) setMode("delete")
         return
@@ -304,6 +309,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
     { key: "s", label: "session", disabled: !selectedTask?.sessionId },
     { key: "f", label: "diff", disabled: !selectedTask },
+    { key: "c", label: "request changes", disabled: !selectedTask?.sessionId },
     { key: "d", label: "delete", disabled: !selectedTask },
   ] : [
     { key: "n", label: "new task" },
@@ -321,7 +327,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
       <text fg="#0088ff">{flashMessage}</text>
     </box>
-  ) : mode === "request_changes" && diffPaneTaskId ? (
+  ) : mode === "request_changes" && (diffPaneTaskId || logPaneTaskId) ? (
     <RequestChangesInput
       onSubmit={(prompt) => handleRequestChanges(prompt)}
       onCancel={() => setMode("normal")}
