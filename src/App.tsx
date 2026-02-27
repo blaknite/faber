@@ -290,7 +290,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
     if (diffPaneTaskId !== null) {
       if (key.name === "c") {
-        if (paneTask && paneTask.sessionId) setMode("request_changes")
+        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
         return
       }
       if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
@@ -313,7 +313,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
       if (key.name === "r") { handleResume(paneTask); return }
       if (key.name === "f") { handleOpenDiff(); return }
       if (key.name === "c") {
-        if (paneTask && paneTask.sessionId) setMode("request_changes")
+        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
         return
       }
       if (key.name === "d") {
@@ -344,7 +344,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
-    { key: "c", label: "request changes", disabled: !paneTask?.sessionId },
+    { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : logPaneTaskId ? [
@@ -353,7 +353,7 @@ export function App({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
     { key: "f", label: "diff", disabled: !paneTask },
-    { key: "c", label: "request changes", disabled: !paneTask?.sessionId },
+    { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
     { key: "n", label: "new task" },
