@@ -1,5 +1,6 @@
 import { execa } from "execa"
 import { join } from "node:path"
+import { readFileSync, existsSync } from "node:fs"
 
 export function worktreePath(repoRoot: string, slug: string): string {
   return join(repoRoot, ".worktrees", slug)
@@ -28,6 +29,24 @@ export async function worktreeHasCommits(repoRoot: string, slug: string): Promis
     return stdout.trim().length > 0
   } catch {
     return false
+  }
+}
+
+// Returns the path to the main repo's HEAD file, which contains the current
+// branch name in the format "ref: refs/heads/<branch>".
+export function gitHeadPath(repoRoot: string): string {
+  return join(repoRoot, ".git", "HEAD")
+}
+
+// Reads the current branch name directly from .git/HEAD without spawning a
+// subprocess. Returns an empty string if HEAD is detached or unreadable.
+export function readCurrentBranch(repoRoot: string): string {
+  try {
+    const content = readFileSync(gitHeadPath(repoRoot), "utf8").trim()
+    const match = content.match(/^ref: refs\/heads\/(.+)$/)
+    return match ? match[1]! : ""
+  } catch {
+    return ""
   }
 }
 

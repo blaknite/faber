@@ -8,7 +8,7 @@ import { BranchInput } from "./components/BranchInput.js"
 import { RequestChangesInput } from "./components/RequestChangesInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, getCurrentBranch, getCommitsAhead, switchBranch, pushBranch } from "./lib/worktree.js"
+import { removeWorktree, mergeBranch, getCommitsAhead, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
 import { addTask, readState, removeTask, updateTask, stateFilePath } from "./lib/state.js"
 import { watch, statSync, existsSync } from "node:fs"
@@ -21,8 +21,6 @@ import { TickContext, SPINNER_FRAMES, useTickProvider, useTick } from "./lib/tic
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
-// How many ticks between branch refreshes. At TICK_MS=200 this is ~2s.
-const REFRESH_EVERY_N_TICKS = 10
 
 function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -76,7 +74,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   // Bootstrap on mount
   useEffect(() => {
-    getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
+    setCurrentBranch(readCurrentBranch(repoRoot))
     refreshCommitsAhead()
   }, [repoRoot, refreshCommitsAhead])
 
@@ -135,13 +133,58 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     }
   }, [repoRoot, refreshTasks])
 
-  // getCurrentBranch has no file to watch, keep it on the tick at ~2s.
+  // Watch .git/HEAD for branch changes and read the branch name directly
+  // from the file rather than spawning a subprocess. Same watchdog pattern
+  // as the state.json watcher.
   useEffect(() => {
-    if (tick === 0) return
-    if (tick % REFRESH_EVERY_N_TICKS === 0) {
-      getCurrentBranch(repoRoot).then(setCurrentBranch).catch(() => {})
+    const headPath = gitHeadPath(repoRoot)
+    let watcher: FSWatcher | null = null
+    let lastRefreshedMtime = 0
+
+    const doRefresh = () => {
+      try {
+        lastRefreshedMtime = existsSync(headPath) ? statSync(headPath).mtimeMs : 0
+      } catch {
+        lastRefreshedMtime = 0
+      }
+      setCurrentBranch(readCurrentBranch(repoRoot))
     }
-  }, [tick, repoRoot])
+
+    const startWatching = () => {
+      if (watcher) return
+      try {
+        watcher = watch(headPath, doRefresh)
+        watcher.on("error", () => {
+          watcher?.close()
+          watcher = null
+        })
+      } catch {
+        // watch() failed, watchdog will retry
+      }
+    }
+
+    startWatching()
+
+    const watchdog = setInterval(() => {
+      let currentMtime = 0
+      try {
+        currentMtime = existsSync(headPath) ? statSync(headPath).mtimeMs : 0
+      } catch {
+        return
+      }
+      if (currentMtime > lastRefreshedMtime) {
+        doRefresh()
+        watcher?.close()
+        watcher = null
+      }
+      if (!watcher) startWatching()
+    }, 1000)
+
+    return () => {
+      watcher?.close()
+      clearInterval(watchdog)
+    }
+  }, [repoRoot])
 
   const runningCount = tasks.filter(t => t.status === "running").length
 
