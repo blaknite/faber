@@ -3,4 +3,4 @@ dist/
 .faber/
 .worktrees/
 faber
-bk.yml
+.bk.yaml
