@@ -4,7 +4,7 @@ import type { TaskStatus } from "../types.js"
 export const STATUS_COLOR: Record<TaskStatus, string> = {
   running: "#00aaff",
   done: "#00cc66",
-  ready_to_merge: "#ff9900",
+  ready: "#ff9900",
   failed: "#cc3333",
   unknown: "#888888",
 }
@@ -12,7 +12,7 @@ export const STATUS_COLOR: Record<TaskStatus, string> = {
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   running: "Running",
   done: "Done",
-  ready_to_merge: "Ready to merge",
+  ready: "Ready",
   failed: "Failed",
   unknown: "Unknown",
 }
@@ -20,7 +20,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
 export const STATUS_SYMBOL: Record<TaskStatus, string> = {
   running: SPINNER_FRAMES[0]!,
   done: "✓",
-  ready_to_merge: "↑",
+  ready: "◆",
   failed: "✗",
   unknown: "?",
 }

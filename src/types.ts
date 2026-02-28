@@ -1,4 +1,4 @@
-export type TaskStatus = "running" | "done" | "ready_to_merge" | "failed" | "unknown"
+export type TaskStatus = "running" | "done" | "ready" | "failed" | "unknown"
 
 export type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
@@ -23,6 +23,7 @@ export interface Task {
   startedAt: string       // ISO 8601
   completedAt: string | null
   exitCode: number | null
+  hasCommits: boolean     // true when the task branch has commits
 }
 
 export interface State {

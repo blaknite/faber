@@ -63,17 +63,18 @@ export function useAppState(initialTasks: Task[]): AppState {
     setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
   }, [visibleTasks.length])
 
-  // When a task transitions to ready_to_merge, switch immediately from the log
-  // view to the diff view. Only fires on the state transition itself -- not
-  // every render while the task is already ready_to_merge.
+  // When a task transitions to ready and has commits, switch immediately from
+  // the log view to the diff view. Only fires on the state transition itself --
+  // not every render while the task is already ready.
   useEffect(() => {
     const prev = prevTaskStatusesRef.current
     for (const task of tasks) {
       const previousStatus = prev.get(task.id)
       if (
         previousStatus !== undefined &&
-        previousStatus !== "ready_to_merge" &&
-        task.status === "ready_to_merge" &&
+        previousStatus !== "ready" &&
+        task.status === "ready" &&
+        task.hasCommits &&
         logPaneTaskId === task.id &&
         diffPaneTaskId === null
       ) {
