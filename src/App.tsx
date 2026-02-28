@@ -6,19 +6,14 @@ import { useAppState, sortDescending } from "./lib/useAppState.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
+import { HeaderBar } from "./components/HeaderBar.js"
 import { killAgent } from "./lib/agent.js"
 import { removeWorktree, hasUnpushedCommits, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
 import { useAppActions } from "./lib/useAppActions.js"
 import type { Task, Mode } from "./types.js"
-import { TickProvider, useSpinnerFrame } from "./lib/tick.js"
-
-
-function RunningCountSpinner({ count }: { count: number }) {
-  const frame = useSpinnerFrame()
-  return <text fg="#00aaff">{frame} {count}</text>
-}
+import { TickProvider } from "./lib/tick.js"
 
 
 interface Props {
@@ -81,6 +76,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
 
   const runningCount = tasks.filter(t => t.status === "running").length
+  const readyToMergeCount = tasks.filter(t => t.status === "ready_to_merge").length
 
   const {
     handleDispatch,
@@ -251,20 +247,13 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}` : ""}</span>{isDirty && <span fg="#ff6600">{" *"}</span>}</text>
-        <box style={{ flexDirection: "row", gap: 1 }}>
-          {runningCount > 0 && (
-            <RunningCountSpinner count={runningCount} />
-          )}
-          {runningCount > 0 && tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#555555">{"•"}</text>
-          )}
-          {tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#ff9900">{"↑"} {tasks.filter(t => t.status === "ready_to_merge").length}</text>
-          )}
-        </box>
-      </box>
+      <HeaderBar
+        repoName={repoName}
+        currentBranch={currentBranch}
+        isDirty={isDirty}
+        runningCount={runningCount}
+        readyToMergeCount={readyToMergeCount}
+      />
 
       <box style={{ flexGrow: 1 }}>
         {diffPaneTaskId ? (() => {
