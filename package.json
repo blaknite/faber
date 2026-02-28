@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "bun src/index.tsx",
-    "build": "bun build src/index.tsx --outdir dist --target bun",
-    "build:bin": "bun build src/index.tsx --compile --outfile faber",
+    "build": "bun build src/index.tsx --outdir dist --target bun --define 'FABER_VERSION=\"dev\"'",
+    "build:bin": "bun build src/index.tsx --compile --outfile faber --define 'FABER_VERSION=\"dev\"'",
     "start": "bun dist/index.js",
     "test": "bun test"
   },

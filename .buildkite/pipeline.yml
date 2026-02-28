@@ -12,7 +12,8 @@ steps:
     key: build-darwin-arm64
     command: |
       bun install --frozen-lockfile
-      bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64
+      VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
+      bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64 --define "FABER_VERSION=\"$VERSION\""
     artifact_paths: "faber-darwin-arm64"
     plugins:
       - docker#v5.12.0:
@@ -24,7 +25,8 @@ steps:
     key: build-darwin-x64
     command: |
       bun install --frozen-lockfile
-      bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64
+      VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
+      bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64 --define "FABER_VERSION=\"$VERSION\""
     artifact_paths: "faber-darwin-x64"
     plugins:
       - docker#v5.12.0:
@@ -36,7 +38,8 @@ steps:
     key: build-linux-x64
     command: |
       bun install --frozen-lockfile
-      bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64
+      VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
+      bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64 --define "FABER_VERSION=\"$VERSION\""
     artifact_paths: "faber-linux-x64"
     plugins:
       - docker#v5.12.0:
@@ -48,7 +51,8 @@ steps:
     key: build-linux-arm64
     command: |
       bun install --frozen-lockfile
-      bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64
+      VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
+      bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64 --define "FABER_VERSION=\"$VERSION\""
     artifact_paths: "faber-linux-arm64"
     plugins:
       - docker#v5.12.0:

@@ -44,9 +44,21 @@ function sessionIdFromLog(repoRoot: string, taskId: string): string | null {
   return sessionId
 }
 
+// FABER_VERSION is injected at compile time via --define. When running from
+// source with `bun src/index.tsx` (dev mode) it won't be set, so we fall back
+// to "dev".
+declare const FABER_VERSION: string | undefined
+const VERSION = typeof FABER_VERSION !== "undefined" ? FABER_VERSION : "dev"
+
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
+
+  // faber version
+  if (command === "version") {
+    console.log(VERSION)
+    exit(0)
+  }
 
   // faber finish <taskId> <exitCode>
   // Called via command chaining after opencode exits, passing the real exit code via $?.
