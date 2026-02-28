@@ -188,7 +188,12 @@ function DiffContent({ diff }: { diff: string }) {
 
 
 function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
-  const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
+  // Prefer the model stored in the log entry (set at prompt time) so that each
+  // prompt row reflects the model it was actually sent with, not whatever model
+  // the task was last run with. Fall back to task.model for older log entries
+  // that predate this field.
+  const resolvedModel = (entry.model as Task["model"]) ?? model
+  const modelDef = MODELS.find((m) => m.value === resolvedModel) ?? MODELS[0]!
   return (
     <box style={{ paddingBottom: 1 }}>
       <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>

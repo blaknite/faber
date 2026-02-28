@@ -14,6 +14,8 @@ export interface LogEvent {
   timestamp: number
   // prompt events carry the message sent to the agent before it starts
   prompt?: string
+  // prompt events also carry the model that was selected when the prompt was sent
+  model?: string
   part?: {
     // tool parts
     tool?: string
@@ -40,6 +42,8 @@ export interface LogEntry {
   timestamp: number
   // text entries
   text?: string
+  // prompt entries
+  model?: string
   // tool_use entries
   tool?: string
   icon?: string
@@ -339,7 +343,7 @@ export function parseEvent(event: LogEvent): LogEntry[] {
     case "prompt": {
       const text = event.prompt?.trim()
       if (!text) return []
-      return [{ kind: "prompt", timestamp: event.timestamp, text }]
+      return [{ kind: "prompt", timestamp: event.timestamp, text, model: event.model }]
     }
 
     case "text": {
