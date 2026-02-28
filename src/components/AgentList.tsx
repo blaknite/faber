@@ -19,11 +19,9 @@ interface Props {
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
   onSelectTask: (id: string) => void
-  mergeMessage?: string | null
-  onDismissMergeMessage?: () => void
 }
 
-export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask, mergeMessage = null, onDismissMergeMessage }: Props) {
+export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -37,10 +35,6 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
 
   useKeyboard((key) => {
     if (inputActive) return
-    if (mergeMessage) {
-      onDismissMergeMessage?.()
-      return
-    }
     if (key.name === "tab") {
       onFilterChange(filterMode === "active" ? "all" : "active")
     }
@@ -86,11 +80,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
       </box>
       <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
 
-      {mergeMessage ? (
-        <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="white">{mergeMessage}</text>
-        </box>
-      ) : tasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
           <text fg="#333333">{filterMode === "active" ? "No active tasks." : "No tasks yet."}</text>
         </box>
