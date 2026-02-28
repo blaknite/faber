@@ -10,7 +10,7 @@ import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
-import { DEFAULT_MODEL } from "./types.js"
+import { DEFAULT_MODEL, MODELS } from "./types.js"
 
 // Single exit point for the process. Everything routes through here so it's
 // easy to find all the places we terminate and to add any future cleanup.
@@ -23,6 +23,22 @@ function parseDirFlag(args: string[]): string | null {
   const i = args.indexOf("--dir")
   if (i !== -1 && args[i + 1]) return resolve(args[i + 1]!)
   return null
+}
+
+// Parse --model <label> from an args array, resolving the label to a model ID.
+// Exits with an error if the label doesn't match any entry in MODELS.
+// Returns the default model if --model is not present.
+function parseModelFlag(args: string[]): Task["model"] {
+  const i = args.indexOf("--model")
+  if (i === -1 || !args[i + 1]) return DEFAULT_MODEL
+  const label = args[i + 1]!
+  const match = MODELS.find((m) => m.label.toLowerCase() === label.toLowerCase())
+  if (!match) {
+    const valid = MODELS.map((m) => m.label).join(", ")
+    console.error(`Unknown model "${label}". Valid options: ${valid}`)
+    exit(1)
+  }
+  return match.value
 }
 
 // Read the task log and return the sessionID from the last log entry that has
@@ -69,13 +85,13 @@ Commands:
 
 Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
-  --model <id>      Model to use for the task, e.g. anthropic/claude-sonnet-4-6
+  --model <label>   Model to use for the task: Smart, Fast, or Deep
                     (only applies to the run command)
 
 Examples:
   faber
   faber run "Fix the login bug"
-  faber run "Refactor the auth module" --model anthropic/claude-opus-4-5
+  faber run "Refactor the auth module" --model Deep
   faber setup --dir /path/to/repo`)
     exit(0)
   }
@@ -162,17 +178,16 @@ Examples:
     exit(exitCode)
   }
 
-  // faber run "<prompt>" [--dir <repo>] [--model <provider/model>]
+  // faber run "<prompt>" [--dir <repo>] [--model <label>]
   if (command === "run") {
     const prompt = args[1]
     if (!prompt) {
-      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <provider/model>]')
+      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>]')
       exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
-    const modelFlag = args.indexOf("--model")
-    const model = (modelFlag !== -1 && args[modelFlag + 1] ? args[modelFlag + 1]! : DEFAULT_MODEL) as Task["model"]
+    const model = parseModelFlag(args)
     await runHeadless(repoRoot, prompt, model)
     return
   }
