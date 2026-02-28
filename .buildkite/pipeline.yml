@@ -10,25 +10,48 @@ steps:
 
   - wait
 
-  - label: ":hammer: Build (macOS)"
-    key: build-mac
+  - label: ":hammer: Build (macOS arm64)"
+    key: build-darwin-arm64
     command: |
       bun install --frozen-lockfile
-      bun run build:bin
-      mv faber faber-darwin
-    artifact_paths: "faber-darwin"
-    agents:
-      os: macos
+      bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64
+    artifact_paths: "faber-darwin-arm64"
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
     if: build.branch == "main"
     depends_on: test
 
-  - label: ":hammer: Build (Linux)"
-    key: build-linux
+  - label: ":hammer: Build (macOS x64)"
+    key: build-darwin-x64
     command: |
       bun install --frozen-lockfile
-      bun run build:bin
-      mv faber faber-linux
-    artifact_paths: "faber-linux"
+      bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64
+    artifact_paths: "faber-darwin-x64"
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
+    if: build.branch == "main"
+    depends_on: test
+
+  - label: ":hammer: Build (Linux x64)"
+    key: build-linux-x64
+    command: |
+      bun install --frozen-lockfile
+      bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64
+    artifact_paths: "faber-linux-x64"
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
+    if: build.branch == "main"
+    depends_on: test
+
+  - label: ":hammer: Build (Linux arm64)"
+    key: build-linux-arm64
+    command: |
+      bun install --frozen-lockfile
+      bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64
+    artifact_paths: "faber-linux-arm64"
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
@@ -41,16 +64,20 @@ steps:
   - label: ":github: Release"
     key: release
     command: |
-      buildkite-agent artifact download "faber-darwin" .
-      buildkite-agent artifact download "faber-linux" .
+      buildkite-agent artifact download "faber-darwin-arm64" .
+      buildkite-agent artifact download "faber-darwin-x64" .
+      buildkite-agent artifact download "faber-linux-x64" .
+      buildkite-agent artifact download "faber-linux-arm64" .
 
-      VERSION="$(date -u '+%Y%m%d.%H%M%S')"
+      VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
 
       gh release create "v${VERSION}" \
         --title "v${VERSION}" \
         --notes "Build [${BUILDKITE_BUILD_NUMBER}](${BUILDKITE_BUILD_URL}) from commit ${BUILDKITE_COMMIT:0:7}" \
-        faber-darwin \
-        faber-linux
+        faber-darwin-arm64 \
+        faber-darwin-x64 \
+        faber-linux-x64 \
+        faber-linux-arm64
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
@@ -58,5 +85,7 @@ steps:
             - GITHUB_TOKEN
     if: build.branch == "main"
     depends_on:
-      - build-mac
-      - build-linux
+      - build-darwin-arm64
+      - build-darwin-x64
+      - build-linux-x64
+      - build-linux-arm64
