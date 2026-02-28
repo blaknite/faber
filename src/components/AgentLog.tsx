@@ -186,35 +186,6 @@ function DiffContent({ diff }: { diff: string }) {
   )
 }
 
-function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) {
-  const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
-  return (
-    <box style={{ paddingBottom: 1 }}>
-      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
-        <box
-          border={["left"]}
-          borderColor={modelDef.color}
-          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
-        >
-          <markdown
-            content={prompt}
-            syntaxStyle={syntaxStyle}
-            style={{ flexGrow: 1, flexShrink: 1 }}
-            renderNode={(token, context) => {
-              const renderable = context.defaultRender()
-              if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
-                (renderable as any).wrapMode = "word"
-              }
-              return renderable
-            }}
-          />
-          <text> </text>
-          <text fg={modelDef.color}>{modelDef.label}</text>
-        </box>
-      </box>
-    </box>
-  )
-}
 
 function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
   const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
@@ -434,7 +405,6 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
       <box style={{ flexGrow: 1, paddingLeft: 2, paddingRight: 2, paddingBottom: 1, overflow: "hidden" }}>
         <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} stickyScroll stickyStart="bottom" contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
           <box style={{ flexDirection: "column" }}>
-            <PromptRow prompt={task.prompt} model={task.model} />
             {entries.length === 0 ? (
               <text fg="#555555">No output yet.</text>
             ) : (
