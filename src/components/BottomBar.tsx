@@ -2,9 +2,7 @@ import { useSpinnerFrame } from "../lib/tick.js"
 import { BranchInput } from "./BranchInput.js"
 import { RequestChangesInput } from "./RequestChangesInput.js"
 import { StatusBar } from "./StatusBar.js"
-import type { Task } from "../types.js"
-
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
+import type { Task, Mode } from "../types.js"
 
 interface Binding {
   key: string
