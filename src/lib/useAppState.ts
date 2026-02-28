@@ -36,7 +36,6 @@ export interface AppState {
   // Helpers
   showFlash: (msg: string, type: FlashType) => void
   showMergeMessage: (msg: string) => void
-  clearMergeMessage: () => void
 }
 
 export function useAppState(initialTasks: Task[]): AppState {
@@ -52,6 +51,7 @@ export function useAppState(initialTasks: Task[]): AppState {
   const [isDirty, setIsDirty] = useState<boolean>(false)
   const prevSelectedIdx = useRef(0)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mergeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevTaskStatusesRef = useRef<Map<string, Task["status"]>>(new Map())
 
   const visibleTasks = filterMode === "active"
@@ -95,6 +95,17 @@ export function useAppState(initialTasks: Task[]): AppState {
     prevTaskStatusesRef.current = next
   }, [tasks, paneTaskId, paneView])
 
+  const showMergeMessage = useCallback((msg: string) => {
+    if (mergeTimerRef.current !== null) {
+      clearTimeout(mergeTimerRef.current)
+    }
+    setMergeMessage(msg)
+    mergeTimerRef.current = setTimeout(() => {
+      setMergeMessage(null)
+      mergeTimerRef.current = null
+    }, 2000)
+  }, [])
+
   const showFlash = useCallback((msg: string, type: FlashType) => {
     if (flashTimerRef.current !== null) {
       clearTimeout(flashTimerRef.current)
@@ -106,14 +117,6 @@ export function useAppState(initialTasks: Task[]): AppState {
       setFlashType(null)
       flashTimerRef.current = null
     }, 2000)
-  }, [])
-
-  const showMergeMessage = useCallback((msg: string) => {
-    setMergeMessage(msg)
-  }, [])
-
-  const clearMergeMessage = useCallback(() => {
-    setMergeMessage(null)
   }, [])
 
   return {
@@ -140,6 +143,5 @@ export function useAppState(initialTasks: Task[]): AppState {
     showFlash,
     mergeMessage,
     showMergeMessage,
-    clearMergeMessage,
   }
 }
