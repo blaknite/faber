@@ -27,7 +27,7 @@ function PushingSpinner({ branch }: { branch: string }) {
   const frame = useSpinnerFrame()
   return (
     <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text fg="#00aaff">{frame}{` Pushing ${branch} to origin...`}</text>
+      <text fg="white">{frame}{` Pushing ${branch} to origin...`}</text>
     </box>
   )
 }
