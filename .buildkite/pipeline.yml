@@ -88,12 +88,6 @@ steps:
         faber-darwin-x64 \
         faber-linux-x64 \
         faber-linux-arm64
-    plugins:
-      - docker#v5.12.0:
-          image: "oven/bun:latest"
-          environment:
-            - GITHUB_TOKEN
-            - FABER_VERSION
     if: build.branch == "main"
     depends_on:
       - build-darwin-arm64
