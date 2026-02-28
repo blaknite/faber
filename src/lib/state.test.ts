@@ -3,12 +3,14 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import {
+  acquireLock,
   addTask,
   ensureFaberDir,
   findRepoRoot,
   readState,
   reconcileRunningTasks,
   removeTask,
+  stateFilePath,
   taskOutputPath,
   updateTask,
   writeState,
@@ -260,5 +262,42 @@ describe("reconcileRunningTasks", () => {
     reconcileRunningTasks(tmpRoot)
     const { tasks } = readState(tmpRoot)
     expect(tasks[0]!.status).toBe("done")
+  })
+})
+
+describe("stateFilePath", () => {
+  it("returns the path to .faber/state.json", () => {
+    expect(stateFilePath("/repo")).toBe("/repo/.faber/state.json")
+  })
+
+  it("handles trailing slashes via join", () => {
+    expect(stateFilePath("/repo/")).toBe("/repo/.faber/state.json")
+  })
+})
+
+describe("acquireLock", () => {
+  it("returns a release function", async () => {
+    ensureFaberDir(tmpRoot)
+    const release = await acquireLock(tmpRoot)
+    expect(typeof release).toBe("function")
+    await release()
+  })
+
+  it("throws when a second lock is attempted on the same repo", async () => {
+    ensureFaberDir(tmpRoot)
+    const release = await acquireLock(tmpRoot)
+    try {
+      await expect(acquireLock(tmpRoot)).rejects.toThrow("already running")
+    } finally {
+      await release()
+    }
+  })
+
+  it("allows re-locking after the first lock is released", async () => {
+    ensureFaberDir(tmpRoot)
+    const first = await acquireLock(tmpRoot)
+    await first()
+    const second = await acquireLock(tmpRoot)
+    await second()
   })
 })
