@@ -135,6 +135,17 @@ export function useKeyboardRouter({
         if (paneTask) setMode("delete")
         return
       }
+      if (key.name === "," || key.name === ".") {
+        const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
+        const currentIdx = activeTasks.findIndex(t => t.id === diffPaneTaskId)
+        if (currentIdx !== -1 && activeTasks.length > 1) {
+          const nextIdx = key.name === "."
+            ? (currentIdx + 1) % activeTasks.length
+            : (currentIdx - 1 + activeTasks.length) % activeTasks.length
+          setDiffPaneTaskId(activeTasks[nextIdx].id)
+        }
+        return
+      }
       return
     }
 
