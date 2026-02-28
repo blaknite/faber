@@ -4,8 +4,9 @@ import { SyntaxStyle } from "@opentui/core"
 import { getDiff } from "../lib/worktree.js"
 import { DiffViewer } from "../lib/diff/index.js"
 import type { ViewMode } from "../lib/diff/index.js"
-import { readLogEntries } from "../lib/logParser.js"
+import { readLogEntries, formatElapsed } from "../lib/logParser.js"
 import { useSpinnerFrame } from "../lib/tick.js"
+import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
 import type { Task } from "../types.js"
 
 const syntaxStyle = SyntaxStyle.create()
@@ -92,7 +93,19 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
         <text>
           <strong fg="#ffffff">{task.id.slice(0, 6)}</strong>
           {"  "}
-          <span fg="#888888">diff vs HEAD</span>
+          {task.completedAt
+            ? <>
+                <span fg={STATUS_COLOR[task.status]}>{STATUS_SYMBOL[task.status]} {STATUS_LABEL[task.status]}</span>
+                {"  "}
+                <span fg="#555555">{formatElapsed(task.startedAt, task.completedAt, new Date(task.completedAt).getTime())}</span>
+              </>
+            : <>
+                <span fg={STATUS_COLOR[task.status]}>{STATUS_LABEL[task.status]}</span>
+                {"  "}
+                <span fg="#555555">{formatElapsed(task.startedAt, null, Date.now())}</span>
+              </>}
+          {"  "}
+          <span fg="#444444">diff vs HEAD</span>
         </text>
         <text>
           <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
