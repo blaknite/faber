@@ -143,6 +143,7 @@ export function useKeyboardRouter({
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
           setDiffPaneTaskId(activeTasks[nextIdx].id)
+          setLogPaneTaskId(activeTasks[nextIdx].id)
         }
         return
       }

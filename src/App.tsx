@@ -152,7 +152,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
-    { key: "</>", label: "prev/next task", disabled: activeTaskCount < 2 },
+    { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
     { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
