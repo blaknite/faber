@@ -54,6 +54,32 @@ async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
 
+  // faber --help | faber help
+  if (command === "--help" || command === "-h" || command === "help") {
+    console.log(`faber ${VERSION}
+
+Usage: faber [command] [options]
+
+Commands:
+  (none)            Launch the TUI and manage tasks interactively
+  run "<prompt>"    Dispatch a task headlessly without the TUI
+  setup             Initialise .faber/ and .worktrees/ in the repo
+  version           Print the version and exit
+  help              Show this help message
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+  --model <id>      Model to use for the task, e.g. anthropic/claude-sonnet-4-6
+                    (only applies to the run command)
+
+Examples:
+  faber
+  faber run "Fix the login bug"
+  faber run "Refactor the auth module" --model anthropic/claude-opus-4-5
+  faber setup --dir /path/to/repo`)
+    exit(0)
+  }
+
   // faber version
   if (command === "version") {
     console.log(VERSION)
