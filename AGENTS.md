@@ -23,4 +23,4 @@ bun test
 
 ## CI/CD
 
-The pipeline is at [blaknite/faber](https://buildkite.com/blaknite/faber) on Buildkite. Every push runs tests. Merges to `main` also build and release platform binaries via GitHub Releases. See `.buildkite/pipeline.yml` for details.
+The pipeline is at [blaknite/faber](https://buildkite.com/blaknite/faber) on Buildkite.
