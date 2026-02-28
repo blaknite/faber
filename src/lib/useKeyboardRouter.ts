@@ -2,9 +2,11 @@ import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
 import { killAgent } from "./agent.js"
 import { removeWorktree } from "./worktree.js"
-import type { Task } from "../types.js"
+import type { Task, TaskStatus } from "../types.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
+
+const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
 
 interface UseKeyboardRouterParams {
   mode: Mode
@@ -17,6 +19,7 @@ interface UseKeyboardRouterParams {
   selectedTask: Task | null
   selectedIdx: number
   setSelectedIdx: (updater: number | ((i: number) => number)) => void
+  tasks: Task[]
   visibleTasks: Task[]
   isDirty: boolean
   repoRoot: string
@@ -42,6 +45,7 @@ export function useKeyboardRouter({
   selectedTask,
   selectedIdx,
   setSelectedIdx,
+  tasks,
   visibleTasks,
   isDirty,
   repoRoot,
@@ -145,6 +149,17 @@ export function useKeyboardRouter({
       }
       if (key.name === "d") {
         if (paneTask) setMode("delete")
+        return
+      }
+      if (key.name === "," || key.name === ".") {
+        const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
+        const currentIdx = activeTasks.findIndex(t => t.id === logPaneTaskId)
+        if (currentIdx !== -1 && activeTasks.length > 1) {
+          const nextIdx = key.name === "."
+            ? (currentIdx + 1) % activeTasks.length
+            : (currentIdx - 1 + activeTasks.length) % activeTasks.length
+          setLogPaneTaskId(activeTasks[nextIdx].id)
+        }
         return
       }
       return
