@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, rmdirSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, rmdirSync, statSync } from "node:fs"
 import { join, dirname } from "node:path"
 import lockfile from "proper-lockfile"
 import type { State, Task } from "../types.js"
@@ -11,6 +11,11 @@ const TASKS_DIR = "tasks"
 // The TUI instance lock uses the default `state.json.lock` path; this uses
 // `state.json.op.lock` so the two locks don't interfere with each other.
 const OP_LOCK_SUFFIX = ".op.lock"
+
+// A legitimate RMW completes in well under 1ms. If the lock directory is older
+// than this, the process that created it was almost certainly killed without
+// cleaning up.
+const OP_LOCK_STALE_MS = 5_000
 
 function faberDir(repoRoot: string): string {
   return join(repoRoot, FABER_DIR)
@@ -42,6 +47,13 @@ export function ensureFaberDir(repoRoot: string): void {
   const path = statePath(repoRoot)
   if (!existsSync(path)) {
     writeFileSync(path, JSON.stringify({ tasks: [] }, null, 2))
+  }
+  // Remove any op-lock left by a previously crashed process. This is safe
+  // because acquireLock guarantees no other instance is running by the time
+  // ensureFaberDir is called (see acquireLock below).
+  const opLockPath = join(faberDir(repoRoot), STATE_FILE + OP_LOCK_SUFFIX)
+  if (existsSync(opLockPath)) {
+    try { rmdirSync(opLockPath) } catch { /* already gone */ }
   }
 }
 
@@ -81,6 +93,19 @@ function withOpLock(repoRoot: string, fn: () => void): void {
       break
     } catch (err: any) {
       if (err?.code !== "EEXIST" || attempt === maxAttempts - 1) throw err
+      // Check whether the existing lock directory is stale (left by a crashed
+      // process). Two processes racing to remove a stale lock is fine: one gets
+      // ENOENT on rmdirSync and both just continue to retry mkdirSync.
+      try {
+        const { mtimeMs } = statSync(lockDirPath)
+        if (Date.now() - mtimeMs > OP_LOCK_STALE_MS) {
+          rmdirSync(lockDirPath)
+          continue
+        }
+      } catch {
+        // Lock was concurrently removed -- just retry.
+        continue
+      }
       // Busy-wait using a shared buffer so we don't need async.
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, sleepMs)
     }
