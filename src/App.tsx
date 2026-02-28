@@ -152,7 +152,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
-    { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 },
+    { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
     { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
@@ -160,7 +160,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
-    { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 },
+    { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
     { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
     { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits },
