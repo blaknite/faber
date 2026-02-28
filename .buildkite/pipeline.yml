@@ -13,7 +13,7 @@ steps:
 
   - label: ":label: Set version"
     key: set-version
-    command: buildkite-agent meta-data set version "$FABER_VERSION"
+    command: buildkite-agent meta-data set version "$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
     if: build.branch == "main"
     depends_on: test
 
