@@ -2,15 +2,22 @@ import { useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 import { DEFAULT_RESUME_PROMPT } from "../lib/agent.js"
+import { MODELS, DEFAULT_MODEL } from "../types.js"
+import type { Model } from "../types.js"
 
 interface Props {
-  onSubmit: (prompt?: string) => void
+  onSubmit: (prompt?: string, model?: Model) => void
   onCancel: () => void
 }
 
 export function ContinueInput({ onSubmit, onCancel }: Props) {
+  const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
+
+  const model = MODELS[modelIdx]!
+  const modelRef = useRef(model)
+  modelRef.current = model
 
   const onContentChange = () => {
     const lines = textareaRef.current?.virtualLineCount ?? MIN_LINES
@@ -24,7 +31,7 @@ export function ContinueInput({ onSubmit, onCancel }: Props) {
     <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
       <box
         border={["left"]}
-        borderColor="#666666"
+        borderColor={model.color}
         style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
       >
         <textarea
@@ -36,7 +43,7 @@ export function ContinueInput({ onSubmit, onCancel }: Props) {
           placeholder={DEFAULT_RESUME_PROMPT}
           onSubmit={() => {
             const trimmed = textareaRef.current?.plainText.trim()
-            onSubmit(trimmed || undefined)
+            onSubmit(trimmed || undefined, modelRef.current.value)
           }}
           onKeyDown={(key) => {
             if (key.name === "escape") {
@@ -47,12 +54,17 @@ export function ContinueInput({ onSubmit, onCancel }: Props) {
                 textareaRef.current?.clear()
               }
               key.preventDefault()
+              return
+            }
+            if (key.name === "tab") {
+              setModelIdx((i) => (i + 1) % MODELS.length)
+              key.preventDefault()
             }
           }}
           focused
         />
         <box style={{ height: 1 }} />
-        <text fg="#555555">continue  <span fg="#333333">[enter] submit  [esc] cancel</span></text>
+        <text fg={model.color}>{model.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] model</span></text>
       </box>
     </box>
   )

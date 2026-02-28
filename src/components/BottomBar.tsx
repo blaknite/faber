@@ -2,7 +2,7 @@ import { useSpinnerFrame } from "../lib/tick.js"
 import { BranchInput } from "./BranchInput.js"
 import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
-import type { Task, Mode } from "../types.js"
+import type { Task, Mode, Model } from "../types.js"
 
 interface Binding {
   key: string
@@ -40,7 +40,7 @@ interface Props {
   bindings: Binding[]
   onBranchSubmit: (branch: string) => void
   onBranchCancel: () => void
-  onContinueSubmit: (prompt?: string) => void
+  onContinueSubmit: (prompt?: string, model?: Model) => void
   onContinueCancel: () => void
 }
 

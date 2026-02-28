@@ -235,7 +235,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         bindings={normalBindings}
         onBranchSubmit={(branch) => handleSwitchBranch(branch)}
         onBranchCancel={() => setMode("normal")}
-        onContinueSubmit={(prompt?: string) => handleContinue(prompt)}
+        onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
         onContinueCancel={() => setMode("normal")}
       />
     </box>
