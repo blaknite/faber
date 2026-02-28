@@ -6,7 +6,7 @@ export const STATUS_COLOR: Record<TaskStatus, string> = {
   done: "#00cc66",
   ready: "#ff9900",
   failed: "#cc3333",
-  stopped: "#cc8800",
+  stopped: "#00aaaa",
   unknown: "#888888",
 }
 
