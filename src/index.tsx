@@ -86,13 +86,13 @@ Commands:
 
 Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
-  --model <label>   Model to use for the task: Smart, Fast, or Deep
+  --model <label>   Model to use for the task: smart, fast, or deep
                     (only applies to the run command)
 
 Examples:
   faber
   faber run "Fix the login bug"
-  faber run "Refactor the auth module" --model Deep
+  faber run "Refactor the auth module" --model deep
   faber setup --dir /path/to/repo`)
     exit(0)
   }

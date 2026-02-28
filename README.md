@@ -61,7 +61,7 @@ Fire off a task without opening the TUI:
 ```bash
 faber run "fix the login bug"
 faber run "fix the login bug" --dir /path/to/repo
-faber run "add tests for UserService" --model Fast
+faber run "add tests for UserService" --model fast
 ```
 
 ### TUI keybindings
@@ -108,9 +108,9 @@ When creating a task, `Tab` cycles through models and `Enter` submits. Multi-lin
 
 | Label | Model |
 |-------|-------|
-| Smart (default) | `anthropic/claude-sonnet-4-6` |
-| Fast | `anthropic/claude-haiku-4-5` |
-| Deep | `anthropic/claude-opus-4-6` |
+| smart (default) | `anthropic/claude-sonnet-4-6` |
+| fast | `anthropic/claude-haiku-4-5` |
+| deep | `anthropic/claude-opus-4-6` |
 
 ## Reviewing and merging agent work
 
