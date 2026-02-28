@@ -116,9 +116,8 @@ export function useKeyboardRouter({
     }
 
     if (paneTaskId !== null) {
-      // Prev/next: change the open task, keep the current view type where
-      // possible. openTaskView picks the right default for the new task so
-      // we don't get stuck on diff for a task that only has a log.
+      // Prev/next: switch to the new task using openTaskView so the correct
+      // view is always shown (diff for ready tasks with commits, log otherwise).
       if (key.name === "," || key.name === ".") {
         const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
         const currentIdx = activeTasks.findIndex(t => t.id === paneTaskId)
@@ -127,19 +126,7 @@ export function useKeyboardRouter({
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
           const nextTask = activeTasks[nextIdx]
-          // Stay on the same view if the new task supports it, otherwise fall
-          // back to whatever openTaskView picks as the default.
-          const nextView = paneView === "diff" && nextTask.status === "ready" && nextTask.hasCommits
-            ? "diff"
-            : paneView === "log"
-              ? "log"
-              : null
-          if (nextView) {
-            setPaneTaskId(nextTask.id)
-            setPaneView(nextView)
-          } else {
-            openTaskView(nextTask)
-          }
+          openTaskView(nextTask)
         }
         return
       }
