@@ -6,6 +6,9 @@ interface UseFileWatchOptions {
   // When true, polls at 500ms until the file appears before switching to
   // fs.watch. Use this when the file may not exist when the hook first mounts.
   pollUntilExists?: boolean
+  // Incrementing this number tears down and restarts the watcher. Use it to
+  // retry attaching to a file that may not have existed on the previous attempt.
+  retryKey?: number
 }
 
 // Watches a file for changes and calls callback whenever it is written.
@@ -18,6 +21,10 @@ interface UseFileWatchOptions {
 // When pollUntilExists is true the hook polls every 500ms until the file
 // appears, then hands off to fs.watch + the watchdog. This covers cases where
 // the file is created after the component mounts.
+//
+// When retryKey increments the effect restarts, attempting to attach the
+// watcher again. Use this instead of pollUntilExists when an external event
+// (e.g. HEAD changing) is a reliable signal that the file may now exist.
 export function useFileWatch(
   path: string,
   callback: () => void,
@@ -89,5 +96,5 @@ export function useFileWatch(
       if (pollInterval) clearInterval(pollInterval)
       clearInterval(watchdog)
     }
-  }, [path, callback, options?.pollUntilExists])
+  }, [path, callback, options?.pollUntilExists, options?.retryKey])
 }

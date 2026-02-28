@@ -7,7 +7,7 @@ import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
 import { HeaderBar } from "./components/HeaderBar.js"
 import { killAgent } from "./lib/agent.js"
-import { removeWorktree, hasUnpushedCommits, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { removeWorktree, hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
 import { useKeyboardRouter } from "./lib/useKeyboardRouter.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
@@ -69,11 +69,25 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
 
   // Watch .git/HEAD for branch changes and read the branch name directly
   // from the file rather than spawning a subprocess.
+  //
+  // We also use HEAD changes as the trigger to retry attaching the FETCH_HEAD
+  // watcher (see below). A branch switch is a reliable signal that git has
+  // been active and FETCH_HEAD is likely to exist now.
+  const [fetchHeadWatchKey, setFetchHeadWatchKey] = useState(0)
   const refreshBranchState = useCallback(() => {
     setCurrentBranch(readCurrentBranch(repoRoot))
     refreshDirtyState()
+    setFetchHeadWatchKey(k => k + 1)
   }, [repoRoot, refreshDirtyState])
   useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
+
+  // Watch FETCH_HEAD so that pushing outside of Faber clears the dirty
+  // indicator. Git rewrites FETCH_HEAD on every push and fetch, which is
+  // more reliable than watching the per-branch remote ref (those can be
+  // absorbed into packed-refs). FETCH_HEAD won't exist until the first push
+  // in a fresh repo, so we retry the watcher each time HEAD changes rather
+  // than polling.
+  useFileWatch(gitFetchHeadPath(repoRoot), refreshDirtyState, { retryKey: fetchHeadWatchKey })
 
   const runningCount = tasks.filter(t => t.status === "running").length
   const readyToMergeCount = tasks.filter(t => t.status === "ready_to_merge").length

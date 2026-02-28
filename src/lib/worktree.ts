@@ -38,6 +38,13 @@ export function gitHeadPath(repoRoot: string): string {
   return join(repoRoot, ".git", "HEAD")
 }
 
+// Returns the path to FETCH_HEAD, which git rewrites on every push and fetch.
+// Watching this file is more reliable than watching per-branch remote refs
+// because those can be absorbed into packed-refs and disappear as loose files.
+export function gitFetchHeadPath(repoRoot: string): string {
+  return join(repoRoot, ".git", "FETCH_HEAD")
+}
+
 // Reads the current branch name directly from .git/HEAD without spawning a
 // subprocess. Returns an empty string if HEAD is detached or unreadable.
 export function readCurrentBranch(repoRoot: string): string {
