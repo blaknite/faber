@@ -55,7 +55,7 @@ function pairHunkLines(hunk: Hunk): PairedLines {
 
 // Render a single highlighted segment inline.
 // Each segment is a <span> so we can use bg for character-level highlighting.
-function SegmentedLine({ segments, baseColor, highlightBg }: {
+export function SegmentedLine({ segments, baseColor, highlightBg }: {
   segments: Segment[]
   baseColor: string
   highlightBg: string
