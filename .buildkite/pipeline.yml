@@ -22,6 +22,8 @@ steps:
     command: |
       bun install --frozen-lockfile
       bun add @opentui/core-darwin-arm64@0.1.82
+      ls node_modules/@opentui/core-darwin-arm64/
+      cat node_modules/@opentui/core-darwin-arm64/package.json
       bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-darwin-arm64"
     plugins:
