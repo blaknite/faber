@@ -1,4 +1,5 @@
 import { useSpinnerFrame } from "../lib/tick.js"
+import { STATUS_COLOR, STATUS_SYMBOL } from "../lib/status.js"
 
 function RunningCountSpinner({ count }: { count: number }) {
   const frame = useSpinnerFrame()
@@ -25,7 +26,7 @@ export function HeaderBar({ repoName, currentBranch, isDirty, runningCount, read
           <text fg="#555555">{"•"}</text>
         )}
         {readyCount > 0 && (
-          <text fg="#ff9900">{"▲"} {readyCount}</text>
+          <text fg={STATUS_COLOR["ready"]}>{STATUS_SYMBOL["ready"]} {readyCount}</text>
         )}
       </box>
     </box>
