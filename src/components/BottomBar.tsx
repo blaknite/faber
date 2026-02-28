@@ -75,7 +75,7 @@ export function BottomBar({
   }
 
   if (mode === "kill" && activeTask) {
-    return <ConfirmPrompt message={`Kill ${activeTask.id}?`} />
+    return <ConfirmPrompt message={`Stop ${activeTask.id}?`} />
   }
 
   if (mode === "delete" && activeTask) {

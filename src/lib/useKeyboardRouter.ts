@@ -151,7 +151,7 @@ export function useKeyboardRouter({
     }
 
     if (logPaneTaskId !== null) {
-      if (key.name === "x") {
+      if (key.name === "s") {
         if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
         return
       }
@@ -189,7 +189,7 @@ export function useKeyboardRouter({
     if (key.name === "n" || key.name === "c") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
-    if (key.name === "x") {
+    if (key.name === "s") {
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
