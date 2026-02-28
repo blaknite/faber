@@ -198,7 +198,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <DiffView
               repoRoot={repoRoot}
               task={diffTask}
-              disabled={mode === "continue"}
+              disabled={mode === "continue" || mode === "switch_branch"}
             />
           ) : null
         })() : logPaneTaskId ? (() => {
@@ -207,7 +207,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <AgentLog
               repoRoot={repoRoot}
               task={logTask}
-              disabled={mode === "continue"}
+              disabled={mode === "continue" || mode === "switch_branch"}
             />
           ) : null
         })() : (
@@ -216,7 +216,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             selectedId={selectedTask?.id ?? null}
             filterMode={filterMode}
             onFilterChange={setFilterMode}
-            inputActive={mode === "input"}
+            inputActive={mode === "input" || mode === "continue" || mode === "switch_branch"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
             onSelectTask={(id) => {
