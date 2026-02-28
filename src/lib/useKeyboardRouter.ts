@@ -2,10 +2,8 @@ import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
 import { killAgent } from "./agent.js"
 import { removeWorktree } from "./worktree.js"
-import type { Task } from "../types.js"
+import type { Task, Mode } from "../types.js"
 import { ACTIVE_STATUSES } from "../components/AgentList.js"
-
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
 interface UseKeyboardRouterParams {
   mode: Mode
@@ -27,7 +25,7 @@ interface UseKeyboardRouterParams {
   handleMerge: (task?: Task | null) => void
   handleMarkDone: (task?: Task | null) => void
   handlePush: () => void
-  handleResume: (task?: Task | null) => void
+  handleContinue: (prompt?: string) => void
   handleOpenLog: () => void
   handleOpenDiff: () => void
   removeTaskFromState: (id: string) => void
@@ -54,14 +52,14 @@ export function useKeyboardRouter({
   handleMerge,
   handleMarkDone,
   handlePush,
-  handleResume,
+  handleContinue,
   handleOpenLog,
   handleOpenDiff,
   removeTaskFromState,
   onExit,
 }: UseKeyboardRouterParams): void {
   useKeyboard((key) => {
-    if (mode === "input" || mode === "request_changes" || mode === "switch_branch") return
+    if (mode === "input" || mode === "continue" || mode === "switch_branch") return
 
     if (mode === "pushing") return
 
@@ -119,7 +117,7 @@ export function useKeyboardRouter({
 
     if (diffPaneTaskId !== null) {
       if (key.name === "c") {
-        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
+        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
         return
       }
       if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
@@ -161,13 +159,12 @@ export function useKeyboardRouter({
         if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
         return
       }
-      if (key.name === "r") { handleResume(paneTask); return }
       if (key.name === "f") {
         if (paneTask && paneTask.status === "ready" && paneTask.hasCommits) handleOpenDiff()
         return
       }
       if (key.name === "c") {
-        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
+        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
         return
       }
       if (key.name === "e") {
@@ -198,7 +195,7 @@ export function useKeyboardRouter({
       return
     }
 
-    if (key.name === "n" || key.name === "c") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
+    if (key.name === "n") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
     if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
     if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
     if (key.name === "s") {
@@ -206,7 +203,10 @@ export function useKeyboardRouter({
       return
     }
     if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready" && selectedTask.hasCommits ? handleOpenDiff() : handleOpenLog(); return }
-    if (key.name === "r") { handleResume(); return }
+    if (key.name === "c") {
+      if (selectedTask && selectedTask.sessionId && selectedTask.status !== "running") setMode("continue")
+      return
+    }
     if (key.name === "b") { setMode("switch_branch"); return }
     if (key.name === "e") {
       if (selectedTask && selectedTask.status === "ready") handleMarkDone(selectedTask)

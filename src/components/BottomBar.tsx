@@ -1,6 +1,6 @@
 import { useSpinnerFrame } from "../lib/tick.js"
 import { BranchInput } from "./BranchInput.js"
-import { RequestChangesInput } from "./RequestChangesInput.js"
+import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
 import type { Task, Mode } from "../types.js"
 
@@ -40,8 +40,8 @@ interface Props {
   bindings: Binding[]
   onBranchSubmit: (branch: string) => void
   onBranchCancel: () => void
-  onRequestChangesSubmit: (prompt: string) => void
-  onRequestChangesCancel: () => void
+  onContinueSubmit: (prompt?: string) => void
+  onContinueCancel: () => void
 }
 
 export function BottomBar({
@@ -53,8 +53,8 @@ export function BottomBar({
   bindings,
   onBranchSubmit,
   onBranchCancel,
-  onRequestChangesSubmit,
-  onRequestChangesCancel,
+  onContinueSubmit,
+  onContinueCancel,
 }: Props) {
   const activeTask = paneTask ?? selectedTask
 
@@ -70,8 +70,8 @@ export function BottomBar({
     return <BranchInput onSubmit={onBranchSubmit} onCancel={onBranchCancel} />
   }
 
-  if (mode === "request_changes") {
-    return <RequestChangesInput onSubmit={onRequestChangesSubmit} onCancel={onRequestChangesCancel} />
+  if (mode === "continue") {
+    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} />
   }
 
   if (mode === "kill" && activeTask) {
