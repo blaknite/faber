@@ -6,7 +6,7 @@ import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
 import { HeaderBar } from "./components/HeaderBar.js"
-import { MergeSuccessView } from "./components/MergeSuccessView.js"
+import { InterstitialView } from "./components/InterstitialView.js"
 import { killAgent } from "./lib/agent.js"
 import { removeWorktree, hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
@@ -188,7 +188,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ]
 
   if (mergeMessage) {
-    return <MergeSuccessView message={mergeMessage} />
+    return <InterstitialView message={mergeMessage} />
   }
 
   return (
