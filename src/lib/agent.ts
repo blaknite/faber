@@ -5,6 +5,8 @@ import type { Task } from "../types.js"
 import { updateTask, taskOutputPath } from "./state.js"
 import { logTaskFailure } from "./failureLog.js"
 
+export const DEFAULT_RESUME_PROMPT = "The task was interrupted. Please continue where you left off."
+
 export function spawnAgent(
   task: Task,
   repoRoot: string,
@@ -30,14 +32,14 @@ export function spawnAgent(
   const outputFile = taskOutputPath(repoRoot, task.id)
 
   const agentPrompt = resumeSessionId
-    ? (resumePrompt ?? "The task was interrupted. Please continue where you left off.")
+    ? (resumePrompt ?? DEFAULT_RESUME_PROMPT)
     : `Load the skill \`working-in-faber\`\n\n${task.prompt}`
 
   // The log shows what the user asked for, not the internal scaffolding we
   // prepend. For new tasks that's task.prompt; for resumes it's whatever
   // follow-up prompt was provided (or the interruption fallback).
   const logPrompt = resumeSessionId
-    ? (resumePrompt ?? "The task was interrupted. Please continue where you left off.")
+    ? (resumePrompt ?? DEFAULT_RESUME_PROMPT)
     : task.prompt
 
   // Write the prompt to the log before the agent starts so it's always visible,

@@ -95,10 +95,9 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const {
     handleDispatch,
     handleKill,
-    handleResume,
+    handleContinue,
     handleOpenLog,
     handleOpenDiff,
-    handleRequestChanges,
     handleSwitchBranch,
     handlePush,
     handleMerge,
@@ -140,7 +139,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     handleMerge,
     handleMarkDone,
     handlePush,
-    handleResume,
+    handleContinue,
     handleOpenLog,
     handleOpenDiff,
     removeTaskFromState,
@@ -153,7 +152,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
     { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
-    { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
+    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
     { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
@@ -162,9 +161,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "scroll" },
     { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
     { key: "s", label: "stop", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
-    { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
     { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits },
-    { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
+    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
@@ -173,7 +171,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "select", disabled: tasks.length === 0 },
     { key: "enter", label: "open", disabled: !selectedTask },
     { key: "s", label: "stop", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
-    { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "c", label: "continue", disabled: !selectedTask?.sessionId || selectedTask?.status === "running" },
     { key: "x", label: "done", disabled: !selectedTask || selectedTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "b", label: "switch branch", disabled: !selectedTask },
@@ -197,7 +195,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <DiffView
               repoRoot={repoRoot}
               task={diffTask}
-              disabled={mode === "request_changes"}
+              disabled={mode === "continue"}
             />
           ) : null
         })() : logPaneTaskId ? (() => {
@@ -206,7 +204,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             <AgentLog
               repoRoot={repoRoot}
               task={logTask}
-              disabled={mode === "request_changes"}
+              disabled={mode === "continue"}
             />
           ) : null
         })() : (
@@ -235,8 +233,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         bindings={normalBindings}
         onBranchSubmit={(branch) => handleSwitchBranch(branch)}
         onBranchCancel={() => setMode("normal")}
-        onRequestChangesSubmit={(prompt) => handleRequestChanges(prompt)}
-        onRequestChangesCancel={() => setMode("normal")}
+        onContinueSubmit={(prompt?: string) => handleContinue(prompt)}
+        onContinueCancel={() => setMode("normal")}
       />
     </box>
   )

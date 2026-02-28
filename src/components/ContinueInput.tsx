@@ -1,0 +1,59 @@
+import { useRef, useState } from "react"
+import type { TextareaRenderable } from "@opentui/core"
+import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
+import { DEFAULT_RESUME_PROMPT } from "../lib/agent.js"
+
+interface Props {
+  onSubmit: (prompt?: string) => void
+  onCancel: () => void
+}
+
+export function ContinueInput({ onSubmit, onCancel }: Props) {
+  const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
+  const textareaRef = useRef<TextareaRenderable>(null)
+
+  const onContentChange = () => {
+    const lines = textareaRef.current?.virtualLineCount ?? MIN_LINES
+    setTextareaHeight(Math.min(Math.max(lines, MIN_LINES), MAX_LINES))
+  }
+
+  // textarea height + 1 spacer + 1 label
+  const borderHeight = textareaHeight + 2
+
+  return (
+    <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
+      <box
+        border={["left"]}
+        borderColor="#666666"
+        style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
+      >
+        <textarea
+          ref={textareaRef}
+          minHeight={MIN_LINES}
+          maxHeight={MAX_LINES}
+          keyBindings={KEY_BINDINGS}
+          onContentChange={onContentChange}
+          placeholder={DEFAULT_RESUME_PROMPT}
+          onSubmit={() => {
+            const trimmed = textareaRef.current?.plainText.trim()
+            onSubmit(trimmed || undefined)
+          }}
+          onKeyDown={(key) => {
+            if (key.name === "escape") {
+              const isEmpty = !textareaRef.current?.plainText.trim()
+              if (isEmpty) {
+                onCancel()
+              } else {
+                textareaRef.current?.clear()
+              }
+              key.preventDefault()
+            }
+          }}
+          focused
+        />
+        <box style={{ height: 1 }} />
+        <text fg="#555555">continue  <span fg="#333333">[enter] submit  [esc] cancel</span></text>
+      </box>
+    </box>
+  )
+}

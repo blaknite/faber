@@ -102,19 +102,6 @@ export function useAppActions({
     setMode("normal")
   }, [selectedTask, updateTaskInState, setMode])
 
-  const handleResume = useCallback((task: Task | null = selectedTask) => {
-    if (!task || (task.status !== "failed" && task.status !== "done") || !task.sessionId) return
-    if (task.pid) killAgent(task.pid)
-    const patch: Partial<Task> = {
-      status: "running",
-      completedAt: null,
-      exitCode: null,
-    }
-    updateTaskInState(task.id, patch)
-    const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, task.sessionId)
-  }, [selectedTask, repoRoot, updateTaskInState])
-
   const handleOpenLog = useCallback(() => {
     if (!selectedTask) return
     setLogPaneTaskId(selectedTask.id)
@@ -126,9 +113,10 @@ export function useAppActions({
     setDiffPaneTaskId(task.id)
   }, [paneTask, selectedTask, setDiffPaneTaskId])
 
-  const handleRequestChanges = useCallback((prompt: string) => {
-    const task = paneTask
+  const handleContinue = useCallback((prompt?: string) => {
+    const task = paneTask ?? selectedTask
     if (!task || !task.sessionId) return
+    if (task.status === "running") return
     setMode("normal")
     if (task.pid) killAgent(task.pid)
     const patch: Partial<Task> = {
@@ -138,10 +126,11 @@ export function useAppActions({
     }
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, task.sessionId, prompt)
+    const resolvedPrompt = prompt?.trim() || undefined
+    spawnAgent(updated, repoRoot, task.sessionId, resolvedPrompt)
     setDiffPaneTaskId(null)
     setLogPaneTaskId(task.id)
-  }, [paneTask, repoRoot, updateTaskInState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
+  }, [paneTask, selectedTask, repoRoot, updateTaskInState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
 
   const handleSwitchBranch = useCallback(async (branch: string) => {
     setMode("normal")
@@ -192,10 +181,9 @@ export function useAppActions({
   return {
     handleDispatch,
     handleKill,
-    handleResume,
+    handleContinue,
     handleOpenLog,
     handleOpenDiff,
-    handleRequestChanges,
     handleSwitchBranch,
     handlePush,
     handleMerge,
