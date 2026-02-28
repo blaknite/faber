@@ -98,6 +98,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     handleContinue,
     handleOpenLog,
     handleOpenDiff,
+    openTaskView,
     handleSwitchBranch,
     handlePush,
     handleMerge,
@@ -142,6 +143,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     handleContinue,
     handleOpenLog,
     handleOpenDiff,
+    openTaskView,
     removeTaskFromState,
     onExit,
   })

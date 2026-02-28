@@ -1,6 +1,7 @@
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react"
 import { ACTIVE_STATUSES, type FilterMode } from "../components/AgentList.js"
 import type { Task } from "../types.js"
+import { taskUsesDiffView } from "./useAppActions.js"
 
 export function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -73,8 +74,7 @@ export function useAppState(initialTasks: Task[]): AppState {
       if (
         previousStatus !== undefined &&
         previousStatus !== "ready" &&
-        task.status === "ready" &&
-        task.hasCommits &&
+        taskUsesDiffView(task) &&
         logPaneTaskId === task.id &&
         diffPaneTaskId === null
       ) {

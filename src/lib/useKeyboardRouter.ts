@@ -28,6 +28,7 @@ interface UseKeyboardRouterParams {
   handleContinue: (prompt?: string) => void
   handleOpenLog: () => void
   handleOpenDiff: () => void
+  openTaskView: (task: Task) => void
   removeTaskFromState: (id: string) => void
   onExit: () => void
 }
@@ -55,6 +56,7 @@ export function useKeyboardRouter({
   handleContinue,
   handleOpenLog,
   handleOpenDiff,
+  openTaskView,
   removeTaskFromState,
   onExit,
 }: UseKeyboardRouterParams): void {
@@ -140,14 +142,7 @@ export function useKeyboardRouter({
           const nextIdx = key.name === ","
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          const nextTask = activeTasks[nextIdx]
-          if (nextTask.status === "ready" && nextTask.hasCommits) {
-            setDiffPaneTaskId(nextTask.id)
-            setLogPaneTaskId(null)
-          } else {
-            setDiffPaneTaskId(null)
-            setLogPaneTaskId(nextTask.id)
-          }
+          openTaskView(activeTasks[nextIdx])
         }
         return
       }
@@ -182,13 +177,7 @@ export function useKeyboardRouter({
           const nextIdx = key.name === ","
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          const nextTask = activeTasks[nextIdx]
-          if (nextTask.status === "ready" && nextTask.hasCommits) {
-            setDiffPaneTaskId(nextTask.id)
-            setLogPaneTaskId(null)
-          } else {
-            setLogPaneTaskId(nextTask.id)
-          }
+          openTaskView(activeTasks[nextIdx])
         }
         return
       }
@@ -202,7 +191,7 @@ export function useKeyboardRouter({
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
-    if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready" && selectedTask.hasCommits ? handleOpenDiff() : handleOpenLog(); return }
+    if (key.name === "o" || key.name === "return") { if (selectedTask) openTaskView(selectedTask); return }
     if (key.name === "c") {
       if (selectedTask && selectedTask.sessionId && selectedTask.status !== "running") setMode("continue")
       return
