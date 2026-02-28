@@ -50,6 +50,7 @@ export function spawnAgent(
     type: "prompt",
     timestamp: Date.now(),
     prompt: logPrompt,
+    model: task.model,
   })
   if (resumeSessionId) {
     appendFileSync(outputFile, promptEvent + "\n")
