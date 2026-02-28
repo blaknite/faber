@@ -88,7 +88,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
 
       {mergeMessage ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="#00aaff">{mergeMessage}</text>
+          <text fg="white">{mergeMessage}</text>
         </box>
       ) : tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
