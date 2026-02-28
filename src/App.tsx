@@ -4,9 +4,7 @@ import type { CliRenderer } from "@opentui/core"
 import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
-import { BranchInput } from "./components/BranchInput.js"
-import { RequestChangesInput } from "./components/RequestChangesInput.js"
-import { StatusBar } from "./components/StatusBar.js"
+import { BottomBar } from "./components/BottomBar.js"
 import { spawnAgent, killAgent } from "./lib/agent.js"
 import { removeWorktree, mergeBranch, hasUnpushedCommits, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { generateSlug } from "./lib/slug.js"
@@ -30,10 +28,6 @@ function RunningCountSpinner({ count }: { count: number }) {
   return <text fg="#00aaff">{frame} {count}</text>
 }
 
-function PushingSpinner({ branch }: { branch: string }) {
-  const frame = useSpinnerFrame()
-  return <text fg="#00aaff">{frame}{` Pushing ${branch} to origin...`}</text>
-}
 
 interface Props {
   repoRoot: string
@@ -420,44 +414,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "p", label: "push", disabled: !isDirty },
   ]
 
-  const bottomBar = flashMessage ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text fg="#ff8800">{flashMessage}</text>
-    </box>
-  ) : mode === "switch_branch" ? (
-    <BranchInput
-      onSubmit={(branch) => handleSwitchBranch(branch)}
-      onCancel={() => setMode("normal")}
-    />
-  ) : mode === "request_changes" && (diffPaneTaskId || logPaneTaskId) ? (
-    <RequestChangesInput
-      onSubmit={(prompt) => handleRequestChanges(prompt)}
-      onCancel={() => setMode("normal")}
-    />
-  ) : mode === "kill" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Kill ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "delete" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Delete ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "merge" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Merge ${(paneTask ?? selectedTask)!.id} into HEAD?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "push" ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Push ${currentBranch} to origin?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "pushing" ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <PushingSpinner branch={currentBranch} />
-    </box>
-  ) : (
-    <StatusBar bindings={normalBindings} />
-  )
-
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
@@ -511,7 +467,18 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         )}
       </box>
 
-      {bottomBar}
+      <BottomBar
+        mode={mode}
+        flashMessage={flashMessage}
+        paneTask={paneTask}
+        selectedTask={selectedTask}
+        currentBranch={currentBranch}
+        bindings={normalBindings}
+        onBranchSubmit={(branch) => handleSwitchBranch(branch)}
+        onBranchCancel={() => setMode("normal")}
+        onRequestChangesSubmit={(prompt) => handleRequestChanges(prompt)}
+        onRequestChangesCancel={() => setMode("normal")}
+      />
     </box>
   )
 }
