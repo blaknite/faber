@@ -187,10 +187,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "p", label: "push", disabled: !isDirty },
   ]
 
-  if (mergeMessage) {
-    return <InterstitialView message={mergeMessage} />
-  }
-
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <HeaderBar
@@ -202,7 +198,9 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       />
 
       <box style={{ flexGrow: 1 }}>
-        {paneTaskId && paneView === "diff" ? (() => {
+        {mergeMessage ? (
+          <InterstitialView message={mergeMessage} />
+        ) : paneTaskId && paneView === "diff" ? (() => {
           const diffTask = tasks.find((t) => t.id === paneTaskId) ?? null
           return diffTask ? (
             <DiffView
