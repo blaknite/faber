@@ -64,7 +64,7 @@ async function main() {
       console.error("Could not find faber state file from current directory")
       exit(exitCode)
     }
-    // Always mark the task as done (or ready_to_merge) so intermittent non-zero
+    // Always mark the task as done (or ready) so intermittent non-zero
     // exit codes from the agent process don't permanently flip a completed task to
     // "failed". The exit code is still recorded for diagnostics.
     if (exitCode !== 0) {
