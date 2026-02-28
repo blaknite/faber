@@ -16,10 +16,13 @@ export function spawnAgent(
   })()
   if (!opencodebin) throw new Error("opencode not found in PATH")
 
-  // Reconstruct the faber invocation so it works in dev (bun src/index.tsx),
-  // via the package bin (bun dist/index.js), or as a compiled binary.
-  const [runtime, script] = process.argv
-  const faberCmd = script ? `${runtime} ${script}` : runtime
+  // process.execPath is always the real executable path.
+  // In dev it's the bun binary, so we also need argv[1] (the script path).
+  // In a compiled binary argv[1] is a /$bunfs/ virtual path, not a real file.
+  const script = process.argv[1]
+  const faberCmd = script?.startsWith("/") && !script.startsWith("/$bunfs/")
+    ? `${process.execPath} ${script}`
+    : process.execPath
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
