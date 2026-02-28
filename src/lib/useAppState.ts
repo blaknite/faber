@@ -8,6 +8,7 @@ export function sortDescending(tasks: Task[]): Task[] {
 }
 
 export type FlashType = "success" | "error"
+export type PaneView = "log" | "diff"
 
 export interface AppState {
   tasks: Task[]
@@ -18,10 +19,10 @@ export interface AppState {
   setSelectedIdx: (idx: number | ((prev: number) => number)) => void
   flashMessage: string | null
   flashType: FlashType | null
-  logPaneTaskId: string | null
-  setLogPaneTaskId: (id: string | null) => void
-  diffPaneTaskId: string | null
-  setDiffPaneTaskId: (id: string | null) => void
+  paneTaskId: string | null
+  setPaneTaskId: (id: string | null) => void
+  paneView: PaneView
+  setPaneView: (view: PaneView) => void
   currentBranch: string
   setCurrentBranch: (branch: string) => void
   isDirty: boolean
@@ -41,8 +42,8 @@ export function useAppState(initialTasks: Task[]): AppState {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [flashType, setFlashType] = useState<FlashType | null>(null)
-  const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
-  const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
+  const [paneTaskId, setPaneTaskId] = useState<string | null>(null)
+  const [paneView, setPaneView] = useState<PaneView>("log")
   const [currentBranch, setCurrentBranch] = useState<string>("")
   const [isDirty, setIsDirty] = useState<boolean>(false)
   const prevSelectedIdx = useRef(0)
@@ -59,8 +60,8 @@ export function useAppState(initialTasks: Task[]): AppState {
   // viewed, not on selectedTask (which is position-based in the filtered list).
   // If the filter hides a task after it's killed, selectedTask silently shifts
   // to whatever lands at that index -- paneTask prevents that mismatch.
-  const paneTask = (diffPaneTaskId ?? logPaneTaskId)
-    ? tasks.find((t) => t.id === (diffPaneTaskId ?? logPaneTaskId)) ?? null
+  const paneTask = paneTaskId
+    ? tasks.find((t) => t.id === paneTaskId) ?? null
     : null
 
   // Keep selectedIdx in bounds when visibleTasks changes (filter toggle, task added/removed).
@@ -68,9 +69,9 @@ export function useAppState(initialTasks: Task[]): AppState {
     setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
   }, [visibleTasks.length])
 
-  // When a task transitions to ready and has commits, switch immediately from
-  // the log view to the diff view. Only fires on the state transition itself --
-  // not every render while the task is already ready.
+  // When a task transitions to ready and has commits while the log view is
+  // open, switch automatically to the diff view. Only fires on the status
+  // transition itself -- not every render while the task is already ready.
   useEffect(() => {
     const prev = prevTaskStatusesRef.current
     for (const task of tasks) {
@@ -79,17 +80,16 @@ export function useAppState(initialTasks: Task[]): AppState {
         previousStatus !== undefined &&
         previousStatus !== "ready" &&
         taskUsesDiffView(task) &&
-        logPaneTaskId === task.id &&
-        diffPaneTaskId === null
+        paneTaskId === task.id &&
+        paneView === "log"
       ) {
-        setDiffPaneTaskId(task.id)
-        setLogPaneTaskId(null)
+        setPaneView("diff")
       }
     }
     const next = new Map<string, Task["status"]>()
     for (const task of tasks) next.set(task.id, task.status)
     prevTaskStatusesRef.current = next
-  }, [tasks, logPaneTaskId, diffPaneTaskId])
+  }, [tasks, paneTaskId, paneView])
 
   const showFlash = useCallback((msg: string, type: FlashType) => {
     if (flashTimerRef.current !== null) {
@@ -113,10 +113,10 @@ export function useAppState(initialTasks: Task[]): AppState {
     setSelectedIdx,
     flashMessage,
     flashType,
-    logPaneTaskId,
-    setLogPaneTaskId,
-    diffPaneTaskId,
-    setDiffPaneTaskId,
+    paneTaskId,
+    setPaneTaskId,
+    paneView,
+    setPaneView,
     currentBranch,
     setCurrentBranch,
     isDirty,

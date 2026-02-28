@@ -34,10 +34,10 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setSelectedIdx,
     flashMessage,
     flashType,
-    logPaneTaskId,
-    setLogPaneTaskId,
-    diffPaneTaskId,
-    setDiffPaneTaskId,
+    paneTaskId,
+    setPaneTaskId,
+    paneView,
+    setPaneView,
     currentBranch,
     setCurrentBranch,
     isDirty,
@@ -110,12 +110,12 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     selectedTask,
     paneTask,
     currentBranch,
-    logPaneTaskId,
-    diffPaneTaskId,
+    paneTaskId,
+    paneView,
     setMode,
     setSelectedIdx,
-    setLogPaneTaskId,
-    setDiffPaneTaskId,
+    setPaneTaskId,
+    setPaneView,
     prevSelectedIdx,
     refreshDirtyState,
     showFlash,
@@ -124,10 +124,10 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   useKeyboardRouter({
     mode,
     setMode,
-    diffPaneTaskId,
-    setDiffPaneTaskId,
-    logPaneTaskId,
-    setLogPaneTaskId,
+    paneTaskId,
+    setPaneTaskId,
+    paneView,
+    setPaneView,
     paneTask,
     selectedTask,
     selectedIdx,
@@ -150,7 +150,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   })
 
   const activeTaskCount = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
-  const normalBindings = diffPaneTaskId ? [
+  const normalBindings = paneTaskId && paneView === "diff" ? [
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
     { key: "↑↓", label: "scroll" },
@@ -159,7 +159,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
     { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
-  ] : logPaneTaskId ? [
+  ] : paneTaskId && paneView === "log" ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
     { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
@@ -192,8 +192,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       />
 
       <box style={{ flexGrow: 1 }}>
-        {diffPaneTaskId ? (() => {
-          const diffTask = tasks.find((t) => t.id === diffPaneTaskId) ?? null
+        {paneTaskId && paneView === "diff" ? (() => {
+          const diffTask = tasks.find((t) => t.id === paneTaskId) ?? null
           return diffTask ? (
             <DiffView
               repoRoot={repoRoot}
@@ -201,8 +201,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
               disabled={mode === "continue" || mode === "switch_branch"}
             />
           ) : null
-        })() : logPaneTaskId ? (() => {
-          const logTask = tasks.find((t) => t.id === logPaneTaskId) ?? null
+        })() : paneTaskId && paneView === "log" ? (() => {
+          const logTask = tasks.find((t) => t.id === paneTaskId) ?? null
           return logTask ? (
             <AgentLog
               repoRoot={repoRoot}

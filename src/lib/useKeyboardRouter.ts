@@ -3,15 +3,16 @@ import type { MutableRefObject } from "react"
 import { killAgent } from "./agent.js"
 import { removeWorktree } from "./worktree.js"
 import type { Task, Mode } from "../types.js"
+import type { PaneView } from "./useAppState.js"
 import { ACTIVE_STATUSES } from "../components/AgentList.js"
 
 interface UseKeyboardRouterParams {
   mode: Mode
   setMode: (mode: Mode) => void
-  diffPaneTaskId: string | null
-  setDiffPaneTaskId: (id: string | null) => void
-  logPaneTaskId: string | null
-  setLogPaneTaskId: (id: string | null) => void
+  paneTaskId: string | null
+  setPaneTaskId: (id: string | null) => void
+  paneView: PaneView
+  setPaneView: (view: PaneView) => void
   paneTask: Task | null
   selectedTask: Task | null
   selectedIdx: number
@@ -36,10 +37,10 @@ interface UseKeyboardRouterParams {
 export function useKeyboardRouter({
   mode,
   setMode,
-  diffPaneTaskId,
-  setDiffPaneTaskId,
-  logPaneTaskId,
-  setLogPaneTaskId,
+  paneTaskId,
+  setPaneTaskId,
+  paneView,
+  setPaneView,
   paneTask,
   selectedTask,
   selectedIdx,
@@ -67,8 +68,7 @@ export function useKeyboardRouter({
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
-      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
-      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
+      if (paneTaskId !== null) { setPaneTaskId(null); return }
       return
     }
 
@@ -88,8 +88,7 @@ export function useKeyboardRouter({
         if (!activeTask) { setMode("normal"); return }
         if (activeTask.pid) killAgent(activeTask.pid)
         removeWorktree(repoRoot, activeTask.id).catch(() => {})
-        if (logPaneTaskId === activeTask.id) setLogPaneTaskId(null)
-        if (diffPaneTaskId === activeTask.id) setDiffPaneTaskId(null)
+        if (paneTaskId === activeTask.id) setPaneTaskId(null)
         removeTaskFromState(activeTask.id)
         setMode("normal")
         return
@@ -111,76 +110,85 @@ export function useKeyboardRouter({
     }
 
     if (key.name === "q") {
-      if (diffPaneTaskId !== null) { setDiffPaneTaskId(null); setLogPaneTaskId(null); return }
-      if (logPaneTaskId !== null) { setLogPaneTaskId(null); return }
+      if (paneTaskId !== null) { setPaneTaskId(null); return }
       onExit()
       return
     }
 
-    if (diffPaneTaskId !== null) {
-      if (key.name === "c") {
-        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
-        return
-      }
-      if (key.name === "l") { handleOpenLog(); setDiffPaneTaskId(null); return }
-      if (key.name === "m") {
-        if (paneTask) setMode("merge")
-        return
-      }
-      if (key.name === "x") {
-        if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
-        return
-      }
-      if (key.name === "d") {
-        if (paneTask) setMode("delete")
-        return
-      }
+    if (paneTaskId !== null) {
+      // Prev/next: change the open task, keep the current view type where
+      // possible. openTaskView picks the right default for the new task so
+      // we don't get stuck on diff for a task that only has a log.
       if (key.name === "," || key.name === ".") {
         const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
-        const currentIdx = activeTasks.findIndex(t => t.id === diffPaneTaskId)
+        const currentIdx = activeTasks.findIndex(t => t.id === paneTaskId)
         if (currentIdx !== -1 && activeTasks.length > 1) {
           const nextIdx = key.name === ","
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          openTaskView(activeTasks[nextIdx])
+          const nextTask = activeTasks[nextIdx]
+          // Stay on the same view if the new task supports it, otherwise fall
+          // back to whatever openTaskView picks as the default.
+          const nextView = paneView === "diff" && nextTask.status === "ready" && nextTask.hasCommits
+            ? "diff"
+            : paneView === "log"
+              ? "log"
+              : null
+          if (nextView) {
+            setPaneTaskId(nextTask.id)
+            setPaneView(nextView)
+          } else {
+            openTaskView(nextTask)
+          }
         }
         return
       }
-      return
-    }
 
-    if (logPaneTaskId !== null) {
-      if (key.name === "s") {
-        if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
-        return
-      }
-      if (key.name === "f") {
-        if (paneTask && paneTask.status === "ready" && paneTask.hasCommits) handleOpenDiff()
-        return
-      }
-      if (key.name === "c") {
-        if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
-        return
-      }
-      if (key.name === "x") {
-        if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
-        return
-      }
-      if (key.name === "d") {
-        if (paneTask) setMode("delete")
-        return
-      }
-      if (key.name === "," || key.name === ".") {
-        const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
-        const currentIdx = activeTasks.findIndex(t => t.id === logPaneTaskId)
-        if (currentIdx !== -1 && activeTasks.length > 1) {
-          const nextIdx = key.name === ","
-            ? (currentIdx + 1) % activeTasks.length
-            : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          openTaskView(activeTasks[nextIdx])
+      if (paneView === "diff") {
+        if (key.name === "c") {
+          if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
+          return
+        }
+        if (key.name === "l") { setPaneView("log"); return }
+        if (key.name === "m") {
+          if (paneTask) setMode("merge")
+          return
+        }
+        if (key.name === "x") {
+          if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
+          return
+        }
+        if (key.name === "d") {
+          if (paneTask) setMode("delete")
+          return
         }
         return
       }
+
+      if (paneView === "log") {
+        if (key.name === "s") {
+          if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
+          return
+        }
+        if (key.name === "f") {
+          if (paneTask && paneTask.status === "ready" && paneTask.hasCommits) setPaneView("diff")
+          return
+        }
+        if (key.name === "c") {
+          if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
+          return
+        }
+        if (key.name === "x") {
+          if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
+          return
+        }
+        if (key.name === "d") {
+          if (paneTask) setMode("delete")
+          return
+        }
+        return
+      }
+
       return
     }
 
