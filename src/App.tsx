@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { CliRenderer } from "@opentui/core"
-import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
+import { AgentList } from "./components/AgentList.js"
+import { useAppState, sortDescending } from "./lib/useAppState.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { BranchInput } from "./components/BranchInput.js"
@@ -20,10 +21,6 @@ import { TickProvider, useSpinnerFrame } from "./lib/tick.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
 
-
-function sortDescending(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-}
 
 function RunningCountSpinner({ count }: { count: number }) {
   const frame = useSpinnerFrame()
@@ -44,32 +41,29 @@ interface Props {
 }
 
 function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(sortDescending(initialTasks))
-  const [filterMode, setFilterMode] = useState<FilterMode>("active")
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const {
+    tasks,
+    setTasks,
+    filterMode,
+    setFilterMode,
+    selectedIdx,
+    setSelectedIdx,
+    flashMessage,
+    logPaneTaskId,
+    setLogPaneTaskId,
+    diffPaneTaskId,
+    setDiffPaneTaskId,
+    currentBranch,
+    setCurrentBranch,
+    isDirty,
+    setIsDirty,
+    prevSelectedIdx,
+    visibleTasks,
+    selectedTask,
+    paneTask,
+    showFlash,
+  } = useAppState(initialTasks)
   const [mode, setMode] = useState<Mode>("normal")
-  const [flashMessage, setFlashMessage] = useState<string | null>(null)
-  const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
-  const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
-  const [currentBranch, setCurrentBranch] = useState<string>("")
-  const [isDirty, setIsDirty] = useState<boolean>(false)
-  const prevSelectedIdx = useRef(0)
-  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevTaskStatusesRef = useRef<Map<string, Task["status"]>>(new Map())
-
-  const visibleTasks = filterMode === "active"
-    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
-    : tasks
-
-  const selectedTask = visibleTasks[selectedIdx] ?? null
-
-  // When viewing a log or diff pane, actions must operate on the task being
-  // viewed, not on selectedTask (which is position-based in the filtered list).
-  // If the filter hides a task after it's killed, selectedTask silently shifts
-  // to whatever lands at that index -- paneTask prevents that mismatch.
-  const paneTask = (diffPaneTaskId ?? logPaneTaskId)
-    ? tasks.find((t) => t.id === (diffPaneTaskId ?? logPaneTaskId)) ?? null
-    : null
 
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
@@ -106,45 +100,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   const removeTaskFromState = useCallback((id: string) => {
     removeTask(repoRoot, id)
   }, [repoRoot])
-
-  // Keep selectedIdx in bounds when visibleTasks changes (filter toggle, task added/removed).
-  useEffect(() => {
-    setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
-  }, [visibleTasks.length])
-
-  // When a task transitions to ready_to_merge, switch immediately from the log
-  // view to the diff view. Only fires on the state transition itself -- not
-  // every render while the task is already ready_to_merge.
-  useEffect(() => {
-    const prev = prevTaskStatusesRef.current
-    for (const task of tasks) {
-      const previousStatus = prev.get(task.id)
-      if (
-        previousStatus !== undefined &&
-        previousStatus !== "ready_to_merge" &&
-        task.status === "ready_to_merge" &&
-        logPaneTaskId === task.id &&
-        diffPaneTaskId === null
-      ) {
-        setDiffPaneTaskId(task.id)
-        setLogPaneTaskId(null)
-      }
-    }
-    const next = new Map<string, Task["status"]>()
-    for (const task of tasks) next.set(task.id, task.status)
-    prevTaskStatusesRef.current = next
-  }, [tasks, logPaneTaskId, diffPaneTaskId])
-
-  const showFlash = useCallback((msg: string) => {
-    if (flashTimerRef.current !== null) {
-      clearTimeout(flashTimerRef.current)
-    }
-    setFlashMessage(msg)
-    flashTimerRef.current = setTimeout(() => {
-      setFlashMessage(null)
-      flashTimerRef.current = null
-    }, 2000)
-  }, [])
 
   const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
     setMode("normal")
