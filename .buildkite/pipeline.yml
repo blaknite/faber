@@ -2,6 +2,8 @@ steps:
   - label: ":bun: Test"
     key: test
     command: |
+      git config --global user.email "ci@buildkite.com"
+      git config --global user.name "Buildkite CI"
       bun install --frozen-lockfile
       bun test
     plugins:
