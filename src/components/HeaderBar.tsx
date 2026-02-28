@@ -25,7 +25,7 @@ export function HeaderBar({ repoName, currentBranch, isDirty, runningCount, read
           <text fg="#555555">{"•"}</text>
         )}
         {readyCount > 0 && (
-          <text fg="#ff9900">{"◆"} {readyCount}</text>
+          <text fg="#ff9900">{"▲"} {readyCount}</text>
         )}
       </box>
     </box>
