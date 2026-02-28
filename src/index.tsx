@@ -10,7 +10,7 @@ import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import type { Task } from "./types.js"
-import { DEFAULT_MODEL, MODELS } from "./types.js"
+import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 
 // Single exit point for the process. Everything routes through here so it's
 // easy to find all the places we terminate and to add any future cleanup.
@@ -25,20 +25,21 @@ function parseDirFlag(args: string[]): string | null {
   return null
 }
 
-// Parse --model <label> from an args array, resolving the label to a model ID.
-// Exits with an error if the label doesn't match any entry in MODELS.
+// Parse --model <value> from an args array, resolving it to a model ID.
+// Accepts case-insensitive labels (smart, fast, deep) or literal model ID strings.
+// Exits with an error if the value doesn't match any known model.
 // Returns the default model if --model is not present.
 function parseModelFlag(args: string[]): Task["model"] {
   const i = args.indexOf("--model")
   if (i === -1 || !args[i + 1]) return DEFAULT_MODEL
-  const label = args[i + 1]!
-  const match = MODELS.find((m) => m.label.toLowerCase() === label.toLowerCase())
-  if (!match) {
+  const input = args[i + 1]!
+  const resolved = resolveModel(input)
+  if (!resolved) {
     const valid = MODELS.map((m) => m.label).join(", ")
-    console.error(`Unknown model "${label}". Valid options: ${valid}`)
+    console.error(`Unknown model "${input}". Valid options: ${valid}`)
     exit(1)
   }
-  return match.value
+  return resolved
 }
 
 // Read the task log and return the sessionID from the last log entry that has

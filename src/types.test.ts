@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { DEFAULT_MODEL, MODELS } from "./types.js"
+import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 import type { Model } from "./types.js"
 
 describe("MODELS", () => {
@@ -34,6 +34,30 @@ describe("MODELS", () => {
     for (const model of MODELS) {
       expect(model.value).toContain("/")
     }
+  })
+})
+
+describe("resolveModel", () => {
+  it("matches labels case-insensitively", () => {
+    expect(resolveModel("smart")).toBe("anthropic/claude-sonnet-4-6")
+    expect(resolveModel("Smart")).toBe("anthropic/claude-sonnet-4-6")
+    expect(resolveModel("SMART")).toBe("anthropic/claude-sonnet-4-6")
+    expect(resolveModel("fast")).toBe("anthropic/claude-haiku-4-5")
+    expect(resolveModel("Fast")).toBe("anthropic/claude-haiku-4-5")
+    expect(resolveModel("deep")).toBe("anthropic/claude-opus-4-6")
+    expect(resolveModel("Deep")).toBe("anthropic/claude-opus-4-6")
+  })
+
+  it("matches literal model ID strings", () => {
+    expect(resolveModel("anthropic/claude-sonnet-4-6")).toBe("anthropic/claude-sonnet-4-6")
+    expect(resolveModel("anthropic/claude-haiku-4-5")).toBe("anthropic/claude-haiku-4-5")
+    expect(resolveModel("anthropic/claude-opus-4-6")).toBe("anthropic/claude-opus-4-6")
+  })
+
+  it("returns null for unknown values", () => {
+    expect(resolveModel("unknown")).toBeNull()
+    expect(resolveModel("gpt-4")).toBeNull()
+    expect(resolveModel("")).toBeNull()
   })
 })
 

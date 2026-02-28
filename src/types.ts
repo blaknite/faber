@@ -12,6 +12,18 @@ export const MODELS: { label: string; value: Model; color: string; dimColor: str
 
 export const DEFAULT_MODEL: Model = "anthropic/claude-sonnet-4-6"
 
+// Resolves a --model flag value to a Model. Accepts case-insensitive labels
+// (smart, fast, deep) or a literal model ID string. Returns null if the value
+// doesn't match anything known.
+export function resolveModel(input: string): Model | null {
+  const lower = input.toLowerCase()
+  const byLabel = MODELS.find((m) => m.label.toLowerCase() === lower)
+  if (byLabel) return byLabel.value
+  const byValue = MODELS.find((m) => m.value.toLowerCase() === lower)
+  if (byValue) return byValue.value
+  return null
+}
+
 export interface Task {
   id: string              // e.g. "a3f2-resolve-issue-uic-002"
   prompt: string          // the raw prompt sent to opencode
