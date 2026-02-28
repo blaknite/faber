@@ -131,6 +131,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     selectedTask,
     selectedIdx,
     setSelectedIdx,
+    tasks,
     visibleTasks,
     isDirty,
     repoRoot,
@@ -146,6 +147,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     onExit,
   })
 
+  const activeTaskCount = tasks.filter(t => t.status === "running" || t.status === "ready_to_merge").length
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
@@ -157,6 +159,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
+    { key: "</>", label: "prev/next task", disabled: activeTaskCount < 2 },
     { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
     { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits },
