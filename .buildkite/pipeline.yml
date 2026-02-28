@@ -13,7 +13,7 @@ steps:
 
   - label: ":label: Set version"
     key: set-version
-    command: buildkite-agent meta-data set version "$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
+    command: buildkite-agent meta-data set version "$FABER_VERSION"
     if: build.branch == "main"
     depends_on: test
 
@@ -21,13 +21,13 @@ steps:
     key: build-darwin-arm64
     command: |
       bun install --frozen-lockfile
-      VERSION="$(buildkite-agent meta-data get version)"
-      bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64 --define "FABER_VERSION=\"$VERSION\""
+      bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-darwin-arm64"
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
-          mount-buildkite-agent: true
+          environment:
+            - FABER_VERSION
     if: build.branch == "main"
     depends_on: set-version
 
@@ -35,13 +35,13 @@ steps:
     key: build-darwin-x64
     command: |
       bun install --frozen-lockfile
-      VERSION="$(buildkite-agent meta-data get version)"
-      bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64 --define "FABER_VERSION=\"$VERSION\""
+      bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-darwin-x64"
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
-          mount-buildkite-agent: true
+          environment:
+            - FABER_VERSION
     if: build.branch == "main"
     depends_on: set-version
 
@@ -49,13 +49,13 @@ steps:
     key: build-linux-x64
     command: |
       bun install --frozen-lockfile
-      VERSION="$(buildkite-agent meta-data get version)"
-      bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64 --define "FABER_VERSION=\"$VERSION\""
+      bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-linux-x64"
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
-          mount-buildkite-agent: true
+          environment:
+            - FABER_VERSION
     if: build.branch == "main"
     depends_on: set-version
 
@@ -63,13 +63,13 @@ steps:
     key: build-linux-arm64
     command: |
       bun install --frozen-lockfile
-      VERSION="$(buildkite-agent meta-data get version)"
-      bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64 --define "FABER_VERSION=\"$VERSION\""
+      bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-linux-arm64"
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
-          mount-buildkite-agent: true
+          environment:
+            - FABER_VERSION
     if: build.branch == "main"
     depends_on: set-version
 
@@ -81,10 +81,8 @@ steps:
       buildkite-agent artifact download "faber-linux-x64" .
       buildkite-agent artifact download "faber-linux-arm64" .
 
-      VERSION="$(buildkite-agent meta-data get version)"
-
-      gh release create "v${VERSION}" \
-        --title "v${VERSION}" \
+      gh release create "v${FABER_VERSION}" \
+        --title "v${FABER_VERSION}" \
         --notes "Build [${BUILDKITE_BUILD_NUMBER}](${BUILDKITE_BUILD_URL}) from commit ${BUILDKITE_COMMIT:0:7}" \
         faber-darwin-arm64 \
         faber-darwin-x64 \
@@ -93,9 +91,9 @@ steps:
     plugins:
       - docker#v5.12.0:
           image: "oven/bun:latest"
-          mount-buildkite-agent: true
           environment:
             - GITHUB_TOKEN
+            - FABER_VERSION
     if: build.branch == "main"
     depends_on:
       - build-darwin-arm64
