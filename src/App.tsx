@@ -33,6 +33,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     selectedIdx,
     setSelectedIdx,
     flashMessage,
+    flashType,
     logPaneTaskId,
     setLogPaneTaskId,
     diffPaneTaskId,
@@ -229,6 +230,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
       <BottomBar
         mode={mode}
         flashMessage={flashMessage}
+        flashType={flashType}
         paneTask={paneTask}
         selectedTask={selectedTask}
         currentBranch={currentBranch}

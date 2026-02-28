@@ -7,6 +7,8 @@ export function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
 }
 
+export type FlashType = "success" | "error"
+
 export interface AppState {
   tasks: Task[]
   setTasks: (tasks: Task[] | ((prev: Task[]) => Task[])) => void
@@ -15,6 +17,7 @@ export interface AppState {
   selectedIdx: number
   setSelectedIdx: (idx: number | ((prev: number) => number)) => void
   flashMessage: string | null
+  flashType: FlashType | null
   logPaneTaskId: string | null
   setLogPaneTaskId: (id: string | null) => void
   diffPaneTaskId: string | null
@@ -29,7 +32,7 @@ export interface AppState {
   selectedTask: Task | null
   paneTask: Task | null
   // Helper
-  showFlash: (msg: string) => void
+  showFlash: (msg: string, type: FlashType) => void
 }
 
 export function useAppState(initialTasks: Task[]): AppState {
@@ -37,6 +40,7 @@ export function useAppState(initialTasks: Task[]): AppState {
   const [filterMode, setFilterMode] = useState<FilterMode>("active")
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
+  const [flashType, setFlashType] = useState<FlashType | null>(null)
   const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
   const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
   const [currentBranch, setCurrentBranch] = useState<string>("")
@@ -87,13 +91,15 @@ export function useAppState(initialTasks: Task[]): AppState {
     prevTaskStatusesRef.current = next
   }, [tasks, logPaneTaskId, diffPaneTaskId])
 
-  const showFlash = useCallback((msg: string) => {
+  const showFlash = useCallback((msg: string, type: FlashType) => {
     if (flashTimerRef.current !== null) {
       clearTimeout(flashTimerRef.current)
     }
     setFlashMessage(msg)
+    setFlashType(type)
     flashTimerRef.current = setTimeout(() => {
       setFlashMessage(null)
+      setFlashType(null)
       flashTimerRef.current = null
     }, 2000)
   }, [])
@@ -106,6 +112,7 @@ export function useAppState(initialTasks: Task[]): AppState {
     selectedIdx,
     setSelectedIdx,
     flashMessage,
+    flashType,
     logPaneTaskId,
     setLogPaneTaskId,
     diffPaneTaskId,

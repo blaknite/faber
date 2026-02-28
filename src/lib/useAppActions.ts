@@ -8,6 +8,7 @@ import { generateSlug } from "./slug.js"
 import { logTaskFailure } from "./failureLog.js"
 import type { Task, Mode, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
+import type { FlashType } from "./useAppState.js"
 
 // Returns true when a task should open in the diff view. Both the keyboard
 // router and the auto-transition effect in useAppState rely on this same rule,
@@ -29,7 +30,7 @@ interface UseAppActionsParams {
   setDiffPaneTaskId: (id: string | null) => void
   prevSelectedIdx: React.MutableRefObject<number>
   refreshDirtyState: () => void
-  showFlash: (msg: string) => void
+  showFlash: (msg: string, type: FlashType) => void
 }
 
 export function useAppActions({
@@ -157,9 +158,9 @@ export function useAppActions({
     setMode("normal")
     try {
       await switchBranch(repoRoot, branch)
-      showFlash(`Switched to branch ${branch}`)
+      showFlash(`Switched to branch ${branch}`, "success")
     } catch (err) {
-      showFlash(`Branch switch failed: ${err instanceof Error ? err.message : String(err)}`)
+      showFlash(`Branch switch failed: ${err instanceof Error ? err.message : String(err)}`, "error")
     }
   }, [repoRoot, showFlash, setMode])
 
@@ -167,10 +168,10 @@ export function useAppActions({
     setMode("pushing")
     try {
       await pushBranch(repoRoot)
-      showFlash(`Pushed ${currentBranch} to origin`)
+      showFlash(`Pushed ${currentBranch} to origin`, "success")
       refreshDirtyState()
     } catch (err) {
-      showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
+      showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`, "error")
     } finally {
       setMode("normal")
     }
@@ -184,10 +185,10 @@ export function useAppActions({
       updateTaskInState(task.id, { status: "done" })
       setDiffPaneTaskId(null)
       setLogPaneTaskId(null)
-      showFlash(`Merged ${task.id} into HEAD`)
+      showFlash(`Merged ${task.id} into HEAD`, "success")
       refreshDirtyState()
     } catch (err) {
-      showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
+      showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`, "error")
     }
   }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
 
@@ -196,7 +197,7 @@ export function useAppActions({
     updateTaskInState(task.id, { status: "done" })
     if (diffPaneTaskId === task.id) setDiffPaneTaskId(null)
     if (logPaneTaskId === task.id) setLogPaneTaskId(null)
-    showFlash(`${task.id} marked as done`)
+    showFlash(`${task.id} marked as done`, "success")
   }, [selectedTask, diffPaneTaskId, logPaneTaskId, updateTaskInState, setDiffPaneTaskId, setLogPaneTaskId, showFlash])
 
   return {

@@ -3,6 +3,7 @@ import { BranchInput } from "./BranchInput.js"
 import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
 import type { Task, Mode, Model } from "../types.js"
+import type { FlashType } from "../lib/useAppState.js"
 
 interface Binding {
   key: string
@@ -34,6 +35,7 @@ function PushingSpinner({ branch }: { branch: string }) {
 interface Props {
   mode: Mode
   flashMessage: string | null
+  flashType: FlashType | null
   paneTask: Task | null
   selectedTask: Task | null
   currentBranch: string
@@ -47,6 +49,7 @@ interface Props {
 export function BottomBar({
   mode,
   flashMessage,
+  flashType,
   paneTask,
   selectedTask,
   currentBranch,
@@ -59,9 +62,10 @@ export function BottomBar({
   const activeTask = paneTask ?? selectedTask
 
   if (flashMessage) {
+    const flashColor = flashType === "error" ? "#ff4444" : "#00cc66"
     return (
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-        <text fg="#ff8800">{flashMessage}</text>
+        <text fg={flashColor}>{flashMessage}</text>
       </box>
     )
   }
