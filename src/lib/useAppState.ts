@@ -19,6 +19,7 @@ export interface AppState {
   setSelectedIdx: (idx: number | ((prev: number) => number)) => void
   flashMessage: string | null
   flashType: FlashType | null
+  mergeMessage: string | null
   paneTaskId: string | null
   setPaneTaskId: (id: string | null) => void
   paneView: PaneView
@@ -32,8 +33,10 @@ export interface AppState {
   visibleTasks: Task[]
   selectedTask: Task | null
   paneTask: Task | null
-  // Helper
+  // Helpers
   showFlash: (msg: string, type: FlashType) => void
+  showMergeMessage: (msg: string) => void
+  clearMergeMessage: () => void
 }
 
 export function useAppState(initialTasks: Task[]): AppState {
@@ -42,6 +45,7 @@ export function useAppState(initialTasks: Task[]): AppState {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [flashType, setFlashType] = useState<FlashType | null>(null)
+  const [mergeMessage, setMergeMessage] = useState<string | null>(null)
   const [paneTaskId, setPaneTaskId] = useState<string | null>(null)
   const [paneView, setPaneView] = useState<PaneView>("log")
   const [currentBranch, setCurrentBranch] = useState<string>("")
@@ -104,6 +108,14 @@ export function useAppState(initialTasks: Task[]): AppState {
     }, 2000)
   }, [])
 
+  const showMergeMessage = useCallback((msg: string) => {
+    setMergeMessage(msg)
+  }, [])
+
+  const clearMergeMessage = useCallback(() => {
+    setMergeMessage(null)
+  }, [])
+
   return {
     tasks,
     setTasks,
@@ -126,5 +138,8 @@ export function useAppState(initialTasks: Task[]): AppState {
     selectedTask,
     paneTask,
     showFlash,
+    mergeMessage,
+    showMergeMessage,
+    clearMergeMessage,
   }
 }
