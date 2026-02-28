@@ -216,6 +216,36 @@ function PromptRow({ prompt, model }: { prompt: string; model: Task["model"] }) 
   )
 }
 
+function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
+  const modelDef = MODELS.find((m) => m.value === model) ?? MODELS[0]!
+  return (
+    <box style={{ paddingBottom: 1 }}>
+      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+        <box
+          border={["left"]}
+          borderColor={modelDef.color}
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+        >
+          <markdown
+            content={entry.text ?? ""}
+            syntaxStyle={syntaxStyle}
+            style={{ flexGrow: 1, flexShrink: 1 }}
+            renderNode={(token, context) => {
+              const renderable = context.defaultRender()
+              if (renderable && token.type === "paragraph" && "wrapMode" in renderable) {
+                (renderable as any).wrapMode = "word"
+              }
+              return renderable
+            }}
+          />
+          <text> </text>
+          <text fg={modelDef.color}>{modelDef.label}</text>
+        </box>
+      </box>
+    </box>
+  )
+}
+
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
     <box style={{ flexDirection: "row" }}>
@@ -308,7 +338,8 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
   )
 }
 
-function LogRow({ entry }: { entry: LogEntry }) {
+function LogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
+  if (entry.kind === "prompt") return <PromptLogRow entry={entry} model={model} />
   if (entry.kind === "tool_use") return <ToolRow entry={entry} />
   if (entry.kind === "step_finish") return <StepFinishRow entry={entry} />
   if (entry.kind === "reasoning") return <ReasoningRow entry={entry} />
@@ -408,7 +439,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
               <text fg="#555555">No output yet.</text>
             ) : (
               entries.map((entry, i) => (
-                <LogRow key={i} entry={entry} />
+                <LogRow key={i} entry={entry} model={task.model} />
               ))
             )}
           </box>
