@@ -13,11 +13,7 @@ steps:
 
   - label: ":label: Set version"
     key: set-version
-    command: VERSION="$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}" && buildkite-agent meta-data set version "$$VERSION"
-    plugins:
-      - docker#v5.12.0:
-          image: "oven/bun:latest"
-          mount-buildkite-agent: true
+    command: buildkite-agent meta-data set version "$(date -u '+%Y%m%d').${BUILDKITE_BUILD_NUMBER}"
     if: build.branch == "main"
     depends_on: test
 
