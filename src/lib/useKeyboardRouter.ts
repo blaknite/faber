@@ -2,11 +2,10 @@ import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
 import { killAgent } from "./agent.js"
 import { removeWorktree } from "./worktree.js"
-import type { Task, TaskStatus } from "../types.js"
+import type { Task } from "../types.js"
+import { ACTIVE_STATUSES } from "../components/AgentList.js"
 
 type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
-
-const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
 
 interface UseKeyboardRouterParams {
   mode: Mode
