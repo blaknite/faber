@@ -21,7 +21,7 @@ steps:
     key: build-darwin-arm64
     command: |
       bun install --frozen-lockfile
-      bun add --no-save @opentui/core-darwin-arm64@0.1.82
+      bun add @opentui/core-darwin-arm64@0.1.82
       bun build src/index.tsx --compile --target=bun-darwin-arm64 --outfile faber-darwin-arm64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-darwin-arm64"
     plugins:
@@ -36,7 +36,7 @@ steps:
     key: build-darwin-x64
     command: |
       bun install --frozen-lockfile
-      bun add --no-save @opentui/core-darwin-x64@0.1.82
+      bun add @opentui/core-darwin-x64@0.1.82
       bun build src/index.tsx --compile --target=bun-darwin-x64 --outfile faber-darwin-x64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-darwin-x64"
     plugins:
@@ -51,7 +51,7 @@ steps:
     key: build-linux-x64
     command: |
       bun install --frozen-lockfile
-      bun add --no-save @opentui/core-linux-x64@0.1.82
+      bun add @opentui/core-linux-x64@0.1.82
       bun build src/index.tsx --compile --target=bun-linux-x64 --outfile faber-linux-x64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-linux-x64"
     plugins:
@@ -66,7 +66,7 @@ steps:
     key: build-linux-arm64
     command: |
       bun install --frozen-lockfile
-      bun add --no-save @opentui/core-linux-arm64@0.1.82
+      bun add @opentui/core-linux-arm64@0.1.82
       bun build src/index.tsx --compile --target=bun-linux-arm64 --outfile faber-linux-arm64 --define "FABER_VERSION=\"$FABER_VERSION\""
     artifact_paths: "faber-linux-arm64"
     plugins:
