@@ -21,6 +21,7 @@ interface UseKeyboardRouterParams {
   visibleTasks: Task[]
   isDirty: boolean
   repoRoot: string
+  mergeMessage: string | null
   prevSelectedIdx: MutableRefObject<number>
   handleKill: (task?: Task | null) => void
   handleMerge: (task?: Task | null) => void
@@ -49,6 +50,7 @@ export function useKeyboardRouter({
   visibleTasks,
   isDirty,
   repoRoot,
+  mergeMessage,
   prevSelectedIdx,
   handleKill,
   handleMerge,
@@ -65,6 +67,8 @@ export function useKeyboardRouter({
     if (mode === "input" || mode === "continue" || mode === "switch_branch") return
 
     if (mode === "pushing") return
+
+    if (mergeMessage !== null) return
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
