@@ -142,8 +142,14 @@ export function useKeyboardRouter({
           const nextIdx = key.name === "."
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          setDiffPaneTaskId(activeTasks[nextIdx].id)
-          setLogPaneTaskId(activeTasks[nextIdx].id)
+          const nextTask = activeTasks[nextIdx]
+          if (nextTask.status === "ready" && nextTask.hasCommits) {
+            setDiffPaneTaskId(nextTask.id)
+            setLogPaneTaskId(null)
+          } else {
+            setDiffPaneTaskId(null)
+            setLogPaneTaskId(nextTask.id)
+          }
         }
         return
       }
@@ -179,7 +185,13 @@ export function useKeyboardRouter({
           const nextIdx = key.name === "."
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          setLogPaneTaskId(activeTasks[nextIdx].id)
+          const nextTask = activeTasks[nextIdx]
+          if (nextTask.status === "ready" && nextTask.hasCommits) {
+            setDiffPaneTaskId(nextTask.id)
+            setLogPaneTaskId(null)
+          } else {
+            setLogPaneTaskId(nextTask.id)
+          }
         }
         return
       }
