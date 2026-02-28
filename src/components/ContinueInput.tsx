@@ -8,10 +8,11 @@ import type { Model } from "../types.js"
 interface Props {
   onSubmit: (prompt?: string, model?: Model) => void
   onCancel: () => void
+  defaultModel?: Model
 }
 
-export function ContinueInput({ onSubmit, onCancel }: Props) {
-  const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
+export function ContinueInput({ onSubmit, onCancel, defaultModel }: Props) {
+  const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === (defaultModel ?? DEFAULT_MODEL)))
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
 

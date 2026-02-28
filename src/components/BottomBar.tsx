@@ -71,7 +71,7 @@ export function BottomBar({
   }
 
   if (mode === "continue") {
-    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} />
+    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} />
   }
 
   if (mode === "kill" && activeTask) {
