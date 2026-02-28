@@ -20,10 +20,9 @@ interface Props {
   onCancel: () => void
   onSelectTask: (id: string) => void
   mergeMessage?: string | null
-  onDismissMergeMessage?: () => void
 }
 
-export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask, mergeMessage = null, onDismissMergeMessage }: Props) {
+export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask, mergeMessage = null }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -37,10 +36,6 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
 
   useKeyboard((key) => {
     if (inputActive) return
-    if (mergeMessage) {
-      onDismissMergeMessage?.()
-      return
-    }
     if (key.name === "tab") {
       onFilterChange(filterMode === "active" ? "all" : "active")
     }
@@ -88,7 +83,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
 
       {mergeMessage ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="#555555">{mergeMessage}</text>
+          <text fg="#00aaff">{mergeMessage}</text>
         </box>
       ) : tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
