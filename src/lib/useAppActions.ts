@@ -31,6 +31,7 @@ interface UseAppActionsParams {
   prevSelectedIdx: React.MutableRefObject<number>
   refreshDirtyState: () => void
   showFlash: (msg: string, type: FlashType) => void
+  showMergeMessage: (msg: string) => void
 }
 
 export function useAppActions({
@@ -47,6 +48,7 @@ export function useAppActions({
   prevSelectedIdx,
   refreshDirtyState,
   showFlash,
+  showMergeMessage,
 }: UseAppActionsParams) {
   const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
     updateTask(repoRoot, id, patch)
@@ -182,12 +184,12 @@ export function useAppActions({
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
       setPaneTaskId(null)
-      showFlash(`Merged ${task.id} into HEAD`, "success")
+      showMergeMessage(`Merged ${task.id} into HEAD.`)
       refreshDirtyState()
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`, "error")
     }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState, setMode, setPaneTaskId])
+  }, [selectedTask, repoRoot, showFlash, showMergeMessage, updateTaskInState, refreshDirtyState, setMode, setPaneTaskId])
 
   const handleMarkDone = useCallback((task: Task | null = selectedTask) => {
     if (!task || task.status !== "ready") return

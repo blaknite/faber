@@ -47,6 +47,9 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     selectedTask,
     paneTask,
     showFlash,
+    mergeMessage,
+    showMergeMessage,
+    clearMergeMessage,
   } = useAppState(initialTasks)
   const [mode, setMode] = useState<Mode>("normal")
 
@@ -119,6 +122,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     prevSelectedIdx,
     refreshDirtyState,
     showFlash,
+    showMergeMessage,
   })
 
   useKeyboardRouter({
@@ -223,6 +227,8 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
               const idx = visibleTasks.findIndex((t) => t.id === id)
               if (idx !== -1) setSelectedIdx(idx)
             }}
+            mergeMessage={mergeMessage}
+            onDismissMergeMessage={clearMergeMessage}
           />
         )}
       </box>
