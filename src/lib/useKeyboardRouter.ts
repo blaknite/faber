@@ -127,7 +127,7 @@ export function useKeyboardRouter({
         if (paneTask) setMode("merge")
         return
       }
-      if (key.name === "e") {
+      if (key.name === "x") {
         if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
         return
       }
@@ -170,7 +170,7 @@ export function useKeyboardRouter({
         if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
         return
       }
-      if (key.name === "e") {
+      if (key.name === "x") {
         if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
         return
       }
@@ -208,7 +208,7 @@ export function useKeyboardRouter({
     if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready" && selectedTask.hasCommits ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "b") { setMode("switch_branch"); return }
-    if (key.name === "e") {
+    if (key.name === "x") {
       if (selectedTask && selectedTask.status === "ready") handleMarkDone(selectedTask)
       return
     }

@@ -155,7 +155,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "</>", label: "prev/next task", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
-    { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
+    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
@@ -165,7 +165,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
     { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
-    { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
+    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
     { key: "q", label: "quit" },
@@ -174,7 +174,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "enter", label: "open", disabled: !selectedTask },
     { key: "s", label: "stop", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
-    { key: "e", label: "mark done", disabled: !selectedTask || selectedTask.status !== "ready" },
+    { key: "x", label: "done", disabled: !selectedTask || selectedTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "b", label: "switch branch", disabled: !selectedTask },
     { key: "p", label: "push", disabled: !isDirty },
