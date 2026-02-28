@@ -8,8 +8,6 @@ steps:
       - docker#v5.12.0:
           image: "oven/bun:latest"
 
-  - wait
-
   - label: ":hammer: Build (macOS arm64)"
     key: build-darwin-arm64
     command: |
@@ -57,9 +55,6 @@ steps:
           image: "oven/bun:latest"
     if: build.branch == "main"
     depends_on: test
-
-  - wait:
-      if: build.branch == "main"
 
   - label: ":github: Release"
     key: release
