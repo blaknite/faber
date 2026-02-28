@@ -23,12 +23,4 @@ bun test
 
 ## CI/CD
 
-The pipeline is at [blaknite/faber](https://buildkite.com/blaknite/faber) on Buildkite. All steps run inside `oven/bun:latest`.
-
-Every push runs the **Test** step: `bun install --frozen-lockfile && bun test`. That's the only gate on feature branches.
-
-On `main`, after tests pass, the pipeline continues:
-
-1. **Set version** -- generates a `YYYYMMDD.<build-number>` version string and stores it as Buildkite metadata.
-2. **Build** -- compiles four platform binaries in parallel: `faber-darwin-arm64`, `faber-darwin-x64`, `faber-linux-x64`, `faber-linux-arm64`. Each is uploaded as a Buildkite artifact.
-3. **Release** -- downloads all four artifacts and publishes a GitHub Release tagged `v<version>` with the binaries attached.
+The pipeline is at [blaknite/faber](https://buildkite.com/blaknite/faber) on Buildkite. Every push runs tests. Merges to `main` also build and release platform binaries via GitHub Releases. See `.buildkite/pipeline.yml` for details.
