@@ -14,6 +14,8 @@ interface UseAppActionsParams {
   selectedTask: Task | null
   paneTask: Task | null
   currentBranch: string
+  logPaneTaskId: string | null
+  diffPaneTaskId: string | null
   setMode: (mode: Mode) => void
   setSelectedIdx: (i: number) => void
   setLogPaneTaskId: (id: string | null) => void
@@ -28,6 +30,8 @@ export function useAppActions({
   selectedTask,
   paneTask,
   currentBranch,
+  logPaneTaskId,
+  diffPaneTaskId,
   setMode,
   setSelectedIdx,
   setLogPaneTaskId,
@@ -61,6 +65,7 @@ export function useAppActions({
       startedAt: new Date().toISOString(),
       completedAt: null,
       exitCode: null,
+      hasCommits: false,
     }
 
     addTask(repoRoot, task)
@@ -117,7 +122,7 @@ export function useAppActions({
 
   const handleOpenDiff = useCallback(() => {
     const task = paneTask ?? selectedTask
-    if (!task || task.status !== "ready_to_merge") return
+    if (!task || task.status !== "ready" || !task.hasCommits) return
     setDiffPaneTaskId(task.id)
   }, [paneTask, selectedTask, setDiffPaneTaskId])
 
@@ -176,6 +181,14 @@ export function useAppActions({
     }
   }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
 
+  const handleMarkDone = useCallback((task: Task | null = selectedTask) => {
+    if (!task || task.status !== "ready") return
+    updateTaskInState(task.id, { status: "done" })
+    if (diffPaneTaskId === task.id) setDiffPaneTaskId(null)
+    if (logPaneTaskId === task.id) setLogPaneTaskId(null)
+    showFlash(`${task.id} marked as done`)
+  }, [selectedTask, diffPaneTaskId, logPaneTaskId, updateTaskInState, setDiffPaneTaskId, setLogPaneTaskId, showFlash])
+
   return {
     handleDispatch,
     handleKill,
@@ -186,6 +199,7 @@ export function useAppActions({
     handleSwitchBranch,
     handlePush,
     handleMerge,
+    handleMarkDone,
     updateTaskInState,
     removeTaskFromState,
   }

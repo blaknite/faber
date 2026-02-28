@@ -27,6 +27,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     startedAt: new Date().toISOString(),
     completedAt: null,
     exitCode: null,
+    hasCommits: false,
     ...overrides,
   }
 }

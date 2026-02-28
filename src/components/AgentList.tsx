@@ -7,7 +7,7 @@ import { TaskRow } from "./TaskRow.js"
 
 export type FilterMode = "active" | "all"
 
-export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready_to_merge"]
+export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready"]
 
 interface Props {
   tasks: Task[]

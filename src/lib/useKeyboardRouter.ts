@@ -23,6 +23,7 @@ interface UseKeyboardRouterParams {
   prevSelectedIdx: MutableRefObject<number>
   handleKill: (task?: Task | null) => void
   handleMerge: (task?: Task | null) => void
+  handleMarkDone: (task?: Task | null) => void
   handlePush: () => void
   handleResume: (task?: Task | null) => void
   handleOpenLog: () => void
@@ -48,6 +49,7 @@ export function useKeyboardRouter({
   prevSelectedIdx,
   handleKill,
   handleMerge,
+  handleMarkDone,
   handlePush,
   handleResume,
   handleOpenLog,
@@ -122,6 +124,10 @@ export function useKeyboardRouter({
         if (paneTask) setMode("merge")
         return
       }
+      if (key.name === "e") {
+        if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
+        return
+      }
       if (key.name === "d") {
         if (paneTask) setMode("delete")
         return
@@ -136,11 +142,15 @@ export function useKeyboardRouter({
       }
       if (key.name === "r") { handleResume(paneTask); return }
       if (key.name === "f") {
-        if (paneTask && paneTask.status === "ready_to_merge") handleOpenDiff()
+        if (paneTask && paneTask.status === "ready" && paneTask.hasCommits) handleOpenDiff()
         return
       }
       if (key.name === "c") {
         if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("request_changes")
+        return
+      }
+      if (key.name === "e") {
+        if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
         return
       }
       if (key.name === "d") {
@@ -157,9 +167,13 @@ export function useKeyboardRouter({
       if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
       return
     }
-    if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready_to_merge" ? handleOpenDiff() : handleOpenLog(); return }
+    if (key.name === "o" || key.name === "return") { selectedTask?.status === "ready" && selectedTask.hasCommits ? handleOpenDiff() : handleOpenLog(); return }
     if (key.name === "r") { handleResume(); return }
     if (key.name === "b") { setMode("switch_branch"); return }
+    if (key.name === "e") {
+      if (selectedTask && selectedTask.status === "ready") handleMarkDone(selectedTask)
+      return
+    }
     if (key.name === "d") {
       if (selectedTask) setMode("delete")
       return

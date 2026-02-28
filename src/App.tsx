@@ -90,7 +90,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   useFileWatch(gitFetchHeadPath(repoRoot), refreshDirtyState, { retryKey: fetchHeadWatchKey })
 
   const runningCount = tasks.filter(t => t.status === "running").length
-  const readyToMergeCount = tasks.filter(t => t.status === "ready_to_merge").length
+  const readyCount = tasks.filter(t => t.status === "ready").length
 
   const {
     handleDispatch,
@@ -102,12 +102,15 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     handleSwitchBranch,
     handlePush,
     handleMerge,
+    handleMarkDone,
     removeTaskFromState,
   } = useAppActions({
     repoRoot,
     selectedTask,
     paneTask,
     currentBranch,
+    logPaneTaskId,
+    diffPaneTaskId,
     setMode,
     setSelectedIdx,
     setLogPaneTaskId,
@@ -134,6 +137,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     prevSelectedIdx,
     handleKill,
     handleMerge,
+    handleMarkDone,
     handlePush,
     handleResume,
     handleOpenLog,
@@ -148,14 +152,16 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "↑↓", label: "scroll" },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
     { key: "m", label: "merge into HEAD", disabled: !paneTask },
+    { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : logPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "↑↓", label: "scroll" },
     { key: "x", label: "kill", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid },
     { key: "r", label: "resume", disabled: !paneTask || (paneTask.status !== "failed" && paneTask.status !== "done") || !paneTask.sessionId },
-    { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready_to_merge" },
+    { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits },
     { key: "c", label: "request changes", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
+    { key: "e", label: "mark done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : [
     { key: "q", label: "quit" },
@@ -164,6 +170,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "enter", label: "open", disabled: !selectedTask },
     { key: "x", label: "kill", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid },
     { key: "r", label: "resume", disabled: !selectedTask || (selectedTask.status !== "failed" && selectedTask.status !== "done") || !selectedTask.sessionId },
+    { key: "e", label: "mark done", disabled: !selectedTask || selectedTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !selectedTask },
     { key: "b", label: "switch branch", disabled: !selectedTask },
     { key: "p", label: "push", disabled: !isDirty },
@@ -176,7 +183,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         currentBranch={currentBranch}
         isDirty={isDirty}
         runningCount={runningCount}
-        readyToMergeCount={readyToMergeCount}
+        readyCount={readyCount}
       />
 
       <box style={{ flexGrow: 1 }}>

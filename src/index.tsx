@@ -104,14 +104,15 @@ async function main() {
       exit(exitCode)
     }
 
-    // If the agent committed work to its branch, surface that so the user knows
-    // a merge is waiting. If nothing was committed, it's just done.
+    // All finished tasks move to "ready" so the user can review their output.
+    // We record whether the branch has commits so the UI knows whether to offer
+    // the merge flow or just let the user dismiss the task.
     const hasCommits = await worktreeHasCommits(repoRoot, taskId)
-    const status = hasCommits ? "ready_to_merge" : "done"
 
     try {
       updateTask(repoRoot, taskId, {
-        status,
+        status: "ready",
+        hasCommits,
         exitCode,
         completedAt: new Date().toISOString(),
         pid: null,
@@ -212,6 +213,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
     startedAt: new Date().toISOString(),
     completedAt: null,
     exitCode: null,
+    hasCommits: false,
   }
 
   addTask(repoRoot, task)
