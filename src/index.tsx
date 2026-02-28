@@ -97,7 +97,7 @@ async function main() {
       exit(1)
     }
     const dirArg = parseDirFlag(args)
-    const repoRoot = dirArg ?? resolve(process.cwd())
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const modelFlag = args.indexOf("--model")
     const model = (modelFlag !== -1 && args[modelFlag + 1] ? args[modelFlag + 1]! : DEFAULT_MODEL) as Task["model"]
     await runHeadless(repoRoot, prompt, model)
@@ -115,7 +115,7 @@ async function main() {
   // faber [start] [--dir <repo>]
   // "start" is an optional explicit subcommand; bare "faber" does the same thing.
   const dirArg = parseDirFlag(args)
-  const repoRoot = dirArg ?? resolve(process.cwd())
+  const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
 
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
