@@ -2,6 +2,7 @@ steps:
   - label: ":bun: Test"
     key: test
     command: |
+      apt-get update && apt-get install -y git
       git config --global user.email "ci@buildkite.com"
       git config --global user.name "Buildkite CI"
       bun install --frozen-lockfile
