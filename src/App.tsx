@@ -6,6 +6,7 @@ import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
 import { HeaderBar } from "./components/HeaderBar.js"
+import { MergeSuccessView } from "./components/MergeSuccessView.js"
 import { killAgent } from "./lib/agent.js"
 import { removeWorktree, hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
@@ -186,6 +187,10 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "p", label: "push", disabled: !isDirty },
   ]
 
+  if (mergeMessage) {
+    return <MergeSuccessView message={mergeMessage} />
+  }
+
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
       <HeaderBar
@@ -228,8 +233,6 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
               const idx = visibleTasks.findIndex((t) => t.id === id)
               if (idx !== -1) setSelectedIdx(idx)
             }}
-            mergeMessage={mergeMessage}
-            onDismissMergeMessage={clearMergeMessage}
           />
         )}
       </box>
