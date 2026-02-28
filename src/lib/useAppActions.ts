@@ -168,7 +168,7 @@ export function useAppActions({
     setMode("pushing")
     try {
       await pushBranch(repoRoot)
-      showFlash(`Pushed ${currentBranch} to origin`, "success")
+      showFlash("Success!", "success")
       refreshDirtyState()
     } catch (err) {
       showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`, "error")
