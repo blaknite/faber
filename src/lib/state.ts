@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, rmdirSync } from "node:fs"
 import { join, dirname } from "node:path"
 import lockfile from "proper-lockfile"
 import type { State, Task } from "../types.js"
@@ -62,24 +62,25 @@ export function writeState(repoRoot: string, state: State): void {
 // concurrent callers (e.g. two agents finishing at the same time) don't
 // overwrite each other's updates.
 //
-// lockSync doesn't support retries, so we implement a simple spin-wait: try
-// to acquire the lock up to `maxAttempts` times with a short sleep between
-// each attempt. Each operation should complete in well under a millisecond so
-// a 200 ms total budget with 20 ms sleeps is more than enough headroom.
+// We use a simple filesystem-based lock: try to exclusively create the lock
+// directory using mkdir (atomic on all platforms). If it fails with EEXIST,
+// the lock is held elsewhere. lockSync doesn't support retries, so we
+// implement a simple spin-wait: try to acquire the lock up to `maxAttempts`
+// times with a short sleep between each attempt. Each operation should
+// complete in well under a millisecond so a 200 ms total budget with 20 ms
+// sleeps is more than enough headroom.
 function withOpLock(repoRoot: string, fn: () => void): void {
-  const path = statePath(repoRoot)
-  const lockfilePath = path + OP_LOCK_SUFFIX
+  const lockDirPath = join(faberDir(repoRoot), STATE_FILE + OP_LOCK_SUFFIX)
 
   const maxAttempts = 10
   const sleepMs = 20
 
-  let release: (() => void) | null = null
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      release = lockfile.lockSync(path, { lockfilePath, stale: 5000 })
+      mkdirSync(lockDirPath)
       break
     } catch (err: any) {
-      if (err?.code !== "ELOCKED" || attempt === maxAttempts - 1) throw err
+      if (err?.code !== "EEXIST" || attempt === maxAttempts - 1) throw err
       // Busy-wait using a shared buffer so we don't need async.
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, sleepMs)
     }
@@ -88,7 +89,7 @@ function withOpLock(repoRoot: string, fn: () => void): void {
   try {
     fn()
   } finally {
-    release?.()
+    rmdirSync(lockDirPath)
   }
 }
 
