@@ -113,7 +113,7 @@ export function useAppActions({
     setDiffPaneTaskId(task.id)
   }, [paneTask, selectedTask, setDiffPaneTaskId])
 
-  const handleContinue = useCallback((prompt?: string) => {
+  const handleContinue = useCallback((prompt?: string, model?: Model) => {
     const task = paneTask ?? selectedTask
     if (!task || !task.sessionId) return
     if (task.status === "running") return
@@ -123,6 +123,7 @@ export function useAppActions({
       status: "running",
       completedAt: null,
       exitCode: null,
+      ...(model ? { model } : {}),
     }
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }
