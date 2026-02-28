@@ -8,7 +8,7 @@ import { generateSlug } from "./slug.js"
 import { logTaskFailure } from "./failureLog.js"
 import type { Task, Mode, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
-import type { FlashType } from "./useAppState.js"
+import type { FlashType, PaneView } from "./useAppState.js"
 
 // Returns true when a task should open in the diff view. Both the keyboard
 // router and the auto-transition effect in useAppState rely on this same rule,
@@ -22,12 +22,12 @@ interface UseAppActionsParams {
   selectedTask: Task | null
   paneTask: Task | null
   currentBranch: string
-  logPaneTaskId: string | null
-  diffPaneTaskId: string | null
+  paneTaskId: string | null
+  paneView: PaneView
   setMode: (mode: Mode) => void
   setSelectedIdx: (i: number) => void
-  setLogPaneTaskId: (id: string | null) => void
-  setDiffPaneTaskId: (id: string | null) => void
+  setPaneTaskId: (id: string | null) => void
+  setPaneView: (view: PaneView) => void
   prevSelectedIdx: React.MutableRefObject<number>
   refreshDirtyState: () => void
   showFlash: (msg: string, type: FlashType) => void
@@ -38,12 +38,12 @@ export function useAppActions({
   selectedTask,
   paneTask,
   currentBranch,
-  logPaneTaskId,
-  diffPaneTaskId,
+  paneTaskId,
+  paneView,
   setMode,
   setSelectedIdx,
-  setLogPaneTaskId,
-  setDiffPaneTaskId,
+  setPaneTaskId,
+  setPaneView,
   prevSelectedIdx,
   refreshDirtyState,
   showFlash,
@@ -111,28 +111,26 @@ export function useAppActions({
   }, [selectedTask, updateTaskInState, setMode])
 
   const handleOpenLog = useCallback(() => {
-    if (!selectedTask) return
-    setLogPaneTaskId(selectedTask.id)
-  }, [selectedTask, setLogPaneTaskId])
+    const task = paneTask ?? selectedTask
+    if (!task) return
+    setPaneTaskId(task.id)
+    setPaneView("log")
+  }, [paneTask, selectedTask, setPaneTaskId, setPaneView])
 
   const handleOpenDiff = useCallback(() => {
     const task = paneTask ?? selectedTask
     if (!task || task.status !== "ready" || !task.hasCommits) return
-    setDiffPaneTaskId(task.id)
-  }, [paneTask, selectedTask, setDiffPaneTaskId])
+    setPaneTaskId(task.id)
+    setPaneView("diff")
+  }, [paneTask, selectedTask, setPaneTaskId, setPaneView])
 
   // Opens whichever view is appropriate for the given task. Use this instead of
   // calling handleOpenDiff/handleOpenLog directly so the routing logic stays in
   // one place.
   const openTaskView = useCallback((task: Task) => {
-    if (taskUsesDiffView(task)) {
-      setDiffPaneTaskId(task.id)
-      setLogPaneTaskId(null)
-    } else {
-      setDiffPaneTaskId(null)
-      setLogPaneTaskId(task.id)
-    }
-  }, [setDiffPaneTaskId, setLogPaneTaskId])
+    setPaneTaskId(task.id)
+    setPaneView(taskUsesDiffView(task) ? "diff" : "log")
+  }, [setPaneTaskId, setPaneView])
 
   const handleContinue = useCallback((prompt?: string, model?: Model) => {
     const task = paneTask ?? selectedTask
@@ -150,9 +148,9 @@ export function useAppActions({
     const updated = { ...task, ...patch }
     const resolvedPrompt = prompt?.trim() || undefined
     spawnAgent(updated, repoRoot, task.sessionId, resolvedPrompt)
-    setDiffPaneTaskId(null)
-    setLogPaneTaskId(task.id)
-  }, [paneTask, selectedTask, repoRoot, updateTaskInState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
+    setPaneTaskId(task.id)
+    setPaneView("log")
+  }, [paneTask, selectedTask, repoRoot, updateTaskInState, setMode, setPaneTaskId, setPaneView])
 
   const handleSwitchBranch = useCallback(async (branch: string) => {
     setMode("normal")
@@ -183,22 +181,20 @@ export function useAppActions({
     try {
       await mergeBranch(repoRoot, task.id)
       updateTaskInState(task.id, { status: "done" })
-      setDiffPaneTaskId(null)
-      setLogPaneTaskId(null)
+      setPaneTaskId(null)
       showFlash(`Merged ${task.id} into HEAD`, "success")
       refreshDirtyState()
     } catch (err) {
       showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`, "error")
     }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState, setMode, setDiffPaneTaskId, setLogPaneTaskId])
+  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState, setMode, setPaneTaskId])
 
   const handleMarkDone = useCallback((task: Task | null = selectedTask) => {
     if (!task || task.status !== "ready") return
     updateTaskInState(task.id, { status: "done" })
-    if (diffPaneTaskId === task.id) setDiffPaneTaskId(null)
-    if (logPaneTaskId === task.id) setLogPaneTaskId(null)
+    if (paneTaskId === task.id) setPaneTaskId(null)
     showFlash(`${task.id} marked as done`, "success")
-  }, [selectedTask, diffPaneTaskId, logPaneTaskId, updateTaskInState, setDiffPaneTaskId, setLogPaneTaskId, showFlash])
+  }, [selectedTask, paneTaskId, updateTaskInState, setPaneTaskId, showFlash])
 
   return {
     handleDispatch,
