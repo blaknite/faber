@@ -62,7 +62,12 @@ export function TaskInput({ active, onSubmit, onCancel }: Props) {
               }}
               onKeyDown={(key) => {
                 if (key.name === "escape") {
-                  onCancel()
+                  const isEmpty = !textareaRef.current?.plainText.trim()
+                  if (isEmpty) {
+                    onCancel()
+                  } else {
+                    textareaRef.current?.clear()
+                  }
                   key.preventDefault()
                   return
                 }
