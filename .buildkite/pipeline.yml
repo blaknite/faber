@@ -1,0 +1,62 @@
+steps:
+  - label: ":bun: Test"
+    key: test
+    command: |
+      bun install --frozen-lockfile
+      bun test
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
+
+  - wait
+
+  - label: ":hammer: Build (macOS)"
+    key: build-mac
+    command: |
+      bun install --frozen-lockfile
+      bun run build:bin
+      mv faber faber-darwin
+    artifact_paths: "faber-darwin"
+    agents:
+      os: macos
+    if: build.branch == "main"
+    depends_on: test
+
+  - label: ":hammer: Build (Linux)"
+    key: build-linux
+    command: |
+      bun install --frozen-lockfile
+      bun run build:bin
+      mv faber faber-linux
+    artifact_paths: "faber-linux"
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
+    if: build.branch == "main"
+    depends_on: test
+
+  - wait:
+      if: build.branch == "main"
+
+  - label: ":github: Release"
+    key: release
+    command: |
+      buildkite-agent artifact download "faber-darwin" .
+      buildkite-agent artifact download "faber-linux" .
+
+      VERSION="$(date -u '+%Y%m%d.%H%M%S')"
+
+      gh release create "v${VERSION}" \
+        --title "v${VERSION}" \
+        --notes "Build [${BUILDKITE_BUILD_NUMBER}](${BUILDKITE_BUILD_URL}) from commit ${BUILDKITE_COMMIT:0:7}" \
+        faber-darwin \
+        faber-linux
+    plugins:
+      - docker#v5.12.0:
+          image: "oven/bun:latest"
+          environment:
+            - GITHUB_TOKEN
+    if: build.branch == "main"
+    depends_on:
+      - build-mac
+      - build-linux
