@@ -219,7 +219,7 @@ function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] 
 
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
-    <box style={{ flexDirection: "row" }}>
+    <box style={{ flexDirection: "row", paddingBottom: 1 }}>
       <markdown
         content={entry.text ?? ""}
         syntaxStyle={syntaxStyle}
