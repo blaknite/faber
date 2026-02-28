@@ -1,5 +1,7 @@
 export type TaskStatus = "running" | "done" | "ready_to_merge" | "failed" | "unknown"
 
+export type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
+
 export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"
 
 export const MODELS: { label: string; value: Model; color: string; dimColor: string }[] = [

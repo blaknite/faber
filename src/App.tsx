@@ -1,39 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { CliRenderer } from "@opentui/core"
-import { AgentList, ACTIVE_STATUSES, type FilterMode } from "./components/AgentList.js"
+import { AgentList } from "./components/AgentList.js"
+import { useAppState, sortDescending } from "./lib/useAppState.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
-import { BranchInput } from "./components/BranchInput.js"
-import { RequestChangesInput } from "./components/RequestChangesInput.js"
-import { StatusBar } from "./components/StatusBar.js"
-import { spawnAgent, killAgent } from "./lib/agent.js"
-import { removeWorktree, mergeBranch, hasUnpushedCommits, switchBranch, pushBranch, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { BottomBar } from "./components/BottomBar.js"
+import { HeaderBar } from "./components/HeaderBar.js"
+import { killAgent } from "./lib/agent.js"
+import { removeWorktree, hasUnpushedCommits, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { readState, stateFilePath } from "./lib/state.js"
 import { useKeyboardRouter } from "./lib/useKeyboardRouter.js"
-import { generateSlug } from "./lib/slug.js"
-import { addTask, readState, removeTask, updateTask, stateFilePath } from "./lib/state.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
-import { createWorktree } from "./lib/worktree.js"
-import { logTaskFailure } from "./lib/failureLog.js"
-import type { Task, Model } from "./types.js"
-import { DEFAULT_MODEL } from "./types.js"
-import { TickProvider, useSpinnerFrame } from "./lib/tick.js"
+import { useAppActions } from "./lib/useAppActions.js"
+import type { Task, Mode } from "./types.js"
+import { TickProvider } from "./lib/tick.js"
 
-type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "request_changes" | "switch_branch"
-
-
-function sortDescending(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-}
-
-function RunningCountSpinner({ count }: { count: number }) {
-  const frame = useSpinnerFrame()
-  return <text fg="#00aaff">{frame} {count}</text>
-}
-
-function PushingSpinner({ branch }: { branch: string }) {
-  const frame = useSpinnerFrame()
-  return <text fg="#00aaff">{frame}{` Pushing ${branch} to origin...`}</text>
-}
 
 interface Props {
   repoRoot: string
@@ -44,32 +25,29 @@ interface Props {
 }
 
 function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(sortDescending(initialTasks))
-  const [filterMode, setFilterMode] = useState<FilterMode>("active")
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const {
+    tasks,
+    setTasks,
+    filterMode,
+    setFilterMode,
+    selectedIdx,
+    setSelectedIdx,
+    flashMessage,
+    logPaneTaskId,
+    setLogPaneTaskId,
+    diffPaneTaskId,
+    setDiffPaneTaskId,
+    currentBranch,
+    setCurrentBranch,
+    isDirty,
+    setIsDirty,
+    prevSelectedIdx,
+    visibleTasks,
+    selectedTask,
+    paneTask,
+    showFlash,
+  } = useAppState(initialTasks)
   const [mode, setMode] = useState<Mode>("normal")
-  const [flashMessage, setFlashMessage] = useState<string | null>(null)
-  const [logPaneTaskId, setLogPaneTaskId] = useState<string | null>(null)
-  const [diffPaneTaskId, setDiffPaneTaskId] = useState<string | null>(null)
-  const [currentBranch, setCurrentBranch] = useState<string>("")
-  const [isDirty, setIsDirty] = useState<boolean>(false)
-  const prevSelectedIdx = useRef(0)
-  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevTaskStatusesRef = useRef<Map<string, Task["status"]>>(new Map())
-
-  const visibleTasks = filterMode === "active"
-    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
-    : tasks
-
-  const selectedTask = visibleTasks[selectedIdx] ?? null
-
-  // When viewing a log or diff pane, actions must operate on the task being
-  // viewed, not on selectedTask (which is position-based in the filtered list).
-  // If the filter hides a task after it's killed, selectedTask silently shifts
-  // to whatever lands at that index -- paneTask prevents that mismatch.
-  const paneTask = (diffPaneTaskId ?? logPaneTaskId)
-    ? tasks.find((t) => t.id === (diffPaneTaskId ?? logPaneTaskId)) ?? null
-    : null
 
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
@@ -98,185 +76,32 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
   useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
 
   const runningCount = tasks.filter(t => t.status === "running").length
+  const readyToMergeCount = tasks.filter(t => t.status === "ready_to_merge").length
 
-  const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
-    updateTask(repoRoot, id, patch)
-  }, [repoRoot])
-
-  const removeTaskFromState = useCallback((id: string) => {
-    removeTask(repoRoot, id)
-  }, [repoRoot])
-
-  // Keep selectedIdx in bounds when visibleTasks changes (filter toggle, task added/removed).
-  useEffect(() => {
-    setSelectedIdx((i) => Math.min(i, Math.max(0, visibleTasks.length - 1)))
-  }, [visibleTasks.length])
-
-  // When a task transitions to ready_to_merge, switch immediately from the log
-  // view to the diff view. Only fires on the state transition itself -- not
-  // every render while the task is already ready_to_merge.
-  useEffect(() => {
-    const prev = prevTaskStatusesRef.current
-    for (const task of tasks) {
-      const previousStatus = prev.get(task.id)
-      if (
-        previousStatus !== undefined &&
-        previousStatus !== "ready_to_merge" &&
-        task.status === "ready_to_merge" &&
-        logPaneTaskId === task.id &&
-        diffPaneTaskId === null
-      ) {
-        setDiffPaneTaskId(task.id)
-        setLogPaneTaskId(null)
-      }
-    }
-    const next = new Map<string, Task["status"]>()
-    for (const task of tasks) next.set(task.id, task.status)
-    prevTaskStatusesRef.current = next
-  }, [tasks, logPaneTaskId, diffPaneTaskId])
-
-  const showFlash = useCallback((msg: string) => {
-    if (flashTimerRef.current !== null) {
-      clearTimeout(flashTimerRef.current)
-    }
-    setFlashMessage(msg)
-    flashTimerRef.current = setTimeout(() => {
-      setFlashMessage(null)
-      flashTimerRef.current = null
-    }, 2000)
-  }, [])
-
-  const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
-    setMode("normal")
-    setSelectedIdx(0)
-    prevSelectedIdx.current = 0
-    const slug = generateSlug(prompt)
-    const worktree = `.worktrees/${slug}`
-    const task: Task = {
-      id: slug,
-      prompt,
-      model,
-      status: "running",
-      pid: null,
-      worktree,
-      sessionId: null,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      exitCode: null,
-    }
-
-    addTask(repoRoot, task)
-
-    try {
-      await createWorktree(repoRoot, slug)
-    } catch (err) {
-      logTaskFailure(repoRoot, {
-        taskId: slug,
-        callSite: "App.tsx:handleDispatch",
-        reason: "Failed to create git worktree",
-        exitCode: -1,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      updateTaskInState(slug, {
-        status: "failed",
-        completedAt: new Date().toISOString(),
-        exitCode: -1,
-      })
-      return
-    }
-
-    spawnAgent(task, repoRoot)
-  }, [repoRoot, updateTaskInState])
-
-  const handleKill = useCallback((task: Task | null = selectedTask) => {
-    if (!task || task.status !== "running" || !task.pid) return
-    killAgent(task.pid)
-    updateTaskInState(task.id, {
-      status: "failed",
-      completedAt: new Date().toISOString(),
-      pid: null,
-    })
-    setMode("normal")
-  }, [selectedTask, updateTaskInState])
-
-  const handleResume = useCallback((task: Task | null = selectedTask) => {
-    if (!task || (task.status !== "failed" && task.status !== "done") || !task.sessionId) return
-    if (task.pid) killAgent(task.pid)
-    const patch: Partial<Task> = {
-      status: "running",
-      completedAt: null,
-      exitCode: null,
-    }
-    updateTaskInState(task.id, patch)
-    const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, task.sessionId)
-  }, [selectedTask, repoRoot, updateTaskInState])
-
-  const handleOpenLog = useCallback(() => {
-    if (!selectedTask) return
-    setLogPaneTaskId(selectedTask.id)
-  }, [selectedTask])
-
-  const handleOpenDiff = useCallback(() => {
-    const task = paneTask ?? selectedTask
-    if (!task || task.status !== "ready_to_merge") return
-    setDiffPaneTaskId(task.id)
-  }, [paneTask, selectedTask])
-
-  const handleRequestChanges = useCallback((prompt: string) => {
-    const task = paneTask
-    if (!task || !task.sessionId) return
-    setMode("normal")
-    if (task.pid) killAgent(task.pid)
-    const patch: Partial<Task> = {
-      status: "running",
-      completedAt: null,
-      exitCode: null,
-    }
-    updateTaskInState(task.id, patch)
-    const updated = { ...task, ...patch }
-    spawnAgent(updated, repoRoot, task.sessionId, prompt)
-    setDiffPaneTaskId(null)
-    setLogPaneTaskId(task.id)
-  }, [paneTask, repoRoot, updateTaskInState])
-
-  const handleSwitchBranch = useCallback(async (branch: string) => {
-    setMode("normal")
-    try {
-      await switchBranch(repoRoot, branch)
-      showFlash(`Switched to branch ${branch}`)
-    } catch (err) {
-      showFlash(`Branch switch failed: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }, [repoRoot, showFlash])
-
-  const handlePush = useCallback(async () => {
-    setMode("pushing")
-    try {
-      await pushBranch(repoRoot)
-      showFlash(`Pushed ${currentBranch} to origin`)
-      refreshDirtyState()
-    } catch (err) {
-      showFlash(`Push failed: ${err instanceof Error ? err.message : String(err)}`)
-    } finally {
-      setMode("normal")
-    }
-  }, [repoRoot, currentBranch, showFlash, refreshDirtyState])
-
-  const handleMerge = useCallback(async (task: Task | null = selectedTask) => {
-    if (!task) { setMode("normal"); return }
-    setMode("normal")
-    try {
-      await mergeBranch(repoRoot, task.id)
-      updateTaskInState(task.id, { status: "done" })
-      setDiffPaneTaskId(null)
-      setLogPaneTaskId(null)
-      showFlash(`Merged ${task.id} into HEAD`)
-      refreshDirtyState()
-    } catch (err) {
-      showFlash(`Merge failed: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }, [selectedTask, repoRoot, showFlash, updateTaskInState, refreshDirtyState])
+  const {
+    handleDispatch,
+    handleKill,
+    handleResume,
+    handleOpenLog,
+    handleOpenDiff,
+    handleRequestChanges,
+    handleSwitchBranch,
+    handlePush,
+    handleMerge,
+    removeTaskFromState,
+  } = useAppActions({
+    repoRoot,
+    selectedTask,
+    paneTask,
+    currentBranch,
+    setMode,
+    setSelectedIdx,
+    setLogPaneTaskId,
+    setDiffPaneTaskId,
+    prevSelectedIdx,
+    refreshDirtyState,
+    showFlash,
+  })
 
   useKeyboardRouter({
     mode,
@@ -330,60 +155,15 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     { key: "p", label: "push", disabled: !isDirty },
   ]
 
-  const bottomBar = flashMessage ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text fg="#ff8800">{flashMessage}</text>
-    </box>
-  ) : mode === "switch_branch" ? (
-    <BranchInput
-      onSubmit={(branch) => handleSwitchBranch(branch)}
-      onCancel={() => setMode("normal")}
-    />
-  ) : mode === "request_changes" && (diffPaneTaskId || logPaneTaskId) ? (
-    <RequestChangesInput
-      onSubmit={(prompt) => handleRequestChanges(prompt)}
-      onCancel={() => setMode("normal")}
-    />
-  ) : mode === "kill" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Kill ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "delete" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Delete ${(paneTask ?? selectedTask)!.id}?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "merge" && (paneTask ?? selectedTask) ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Merge ${(paneTask ?? selectedTask)!.id} into HEAD?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "push" ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <text><strong>{`Push ${currentBranch} to origin?`}</strong>{` [y/n]`}</text>
-    </box>
-  ) : mode === "pushing" ? (
-    <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
-      <PushingSpinner branch={currentBranch} />
-    </box>
-  ) : (
-    <StatusBar bindings={normalBindings} />
-  )
-
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222", flexDirection: "row", justifyContent: "space-between", height: 3 }}>
-        <text><strong fg="#ff6600">faber</strong>{"  "}<span fg="#555555">{repoName}{currentBranch ? `:${currentBranch}` : ""}</span>{isDirty && <span fg="#ff6600">{" *"}</span>}</text>
-        <box style={{ flexDirection: "row", gap: 1 }}>
-          {runningCount > 0 && (
-            <RunningCountSpinner count={runningCount} />
-          )}
-          {runningCount > 0 && tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#555555">{"•"}</text>
-          )}
-          {tasks.filter(t => t.status === "ready_to_merge").length > 0 && (
-            <text fg="#ff9900">{"↑"} {tasks.filter(t => t.status === "ready_to_merge").length}</text>
-          )}
-        </box>
-      </box>
+      <HeaderBar
+        repoName={repoName}
+        currentBranch={currentBranch}
+        isDirty={isDirty}
+        runningCount={runningCount}
+        readyToMergeCount={readyToMergeCount}
+      />
 
       <box style={{ flexGrow: 1 }}>
         {diffPaneTaskId ? (() => {
@@ -421,7 +201,18 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         )}
       </box>
 
-      {bottomBar}
+      <BottomBar
+        mode={mode}
+        flashMessage={flashMessage}
+        paneTask={paneTask}
+        selectedTask={selectedTask}
+        currentBranch={currentBranch}
+        bindings={normalBindings}
+        onBranchSubmit={(branch) => handleSwitchBranch(branch)}
+        onBranchCancel={() => setMode("normal")}
+        onRequestChangesSubmit={(prompt) => handleRequestChanges(prompt)}
+        onRequestChangesCancel={() => setMode("normal")}
+      />
     </box>
   )
 }

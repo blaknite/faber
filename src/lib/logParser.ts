@@ -12,6 +12,8 @@ export interface ToolStatePart {
 export interface LogEvent {
   type: string
   timestamp: number
+  // prompt events carry the message sent to the agent before it starts
+  prompt?: string
   part?: {
     // tool parts
     tool?: string
@@ -31,7 +33,7 @@ export interface LogEvent {
   modelID?: string
 }
 
-export type LogEntryKind = "text" | "tool_use" | "step_finish" | "reasoning"
+export type LogEntryKind = "text" | "tool_use" | "step_finish" | "reasoning" | "prompt"
 
 export interface LogEntry {
   kind: LogEntryKind
@@ -334,6 +336,12 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
 
 export function parseEvent(event: LogEvent): LogEntry[] {
   switch (event.type) {
+    case "prompt": {
+      const text = event.prompt?.trim()
+      if (!text) return []
+      return [{ kind: "prompt", timestamp: event.timestamp, text }]
+    }
+
     case "text": {
       const text = event.part?.text?.trim()
       if (!text) return []
