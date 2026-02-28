@@ -62,7 +62,7 @@ export function BottomBar({
   const activeTask = paneTask ?? selectedTask
 
   if (flashMessage) {
-    const flashColor = flashType === "error" ? "#ff4444" : "#00cc66"
+    const flashColor = flashType === "error" ? "#ff4444" : "#2a2a2a"
     return (
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#222222" }}>
         <text fg={flashColor}>{flashMessage}</text>
