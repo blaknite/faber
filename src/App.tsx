@@ -8,7 +8,7 @@ import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
 import { HeaderBar } from "./components/HeaderBar.js"
 import { killAgent } from "./lib/agent.js"
-import { removeWorktree, hasUnpushedCommits, gitHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { removeWorktree, hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
 import { useAppActions } from "./lib/useAppActions.js"
@@ -74,6 +74,13 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     refreshDirtyState()
   }, [repoRoot, refreshDirtyState])
   useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
+
+  // Watch FETCH_HEAD so that pushing outside of Faber clears the dirty
+  // indicator. Git rewrites FETCH_HEAD on every push and fetch, which is
+  // more reliable than watching the per-branch remote ref (those can be
+  // absorbed into packed-refs). FETCH_HEAD may not exist in a fresh repo
+  // before the first push, so poll until it appears.
+  useFileWatch(gitFetchHeadPath(repoRoot), refreshDirtyState, { pollUntilExists: true })
 
   const runningCount = tasks.filter(t => t.status === "running").length
   const readyToMergeCount = tasks.filter(t => t.status === "ready_to_merge").length
