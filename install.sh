@@ -6,6 +6,50 @@ FABER_HOME="${HOME}/.faber"
 BIN_DIR="${FABER_HOME}/bin"
 BINARY_NAME="faber"
 
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log() {
+  echo -e "${BLUE}[INFO]${NC} $1" >&2
+}
+
+warn() {
+  echo -e "${YELLOW}[WARN]${NC} $1" >&2
+}
+
+error() {
+  echo -e "${RED}[ERROR]${NC} $1" >&2
+  exit 1
+}
+
+success() {
+  echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+# Cleanup temp files on interrupt
+TMP_FILE=""
+cleanup() {
+  echo "" >&2
+  echo -e "${YELLOW}Installation interrupted${NC}" >&2
+  rm -f "$TMP_FILE" 2>/dev/null || true
+  exit 1
+}
+
+trap cleanup INT TERM
+
+# Verify required commands are available
+check_prereqs() {
+  for cmd in uname mktemp chmod mkdir rm curl; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      error "Required command not found: $cmd"
+    fi
+  done
+}
+
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -16,8 +60,7 @@ case "$OS" in
       arm64)  ASSET="faber-darwin-arm64" ;;
       x86_64) ASSET="faber-darwin-x64" ;;
       *)
-        echo "Unsupported architecture: $ARCH" >&2
-        exit 1
+        error "Unsupported architecture: $ARCH"
         ;;
     esac
     ;;
@@ -26,19 +69,19 @@ case "$OS" in
       aarch64|arm64) ASSET="faber-linux-arm64" ;;
       x86_64)        ASSET="faber-linux-x64" ;;
       *)
-        echo "Unsupported architecture: $ARCH" >&2
-        exit 1
+        error "Unsupported architecture: $ARCH"
         ;;
     esac
     ;;
   *)
-    echo "Unsupported OS: $OS" >&2
-    exit 1
+    error "Unsupported OS: $OS"
     ;;
 esac
 
+check_prereqs
+
 # Fetch the latest release download URL for our asset
-echo "Fetching latest release from https://github.com/$REPO ..."
+log "Fetching latest release from https://github.com/$REPO ..."
 
 DOWNLOAD_URL="$(
   curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
@@ -49,12 +92,10 @@ DOWNLOAD_URL="$(
 )"
 
 if [ -z "$DOWNLOAD_URL" ]; then
-  echo "Could not find a release asset matching '$ASSET'." >&2
-  echo "Check https://github.com/$REPO/releases for available releases." >&2
-  exit 1
+  error "Could not find a release asset matching '$ASSET'. Check https://github.com/$REPO/releases for available releases."
 fi
 
-echo "Downloading $ASSET ..."
+log "Downloading $ASSET ..."
 TMP_FILE="$(mktemp)"
 trap 'rm -f "$TMP_FILE"' EXIT
 
@@ -66,7 +107,7 @@ mkdir -p "$BIN_DIR"
 DEST="${BIN_DIR}/${BINARY_NAME}"
 mv "$TMP_FILE" "$DEST"
 
-echo "faber installed to $DEST"
+success "faber installed to $DEST"
 
 # Check if a directory is in PATH
 dir_in_path() {
@@ -94,7 +135,7 @@ try_symlink_in_path() {
       fi
 
       if ln -sf "$DEST" "$symlink_path" 2>/dev/null; then
-        echo "Created symlink: $symlink_path -> $DEST"
+        log "Created symlink: $symlink_path -> $DEST"
         return 0
       fi
     fi
@@ -119,7 +160,7 @@ setup_path() {
     rm -f "$symlink_path"
   fi
   ln -sf "$DEST" "$symlink_path"
-  echo "Created symlink: $symlink_path -> $DEST"
+  log "Created symlink: $symlink_path -> $DEST"
 
   # Detect shell
   local shell_name
@@ -154,9 +195,10 @@ setup_path() {
       path_export='fish_add_path "$HOME/.local/bin"'
       ;;
     *)
+      warn "Unknown shell: $shell_name"
       echo ""
-      echo "Add ~/.local/bin to your PATH to use faber:"
-      echo '  export PATH="$HOME/.local/bin:$PATH"'
+      warn "Add ~/.local/bin to your PATH to use faber:"
+      echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
       return
       ;;
   esac
@@ -164,8 +206,8 @@ setup_path() {
   # Check if ~/.local/bin is already configured in the shell profile
   if [[ -f "$shell_profile" ]] && grep -v '^\s*#' "$shell_profile" 2>/dev/null | grep -qE 'PATH=.*\.local/bin|fish_add_path.*\.local/bin'; then
     echo ""
-    echo "~/.local/bin is already in your shell profile."
-    echo "To use faber immediately, run:"
+    log "~/.local/bin is already in your shell profile."
+    log "To use faber immediately, run:"
     echo "  $path_export"
     return
   fi
@@ -178,14 +220,14 @@ setup_path() {
     printf "Add ~/.local/bin to your PATH in %s? [y/n] " "$tilde_profile"
     read -r REPLY
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Skipped. To use faber, add ~/.local/bin to your PATH:"
+      log "Skipped. To use faber, add ~/.local/bin to your PATH:"
       echo "  $path_export"
       return
     fi
   else
     # Non-interactive: just print the export line
     echo ""
-    echo "To use faber, add ~/.local/bin to your PATH:"
+    log "To use faber, add ~/.local/bin to your PATH:"
     echo "  $path_export"
     return
   fi
@@ -201,13 +243,13 @@ setup_path() {
     echo "$path_export"
   } >> "$shell_profile"
 
-  echo "Added ~/.local/bin to PATH in $tilde_profile"
+  success "Added ~/.local/bin to PATH in $tilde_profile"
   echo ""
-  echo "To use faber immediately, run:"
+  log "To use faber immediately, run:"
   echo "  $path_export"
 }
 
 setup_path
 
 echo ""
-echo "Run 'faber --help' to get started."
+success "Run 'faber --help' to get started."
