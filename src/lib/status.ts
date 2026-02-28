@@ -20,7 +20,7 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
 export const STATUS_SYMBOL: Record<TaskStatus, string> = {
   running: SPINNER_FRAMES[0]!,
   done: "✓",
-  ready: "!",
+  ready: "▲",
   failed: "✗",
   unknown: "?",
 }
