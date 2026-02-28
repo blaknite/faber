@@ -61,6 +61,7 @@ function DiffLoadingSpinner() {
 export function DiffView({ repoRoot, task, disabled }: Props) {
   const [diff, setDiff] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showLoading, setShowLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("side-by-side")
 
   useKeyboard((key) => {
@@ -73,9 +74,16 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
   useEffect(() => {
     setDiff(null)
     setError(null)
+    setShowLoading(false)
+
+    const timer = setTimeout(() => setShowLoading(true), 300)
+
     getDiff(repoRoot, task.id)
       .then((output) => setDiff(output))
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .finally(() => clearTimeout(timer))
+
+    return () => clearTimeout(timer)
   }, [repoRoot, task.id])
 
   return (
@@ -99,7 +107,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           <text fg="#cc3333">{error}</text>
         </box>
       ) : diff == null ? (
-        <DiffLoadingSpinner />
+        showLoading ? <DiffLoadingSpinner /> : null
       ) : (
         <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} />
       )}
