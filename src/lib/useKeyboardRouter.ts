@@ -125,7 +125,7 @@ export function useKeyboardRouter({
         if (paneTask) setMode("merge")
         return
       }
-      if (key.name === "e") {
+      if (key.name === "x") {
         if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
         return
       }
@@ -137,7 +137,7 @@ export function useKeyboardRouter({
         const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
         const currentIdx = activeTasks.findIndex(t => t.id === diffPaneTaskId)
         if (currentIdx !== -1 && activeTasks.length > 1) {
-          const nextIdx = key.name === "."
+          const nextIdx = key.name === ","
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
           const nextTask = activeTasks[nextIdx]
@@ -167,7 +167,7 @@ export function useKeyboardRouter({
         if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
         return
       }
-      if (key.name === "e") {
+      if (key.name === "x") {
         if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
         return
       }
@@ -179,7 +179,7 @@ export function useKeyboardRouter({
         const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
         const currentIdx = activeTasks.findIndex(t => t.id === logPaneTaskId)
         if (currentIdx !== -1 && activeTasks.length > 1) {
-          const nextIdx = key.name === "."
+          const nextIdx = key.name === ","
             ? (currentIdx + 1) % activeTasks.length
             : (currentIdx - 1 + activeTasks.length) % activeTasks.length
           const nextTask = activeTasks[nextIdx]
@@ -208,7 +208,7 @@ export function useKeyboardRouter({
       return
     }
     if (key.name === "b") { setMode("switch_branch"); return }
-    if (key.name === "e") {
+    if (key.name === "x") {
       if (selectedTask && selectedTask.status === "ready") handleMarkDone(selectedTask)
       return
     }
