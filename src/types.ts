@@ -1,4 +1,4 @@
-export type TaskStatus = "running" | "done" | "ready" | "failed" | "unknown"
+export type TaskStatus = "running" | "done" | "ready" | "failed" | "stopped" | "unknown"
 
 export type Mode = "normal" | "input" | "delete" | "kill" | "merge" | "push" | "pushing" | "continue" | "switch_branch"
 

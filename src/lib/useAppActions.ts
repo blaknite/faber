@@ -103,7 +103,7 @@ export function useAppActions({
     if (!task || task.status !== "running" || !task.pid) return
     killAgent(task.pid)
     updateTaskInState(task.id, {
-      status: "failed",
+      status: "stopped",
       completedAt: new Date().toISOString(),
       pid: null,
     })
