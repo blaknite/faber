@@ -36,6 +36,7 @@ export interface AppState {
   // Helpers
   showFlash: (msg: string, type: FlashType) => void
   showMergeMessage: (msg: string) => void
+  clearMergeMessage: () => void
 }
 
 export function useAppState(initialTasks: Task[]): AppState {
@@ -95,6 +96,14 @@ export function useAppState(initialTasks: Task[]): AppState {
     prevTaskStatusesRef.current = next
   }, [tasks, paneTaskId, paneView])
 
+  const clearMergeMessage = useCallback(() => {
+    if (mergeTimerRef.current !== null) {
+      clearTimeout(mergeTimerRef.current)
+      mergeTimerRef.current = null
+    }
+    setMergeMessage(null)
+  }, [])
+
   const showMergeMessage = useCallback((msg: string) => {
     if (mergeTimerRef.current !== null) {
       clearTimeout(mergeTimerRef.current)
@@ -143,5 +152,6 @@ export function useAppState(initialTasks: Task[]): AppState {
     showFlash,
     mergeMessage,
     showMergeMessage,
+    clearMergeMessage,
   }
 }

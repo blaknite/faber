@@ -49,6 +49,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     showFlash,
     mergeMessage,
     showMergeMessage,
+    clearMergeMessage,
   } = useAppState(initialTasks)
   const [mode, setMode] = useState<Mode>("normal")
 
@@ -227,6 +228,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
               if (idx !== -1) setSelectedIdx(idx)
             }}
             mergeMessage={mergeMessage}
+            onDismissMergeMessage={clearMergeMessage}
           />
         )}
       </box>
