@@ -142,6 +142,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     isDirty,
     repoRoot,
     mergeMessage,
+    clearMergeMessage,
     prevSelectedIdx,
     handleKill,
     handleMerge,

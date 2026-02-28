@@ -22,6 +22,7 @@ interface UseKeyboardRouterParams {
   isDirty: boolean
   repoRoot: string
   mergeMessage: string | null
+  clearMergeMessage: () => void
   prevSelectedIdx: MutableRefObject<number>
   handleKill: (task?: Task | null) => void
   handleMerge: (task?: Task | null) => void
@@ -51,6 +52,7 @@ export function useKeyboardRouter({
   isDirty,
   repoRoot,
   mergeMessage,
+  clearMergeMessage,
   prevSelectedIdx,
   handleKill,
   handleMerge,
@@ -68,7 +70,12 @@ export function useKeyboardRouter({
 
     if (mode === "pushing") return
 
-    if (mergeMessage !== null) return
+    if (mergeMessage !== null) {
+      if (key.name === "escape" || key.name === "return" || key.name === "space") {
+        clearMergeMessage()
+      }
+      return
+    }
 
     if (key.name === "escape") {
       if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
