@@ -76,8 +76,8 @@ async function main() {
       })
     }
 
-    // If the task was already marked failed (e.g. the user killed it), don't
-    // overwrite that status. Just record the exit code and clear the pid.
+    // If the task was already marked failed or stopped (e.g. the user killed it),
+    // don't overwrite that status. Just record the exit code and clear the pid.
     const currentState = readState(repoRoot)
     const currentTask = currentState.tasks.find((t) => t.id === taskId)
 
@@ -95,7 +95,7 @@ async function main() {
       }
     }
 
-    if (currentTask?.status === "failed") {
+    if (currentTask?.status === "failed" || currentTask?.status === "stopped") {
       try {
         updateTask(repoRoot, taskId, { exitCode, pid: null })
       } catch (err) {
