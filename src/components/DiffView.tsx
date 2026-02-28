@@ -5,6 +5,7 @@ import { getDiff } from "../lib/worktree.js"
 import { DiffViewer } from "../lib/diff/index.js"
 import type { ViewMode } from "../lib/diff/index.js"
 import { readLogEntries } from "../lib/logParser.js"
+import { useSpinnerFrame } from "../lib/tick.js"
 import type { Task } from "../types.js"
 
 const syntaxStyle = SyntaxStyle.create()
@@ -44,6 +45,15 @@ function LastMessage({ repoRoot, task }: { repoRoot: string; task: Task }) {
           return renderable
         }}
       />
+    </box>
+  )
+}
+
+function DiffLoadingSpinner() {
+  const frame = useSpinnerFrame()
+  return (
+    <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
+      <text fg="#555555">{frame} Loading diff...</text>
     </box>
   )
 }
@@ -97,11 +107,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           <text fg="#cc3333">{error}</text>
         </box>
       ) : diff == null ? (
-        showLoading ? (
-          <box style={{ paddingLeft: 2, paddingTop: 1 }}>
-            <text fg="#555555">Loading...</text>
-          </box>
-        ) : null
+        showLoading ? <DiffLoadingSpinner /> : null
       ) : (
         <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} />
       )}
