@@ -9,6 +9,13 @@ import { logTaskFailure } from "./failureLog.js"
 import type { Task, Mode, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
 
+// Returns true when a task should open in the diff view. Both the keyboard
+// router and the auto-transition effect in useAppState rely on this same rule,
+// so keep it here as the single source of truth.
+export function taskUsesDiffView(task: Task): boolean {
+  return task.status === "ready" && task.hasCommits
+}
+
 interface UseAppActionsParams {
   repoRoot: string
   selectedTask: Task | null
@@ -113,6 +120,19 @@ export function useAppActions({
     setDiffPaneTaskId(task.id)
   }, [paneTask, selectedTask, setDiffPaneTaskId])
 
+  // Opens whichever view is appropriate for the given task. Use this instead of
+  // calling handleOpenDiff/handleOpenLog directly so the routing logic stays in
+  // one place.
+  const openTaskView = useCallback((task: Task) => {
+    if (taskUsesDiffView(task)) {
+      setDiffPaneTaskId(task.id)
+      setLogPaneTaskId(null)
+    } else {
+      setDiffPaneTaskId(null)
+      setLogPaneTaskId(task.id)
+    }
+  }, [setDiffPaneTaskId, setLogPaneTaskId])
+
   const handleContinue = useCallback((prompt?: string, model?: Model) => {
     const task = paneTask ?? selectedTask
     if (!task || !task.sessionId) return
@@ -185,6 +205,7 @@ export function useAppActions({
     handleContinue,
     handleOpenLog,
     handleOpenDiff,
+    openTaskView,
     handleSwitchBranch,
     handlePush,
     handleMerge,
