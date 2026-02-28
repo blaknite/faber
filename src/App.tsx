@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import type { CliRenderer } from "@opentui/core"
-import { AgentList } from "./components/AgentList.js"
+import { AgentList, ACTIVE_STATUSES } from "./components/AgentList.js"
 import { useAppState, sortDescending } from "./lib/useAppState.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
@@ -147,7 +147,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     onExit,
   })
 
-  const activeTaskCount = tasks.filter(t => t.status === "running" || t.status === "ready_to_merge").length
+  const activeTaskCount = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
   const normalBindings = diffPaneTaskId ? [
     { key: "q", label: "back to list" },
     { key: "l", label: "back to log", disabled: !paneTask },
