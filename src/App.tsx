@@ -236,19 +236,21 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
         )}
       </box>
 
-      <BottomBar
-        mode={mode}
-        flashMessage={flashMessage}
-        flashType={flashType}
-        paneTask={paneTask}
-        selectedTask={selectedTask}
-        currentBranch={currentBranch}
-        bindings={normalBindings}
-        onBranchSubmit={(branch) => handleSwitchBranch(branch)}
-        onBranchCancel={() => setMode("normal")}
-        onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
-        onContinueCancel={() => setMode("normal")}
-      />
+      {!mergeMessage && (
+        <BottomBar
+          mode={mode}
+          flashMessage={flashMessage}
+          flashType={flashType}
+          paneTask={paneTask}
+          selectedTask={selectedTask}
+          currentBranch={currentBranch}
+          bindings={normalBindings}
+          onBranchSubmit={(branch) => handleSwitchBranch(branch)}
+          onBranchCancel={() => setMode("normal")}
+          onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
+          onContinueCancel={() => setMode("normal")}
+        />
+      )}
     </box>
   )
 }
