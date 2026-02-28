@@ -61,7 +61,7 @@ Fire off a task without opening the TUI:
 ```bash
 faber run "fix the login bug"
 faber run "fix the login bug" --dir /path/to/repo
-faber run "add tests for UserService" --model anthropic/claude-haiku-4-5
+faber run "add tests for UserService" --model Fast
 ```
 
 ### TUI keybindings
