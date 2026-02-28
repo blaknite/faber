@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process"
+import { writeFileSync, appendFileSync } from "node:fs"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
 import { updateTask, taskOutputPath } from "./state.js"
@@ -28,15 +29,32 @@ export function spawnAgent(
 
   const outputFile = taskOutputPath(repoRoot, task.id)
 
+  const agentPrompt = resumeSessionId
+    ? (resumePrompt ?? "The task was interrupted. Please continue where you left off.")
+    : `Load the skill \`working-in-faber\`\n\n${task.prompt}`
+
+  // Write the prompt to the log before the agent starts so it's always visible,
+  // even though the agent's own output won't include it. For new tasks we
+  // create the file fresh; for resumes we append so the previous session's
+  // log is preserved.
+  const promptEvent = JSON.stringify({
+    type: "prompt",
+    timestamp: Date.now(),
+    prompt: agentPrompt,
+  })
+  if (resumeSessionId) {
+    appendFileSync(outputFile, promptEvent + "\n")
+  } else {
+    writeFileSync(outputFile, promptEvent + "\n")
+  }
+
   const opencodeCmd = resumeSessionId
     ? (() => {
-        const message = resumePrompt ?? "The task was interrupted. Please continue where you left off."
-        const prompt = message.replace(/'/g, `'\\''`)
+        const prompt = agentPrompt.replace(/'/g, `'\\''`)
         return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} --fork '${prompt}'`
       })()
     : (() => {
-        const fullPrompt = `Load the skill \`working-in-faber\`\n\n${task.prompt}`
-        const prompt = fullPrompt.replace(/'/g, `'\\''`)
+        const prompt = agentPrompt.replace(/'/g, `'\\''`)
         return `${opencodebin} run --format json --model ${task.model} '${prompt}'`
       })()
   const finishCmd = `; ${faberCmd} finish ${task.id} $?`
