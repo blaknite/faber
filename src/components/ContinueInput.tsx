@@ -113,7 +113,7 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
             return (
               <box
                 key={file}
-                style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#ff6600" : "#1a1a1a" }}
+                style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#D4963F" : "#1a1a1a" }}
               >
                 <text fg={isSelected ? "#ffffff" : "#888888"}>{file}</text>
               </box>
