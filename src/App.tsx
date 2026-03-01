@@ -13,6 +13,7 @@ import { readState, stateFilePath } from "./lib/state.js"
 import { useKeyboardRouter } from "./lib/useKeyboardRouter.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
 import { useAppActions } from "./lib/useAppActions.js"
+import { fetchLatestVersion } from "./lib/update.js"
 import type { Task, Mode } from "./types.js"
 import { TickProvider } from "./lib/tick.js"
 
@@ -20,12 +21,13 @@ import { TickProvider } from "./lib/tick.js"
 interface Props {
   repoRoot: string
   repoName: string
+  version: string
   initialTasks: Task[]
   renderer: CliRenderer
   onExit: () => void
 }
 
-function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
+function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) {
   const {
     tasks,
     setTasks,
@@ -68,6 +70,15 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     setCurrentBranch(readCurrentBranch(repoRoot))
     refreshDirtyState()
   }, [repoRoot, refreshDirtyState])
+
+  const [updateAvailable, setUpdateAvailable] = useState(false)
+  useEffect(() => {
+    // Skip the check in dev so it doesn't fire on every source run.
+    if (version === "dev") return
+    fetchLatestVersion().then((latest) => {
+      if (latest && latest !== version) setUpdateAvailable(true)
+    })
+  }, [version])
 
   // Watch state.json for changes and refresh when it's written.
   useFileWatch(stateFilePath(repoRoot), refreshTasks)
@@ -226,6 +237,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             selectedId={selectedTask?.id ?? null}
             filterMode={filterMode}
             onFilterChange={setFilterMode}
+            updateAvailable={updateAvailable}
             inputActive={mode === "input"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
