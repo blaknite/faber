@@ -1,11 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-# Find the previous release tag
+# Resolve the previous release's commit SHA via the GitHub API rather than
+# relying on the CI agent having release tags fetched in its local git clone.
 LAST_TAG="$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
 
 if [ -n "$LAST_TAG" ]; then
-  COMMITS="$(git log "${LAST_TAG}..HEAD" --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
+  LAST_SHA="$(gh api "repos/:owner/:repo/git/refs/tags/${LAST_TAG}" -q '.object.sha' 2>/dev/null || true)"
+fi
+
+if [ -n "${LAST_SHA:-}" ]; then
+  COMMITS="$(git log "${LAST_SHA}..HEAD" --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
 else
   # No previous release, fall back to last 50 commits
   COMMITS="$(git log -50 --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
@@ -16,6 +21,10 @@ if [ -z "$COMMITS" ]; then
   buildkite-agent meta-data set release-notes "No changes."
   exit 0
 fi
+
+echo "--- Commits"
+git log "${LAST_SHA:-HEAD~50}..HEAD" --pretty=format:'%h %s' --no-merges
+echo
 
 # Use Buildkite's hosted LLM feature to call the Anthropic API
 export ANTHROPIC_BASE_URL="${BUILDKITE_AGENT_ENDPOINT}/ai/anthropic"
@@ -42,5 +51,8 @@ RESPONSE="$(curl -fsSL \
   --data "$PAYLOAD")"
 
 NOTES="$(echo "$RESPONSE" | jq -r '.content[0].text')"
+
+echo "--- Release notes"
+echo "$NOTES"
 
 buildkite-agent meta-data set release-notes "$NOTES"
