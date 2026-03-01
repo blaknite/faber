@@ -40,6 +40,7 @@ interface Props {
   selectedTask: Task | null
   currentBranch: string
   bindings: Binding[]
+  diffFiles?: string[]
   onBranchSubmit: (branch: string) => void
   onBranchCancel: () => void
   onContinueSubmit: (prompt?: string, model?: Model) => void
@@ -54,6 +55,7 @@ export function BottomBar({
   selectedTask,
   currentBranch,
   bindings,
+  diffFiles,
   onBranchSubmit,
   onBranchCancel,
   onContinueSubmit,
@@ -75,7 +77,7 @@ export function BottomBar({
   }
 
   if (mode === "continue") {
-    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} />
+    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} diffFiles={diffFiles} />
   }
 
   if (mode === "kill" && activeTask) {
