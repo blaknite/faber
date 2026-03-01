@@ -98,7 +98,7 @@ faber run "add tests for UserService" --model fast
 | `p` | Push branch to origin (confirms with y/n) |
 | `q` / `Ctrl-C` | Quit |
 
-**Log pane** (after pressing `Enter` on a task)
+**Log pane** (after pressing `Enter` on a task with no commits)
 
 | Key | Action |
 |-----|--------|
@@ -112,7 +112,7 @@ faber run "add tests for UserService" --model fast
 | `,` / `.` | Cycle to next / previous active task |
 | `q` / `Escape` | Back to task list |
 
-**Diff view** (after pressing `f`)
+**Diff view** (after pressing `Enter` on a task with commits, or `f` from the log)
 
 | Key | Action |
 |-----|--------|
@@ -151,7 +151,7 @@ When typing `@` in a prompt, faber opens a file autocomplete. Use `Up` / `Down` 
 
 When an agent finishes with commits on its branch, the task is marked "ready to merge" and the pending count appears in the top bar. The typical flow from there:
 
-1. Select the task and press `enter`. If the task is ready to merge, you'll go straight to the diff view. Otherwise you land on the log, where `f` takes you to the diff.
+1. Select the task and press `enter`. If the branch has commits, you go straight to the diff view. Otherwise you land on the log, where `f` takes you to the diff.
 2. The diff view runs `git diff HEAD...{branch}` (three-dot syntax), so you see exactly what the agent changed relative to the point where work began, regardless of anything that landed on `HEAD` in the meantime.
 3. The diff renders with character-level highlighting and two layout modes: side-by-side (default) and inline. Press `Tab` to switch between them.
 4. When you're happy with the changes, press `m`. You'll get a `[y/n]` confirmation prompt, then faber runs `git merge --no-ff {branch}` from the repo root. The `--no-ff` flag forces a merge commit so the history clearly records that these commits came from an agent task. If the merge fails (conflicts, etc.), faber automatically aborts and leaves your repo clean.
@@ -166,7 +166,7 @@ The typical flow:
 1. Launch faber in your repo as usual.
 2. Switch to your feature branch by pressing `b` from the task list and typing the branch name.
 3. Create tasks as normal. Each agent branches off the feature branch tip, isolated from both `main` and each other.
-4. Review and merge each task into the feature branch using the diff view (`f` then `m`), same as any other task.
+4. Review and merge each task into the feature branch the same as any other task: open the task to reach the diff view, then press `m`.
 
 When you're happy with the feature branch as a whole, merge it into `main` yourself outside of faber.
 
