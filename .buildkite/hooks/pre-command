@@ -2,6 +2,6 @@
 set -e
 
 # Only fetch version for build and release steps
-if [[ "$BUILDKITE_STEP_KEY" =~ ^(build-|release)$ ]]; then
+if [[ "$BUILDKITE_STEP_KEY" =~ ^(build-.*|release)$ ]]; then
   export FABER_VERSION="$(buildkite-agent meta-data get version)"
 fi
