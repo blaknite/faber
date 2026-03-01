@@ -4,99 +4,35 @@ import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 import { DEFAULT_RESUME_PROMPT } from "../lib/agent.js"
 import { MODELS, DEFAULT_MODEL } from "../types.js"
 import type { Model } from "../types.js"
+import { useFileSelector } from "../lib/useFileSelector.js"
 
 interface Props {
+  repoRoot: string
   onSubmit: (prompt?: string, model?: Model) => void
   onCancel: () => void
   defaultModel?: Model
-  diffFiles?: string[]
 }
 
-// Pull the @-query out of a plain-text string. Returns the partial filename
-// the user has typed after the last "@" that hasn't been closed by whitespace,
-// or null when no active mention is in progress.
-//
-// The "@" is only treated as a trigger when it appears at the start of the
-// text or is immediately preceded by whitespace. Mid-word "@" (e.g. "foo@bar")
-// is ignored.
-function getAtQuery(text: string): string | null {
-  const lastAt = text.lastIndexOf("@")
-  if (lastAt === -1) return null
-  // Must be at the start of the text or preceded by whitespace
-  if (lastAt > 0 && !/\s/.test(text[lastAt - 1]!)) return null
-  const after = text.slice(lastAt + 1)
-  // If there's whitespace after the @, the mention is closed
-  if (/\s/.test(after)) return null
-  return after
-}
-
-export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = [] }: Props) {
+export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Props) {
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === (defaultModel ?? DEFAULT_MODEL)))
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
-
-  // Autocomplete state
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [selectedSuggestion, setSelectedSuggestion] = useState(0)
 
   const model = MODELS[modelIdx]!
   const modelRef = useRef(model)
   modelRef.current = model
 
+  const { suggestions, selectedSuggestion, hasSuggestions, onContentChange: onFileSelectorContentChange, onKeyDown: onFileSelectorKeyDown } = useFileSelector({ repoRoot, textareaRef })
+
   const onContentChange = () => {
     const lines = textareaRef.current?.virtualLineCount ?? MIN_LINES
     setTextareaHeight(Math.min(Math.max(lines, MIN_LINES), MAX_LINES))
-
-    const text = textareaRef.current?.plainText ?? ""
-    const query = getAtQuery(text)
-
-    if (query === null || diffFiles.length === 0) {
-      setSuggestions([])
-      setSelectedSuggestion(0)
-      return
-    }
-
-    const lowerQuery = query.toLowerCase()
-    const matches = diffFiles.filter((f) => {
-      // Match against the full path and just the filename
-      const filename = f.split("/").pop() ?? f
-      return f.toLowerCase().startsWith(lowerQuery) || filename.toLowerCase().startsWith(lowerQuery)
-    })
-
-    setSuggestions(matches)
-    setSelectedSuggestion(0)
-  }
-
-  // Replace the current @-mention with the selected file
-  const commitSuggestion = (file: string) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const text = textarea.plainText
-    const lastAt = text.lastIndexOf("@")
-    if (lastAt === -1) return
-
-    // Build the replacement: everything up to and including @, then the file
-    const before = text.slice(0, lastAt + 1)
-    const after = text.slice(lastAt + 1)
-    // Strip the partial query from `after` (up to first whitespace)
-    const spaceIdx = after.search(/\s/)
-    const rest = spaceIdx === -1 ? "" : after.slice(spaceIdx)
-
-    // Add a trailing space so getAtQuery sees the mention as closed and doesn't
-    // re-open the suggestion list when onContentChange fires after replaceText.
-    const newText = before + file + " " + rest
-    textarea.replaceText(newText)
-    // Position the cursor right after the inserted file (and the trailing space)
-    textarea.cursorOffset = lastAt + 1 + file.length + 1
-    setSuggestions([])
-    setSelectedSuggestion(0)
+    onFileSelectorContentChange()
   }
 
   // textarea height + 1 spacer + 1 label
   const borderHeight = textareaHeight + 2
 
-  const hasSuggestions = suggestions.length > 0
   // Each suggestion row is 1 line; cap visible rows at 8 so it doesn't
   // dominate the screen when there are many files.
   const visibleCount = Math.min(suggestions.length, 8)
@@ -145,29 +81,7 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
             onSubmit(trimmed || undefined, modelRef.current.value)
           }}
           onKeyDown={(key) => {
-            if (hasSuggestions) {
-              if (key.name === "up") {
-                setSelectedSuggestion((i) => (i - 1 + suggestions.length) % suggestions.length)
-                key.preventDefault()
-                return
-              }
-              if (key.name === "down") {
-                setSelectedSuggestion((i) => (i + 1) % suggestions.length)
-                key.preventDefault()
-                return
-              }
-              if (key.name === "tab" || key.name === "return") {
-                commitSuggestion(suggestions[selectedSuggestion]!)
-                key.preventDefault()
-                return
-              }
-              if (key.name === "escape") {
-                setSuggestions([])
-                setSelectedSuggestion(0)
-                key.preventDefault()
-                return
-              }
-            }
+            if (onFileSelectorKeyDown(key)) return
 
             if (key.name === "escape") {
               const isEmpty = !textareaRef.current?.plainText.trim()

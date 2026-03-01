@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import { SyntaxStyle } from "@opentui/core"
 import { getDiff } from "../lib/worktree.js"
-import { DiffViewer, parseDiff } from "../lib/diff/index.js"
+import { DiffViewer } from "../lib/diff/index.js"
 import type { ViewMode } from "../lib/diff/index.js"
 import { readLogEntries, formatElapsed } from "../lib/logParser.js"
 import { useSpinnerFrame } from "../lib/tick.js"
@@ -15,7 +15,6 @@ interface Props {
   repoRoot: string
   task: Task
   disabled?: boolean
-  onDiffFiles?: (files: string[]) => void
 }
 
 function LastMessage({ repoRoot, task }: { repoRoot: string; task: Task }) {
@@ -60,7 +59,7 @@ function DiffLoadingSpinner() {
   )
 }
 
-export function DiffView({ repoRoot, task, disabled, onDiffFiles }: Props) {
+export function DiffView({ repoRoot, task, disabled }: Props) {
   const [diff, setDiff] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showLoading, setShowLoading] = useState(false)
@@ -77,19 +76,11 @@ export function DiffView({ repoRoot, task, disabled, onDiffFiles }: Props) {
     setDiff(null)
     setError(null)
     setShowLoading(false)
-    onDiffFiles?.([])
 
     const timer = setTimeout(() => setShowLoading(true), 300)
 
     getDiff(repoRoot, task.id)
-      .then((output) => {
-        setDiff(output)
-        if (onDiffFiles) {
-          const parsed = parseDiff(output)
-          const files = parsed.files.map((f) => f.newPath || f.oldPath).filter(Boolean)
-          onDiffFiles(files)
-        }
-      })
+      .then((output) => setDiff(output))
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => clearTimeout(timer))
 

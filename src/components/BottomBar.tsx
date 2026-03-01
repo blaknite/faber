@@ -33,6 +33,7 @@ function PushingSpinner({ branch }: { branch: string }) {
 }
 
 interface Props {
+  repoRoot: string
   mode: Mode
   flashMessage: string | null
   flashType: FlashType | null
@@ -40,7 +41,6 @@ interface Props {
   selectedTask: Task | null
   currentBranch: string
   bindings: Binding[]
-  diffFiles?: string[]
   onBranchSubmit: (branch: string) => void
   onBranchCancel: () => void
   onContinueSubmit: (prompt?: string, model?: Model) => void
@@ -48,6 +48,7 @@ interface Props {
 }
 
 export function BottomBar({
+  repoRoot,
   mode,
   flashMessage,
   flashType,
@@ -55,7 +56,6 @@ export function BottomBar({
   selectedTask,
   currentBranch,
   bindings,
-  diffFiles,
   onBranchSubmit,
   onBranchCancel,
   onContinueSubmit,
@@ -77,7 +77,7 @@ export function BottomBar({
   }
 
   if (mode === "continue") {
-    return <ContinueInput onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} diffFiles={diffFiles} />
+    return <ContinueInput repoRoot={repoRoot} onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} />
   }
 
   if (mode === "kill" && activeTask) {
