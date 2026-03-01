@@ -71,9 +71,7 @@ export function useKeyboardRouter({
     if (mode === "pushing") return
 
     if (mergeMessage !== null) {
-      if (key.name === "escape" || key.name === "return" || key.name === "space") {
-        clearMergeMessage()
-      }
+      clearMergeMessage()
       return
     }
 
