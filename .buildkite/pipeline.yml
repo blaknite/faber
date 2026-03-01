@@ -73,6 +73,8 @@ steps:
   - label: ":pencil: Generate release notes"
     key: generate-release-notes
     command: bin/generate-release-notes
+    secrets:
+      GH_TOKEN: FABER_RELEASE_TOKEN
     if: build.branch == "main"
     depends_on: set-version
 
