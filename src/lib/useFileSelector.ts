@@ -2,18 +2,22 @@ import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { getProjectFiles } from "./worktree.js"
 
-// Pull the @-query out of a plain-text string. Returns the partial filename
-// the user has typed after the last "@" that hasn't been closed by whitespace,
-// or null when no active mention is in progress.
+// Pull the @-query out of the text up to the cursor position. Returns the
+// partial filename the user has typed after the last "@" that hasn't been
+// closed by whitespace, or null when no active mention is in progress.
+//
+// We only look at text up to the cursor so that an "@" typed in the middle of
+// a prompt (with more text after it) still triggers the selector -- the text
+// after the cursor is irrelevant to whether a mention is in progress.
 //
 // The "@" is only treated as a trigger when it appears at the start of the
 // text or is immediately preceded by whitespace. Mid-word "@" (e.g. "foo@bar")
 // is ignored.
-function getAtQuery(text: string): string | null {
-  const lastAt = text.lastIndexOf("@")
+export function getAtQuery(textBeforeCursor: string): string | null {
+  const lastAt = textBeforeCursor.lastIndexOf("@")
   if (lastAt === -1) return null
-  if (lastAt > 0 && !/\s/.test(text[lastAt - 1]!)) return null
-  const after = text.slice(lastAt + 1)
+  if (lastAt > 0 && !/\s/.test(textBeforeCursor[lastAt - 1]!)) return null
+  const after = textBeforeCursor.slice(lastAt + 1)
   if (/\s/.test(after)) return null
   return after
 }
@@ -142,8 +146,14 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
   projectFilesRef.current = projectFiles
 
   const onContentChange = () => {
-    const text = textareaRef.current?.plainText ?? ""
-    const query = getAtQuery(text)
+    const textarea = textareaRef.current
+    const text = textarea?.plainText ?? ""
+    // Only look at the text up to the cursor. This means an "@" typed in the
+    // middle of a prompt (with more words after it) correctly triggers the
+    // selector -- whitespace that follows the cursor doesn't matter.
+    const cursor = textarea?.cursorOffset ?? text.length
+    const textBeforeCursor = text.slice(0, cursor)
+    const query = getAtQuery(textBeforeCursor)
 
     if (query === null || projectFilesRef.current.length === 0) {
       setSuggestions([])
@@ -177,16 +187,21 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     if (!textarea) return
 
     const text = textarea.plainText
-    const lastAt = text.lastIndexOf("@")
+    // Use the cursor position to correctly split the text. Everything up to the
+    // cursor replaces the @-query; everything from the cursor onward is preserved
+    // as the trailing context. This handles mid-prompt mentions correctly.
+    const cursor = textarea.cursorOffset
+    const textBeforeCursor = text.slice(0, cursor)
+    const textAfterCursor = text.slice(cursor)
+
+    const lastAt = textBeforeCursor.lastIndexOf("@")
     if (lastAt === -1) return
 
-    const before = text.slice(0, lastAt + 1)
-    const after = text.slice(lastAt + 1)
-    const spaceIdx = after.search(/\s/)
-    const rest = spaceIdx === -1 ? "" : after.slice(spaceIdx)
+    // "before" includes the "@" so we can keep it as part of the mention.
+    const before = textBeforeCursor.slice(0, lastAt + 1)
 
     // Trailing space closes the mention so onContentChange won't re-open the list.
-    const newText = before + file + " " + rest
+    const newText = before + file + " " + textAfterCursor
     textarea.replaceText(newText)
     textarea.cursorOffset = lastAt + 1 + file.length + 1
     setSuggestions([])
