@@ -76,8 +76,8 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
         {updateAvailable ? (
           <text>
             <span fg="#ff6600">update available</span>
-            <span fg="#555555">{" — run "}</span>
-            <span fg="#888888">faber update</span>
+            <span fg="#888888">{" — run "}</span>
+            <span fg="#555555">faber update</span>
           </text>
         ) : (
           <text>{""}</text>
