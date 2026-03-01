@@ -13,7 +13,7 @@ steps:
 
   - label: ":label: Set version"
     key: set-version
-    command: buildkite-agent meta-data set version "$(date -u '+%Y%m%d%H%M%S').${BUILDKITE_BUILD_NUMBER}"
+    command: buildkite-agent meta-data set version "0.0.$(date +%s)-g${BUILDKITE_COMMIT:0:7}"
     if: build.branch == "main"
     depends_on: test
 
