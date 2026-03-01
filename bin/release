@@ -17,9 +17,11 @@ buildkite-agent artifact download "faber-linux-x64" .
 buildkite-agent artifact download "faber-linux-arm64" .
 
 # Create GitHub release
+RELEASE_NOTES="$(buildkite-agent meta-data get release-notes)"
+
 gh release create "v${FABER_VERSION}" \
   --title "v${FABER_VERSION}" \
-  --notes "Build [${BUILDKITE_BUILD_NUMBER}](${BUILDKITE_BUILD_URL}) from commit ${BUILDKITE_COMMIT:0:7}" \
+  --notes "$RELEASE_NOTES" \
   faber-darwin-arm64 \
   faber-darwin-x64 \
   faber-linux-x64 \
