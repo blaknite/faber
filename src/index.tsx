@@ -9,6 +9,7 @@ import { generateSlug } from "./lib/slug.js"
 import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
+import { checkAndUpdate } from "./lib/update.js"
 import type { Task } from "./types.js"
 import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 
@@ -81,6 +82,7 @@ Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
   setup             Initialise .faber/ and .worktrees/ in the repo
+  update            Check for a new release and install it
   version           Print the version and exit
   help              Show this help message
 
@@ -190,6 +192,17 @@ Examples:
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const model = parseModelFlag(args)
     await runHeadless(repoRoot, prompt, model)
+    return
+  }
+
+  // faber update
+  if (command === "update") {
+    try {
+      await checkAndUpdate(VERSION)
+    } catch (err: any) {
+      console.error(`Update failed: ${err.message}`)
+      exit(1)
+    }
     return
   }
 
