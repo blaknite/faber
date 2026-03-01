@@ -83,10 +83,12 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
     const spaceIdx = after.search(/\s/)
     const rest = spaceIdx === -1 ? "" : after.slice(spaceIdx)
 
-    const newText = before + file + rest
+    // Add a trailing space so getAtQuery sees the mention as closed and doesn't
+    // re-open the suggestion list when onContentChange fires after replaceText.
+    const newText = before + file + " " + rest
     textarea.replaceText(newText)
-    // Position the cursor right after the inserted file
-    textarea.cursorOffset = lastAt + 1 + file.length
+    // Position the cursor right after the inserted file (and the trailing space)
+    textarea.cursorOffset = lastAt + 1 + file.length + 1
     setSuggestions([])
     setSelectedSuggestion(0)
   }
