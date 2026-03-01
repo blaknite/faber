@@ -15,9 +15,15 @@ interface Props {
 // Pull the @-query out of a plain-text string. Returns the partial filename
 // the user has typed after the last "@" that hasn't been closed by whitespace,
 // or null when no active mention is in progress.
+//
+// The "@" is only treated as a trigger when it appears at the start of the
+// text or is immediately preceded by whitespace. Mid-word "@" (e.g. "foo@bar")
+// is ignored.
 function getAtQuery(text: string): string | null {
   const lastAt = text.lastIndexOf("@")
   if (lastAt === -1) return null
+  // Must be at the start of the text or preceded by whitespace
+  if (lastAt > 0 && !/\s/.test(text[lastAt - 1]!)) return null
   const after = text.slice(lastAt + 1)
   // If there's whitespace after the @, the mention is closed
   if (/\s/.test(after)) return null
