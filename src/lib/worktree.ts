@@ -72,6 +72,14 @@ export async function getDiff(repoRoot: string, slug: string): Promise<string> {
   return stdout
 }
 
+// Returns all files tracked by git that are not gitignored, relative to the
+// repo root. Uses `git ls-files` so the result respects .gitignore and any
+// other git exclude rules.
+export async function getProjectFiles(repoRoot: string): Promise<string[]> {
+  const { stdout } = await execa("git", ["ls-files"], { cwd: repoRoot })
+  return stdout.split("\n").filter(Boolean)
+}
+
 export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
   try {
     await execa("git", ["merge", "--no-ff", slug], { cwd: repoRoot })

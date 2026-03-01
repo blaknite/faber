@@ -10,6 +10,7 @@ export type FilterMode = "active" | "all"
 export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready", "failed", "stopped"]
 
 interface Props {
+  repoRoot: string
   tasks: Task[]
   selectedId: string | null
   filterMode: FilterMode
@@ -21,7 +22,7 @@ interface Props {
   onSelectTask: (id: string) => void
 }
 
-export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -78,7 +79,7 @@ export function AgentList({ tasks, selectedId, filterMode, onFilterChange, width
           <span fg="#888888">{" [tab]"}</span>
         </text>
       </box>
-      <TaskInput active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
+      <TaskInput repoRoot={repoRoot} active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
 
       {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
