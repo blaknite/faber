@@ -133,13 +133,16 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
   const onKeyDown = (key: { name: string; preventDefault: () => void }): boolean => {
     if (suggestions.length === 0) return false
 
+    // Only the first 6 suggestions are rendered, so cap navigation to that window.
+    const navigableCount = Math.min(suggestions.length, 6)
+
     if (key.name === "up") {
-      setSelectedSuggestion((i) => (i - 1 + suggestions.length) % suggestions.length)
+      setSelectedSuggestion((i) => (i - 1 + navigableCount) % navigableCount)
       key.preventDefault()
       return true
     }
     if (key.name === "down") {
-      setSelectedSuggestion((i) => (i + 1) % suggestions.length)
+      setSelectedSuggestion((i) => (i + 1) % navigableCount)
       key.preventDefault()
       return true
     }
