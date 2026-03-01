@@ -58,7 +58,7 @@ export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
               <box
                 style={{
                   position: "absolute",
-                  bottom: borderHeight + 2,
+                  bottom: borderHeight + 3,
                   left: 0,
                   right: 0,
                   paddingTop: 1,
