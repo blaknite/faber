@@ -86,27 +86,30 @@ faber run "add tests for UserService" --model fast
 
 | Key | Action |
 |-----|--------|
-| `n` / `c` | New task |
+| `n` | New task |
 | `j` / `k` or arrows | Navigate list |
-| `enter` | Open task |
-| `r` | Resume a done or failed task |
-| `s` | Copy `opencode -s <sessionId>` to clipboard |
-| `x` | Kill running task (confirms with y/n) |
+| `Tab` | Toggle filter between active and all tasks |
+| `Enter` / `o` | Open task |
+| `c` | Continue a stopped or failed task |
+| `s` | Kill running task (confirms with y/n) |
+| `x` | Mark task as done |
 | `d` | Delete task and remove its worktree (confirms with y/n) |
-| `f` | Open diff view (task branch vs HEAD) |
+| `b` | Switch branch |
+| `p` | Push branch to origin (confirms with y/n) |
 | `q` / `Ctrl-C` | Quit |
 
-**Log pane** (after pressing `enter` on a task)
+**Log pane** (after pressing `Enter` on a task)
 
 | Key | Action |
 |-----|--------|
 | `j` / `k` or arrows | Scroll |
 | `PgUp` / `PgDn` | Scroll by page |
-| `r` | Resume task |
-| `s` | Copy session ID to clipboard |
-| `x` | Kill running task |
+| `c` | Continue task |
+| `s` | Kill running task |
+| `x` | Mark task as done |
 | `d` | Delete task and worktree |
 | `f` | Open diff view |
+| `,` / `.` | Cycle to next / previous active task |
 | `q` / `Escape` | Back to task list |
 
 **Diff view** (after pressing `f`)
@@ -115,10 +118,26 @@ faber run "add tests for UserService" --model fast
 |-----|--------|
 | `j` / `k` or arrows | Scroll |
 | `PgUp` / `PgDn` | Scroll by page |
+| `g` / `G` | Jump to top / bottom |
+| `Tab` | Toggle between side-by-side and inline layout |
+| `c` | Continue task |
+| `l` | Switch to log view |
 | `m` | Merge branch into HEAD (git merge --no-ff, confirms with y/n) |
+| `x` | Mark task as done |
+| `d` | Delete task and worktree |
+| `,` / `.` | Cycle to next / previous active task |
 | `q` / `Escape` | Back |
 
-When creating a task, `Tab` cycles through models and `Enter` submits. Multi-line prompts are supported with `Shift-Enter`, `Ctrl-Enter`, or `Ctrl-J`.
+**New task / continue input**
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Submit |
+| `Shift-Enter` / `Ctrl-Enter` / `Ctrl-J` | Insert newline |
+| `Tab` | Cycle through models (or select file suggestion if autocomplete is open) |
+| `Escape` | Cancel (or clear text if the field is non-empty) |
+
+When typing `@` in a prompt, faber opens a file autocomplete. Use `Up` / `Down` to navigate suggestions and `Tab` or `Enter` to select one. `Escape` dismisses the list.
 
 ### Models
 
