@@ -44,8 +44,8 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
           style={{
             position: "absolute",
             bottom: borderHeight + 2,
-            left: 1,
-            right: 1,
+            left: 0,
+            right: 0,
             height: visibleCount,
             zIndex: 10,
           }}
