@@ -131,4 +131,3 @@ The log view uses sticky scroll by default: it follows new output as it arrives.
 3. `faber run "<prompt>"` `[--dir path] [--model model]` - headless task dispatch
 4. `faber update` - checks GitHub for a newer release and replaces the binary in-place
 5. `faber version` - prints the current version and exits
-6. `faber finish <taskId> <exitCode>` - called automatically by each agent on exit to write final status
