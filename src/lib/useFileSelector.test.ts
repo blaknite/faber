@@ -1,5 +1,44 @@
 import { describe, expect, it } from "bun:test"
-import { fuzzyScore } from "./useFileSelector.js"
+import { fuzzyScore, getAtQuery } from "./useFileSelector.js"
+
+describe("getAtQuery", () => {
+  it("returns null when there is no @", () => {
+    expect(getAtQuery("write some content")).toBeNull()
+  })
+
+  it("returns an empty string when @ is at the end with nothing typed yet", () => {
+    expect(getAtQuery("write some content in @")).toBe("")
+  })
+
+  it("returns the partial query typed after @", () => {
+    expect(getAtQuery("write some content in @read")).toBe("read")
+  })
+
+  it("returns null when the @ is mid-word (not preceded by whitespace)", () => {
+    expect(getAtQuery("foo@bar")).toBeNull()
+    expect(getAtQuery("email@example")).toBeNull()
+  })
+
+  it("returns the query when @ is at the very start of the text", () => {
+    expect(getAtQuery("@read")).toBe("read")
+  })
+
+  it("returns null when there is whitespace between @ and the cursor (mention closed)", () => {
+    // The space after 'readme' signals the mention was already committed.
+    expect(getAtQuery("@readme ")).toBeNull()
+  })
+
+  it("triggers correctly when @ appears in the middle of a prompt, with text after the cursor excluded", () => {
+    // The caller slices to the cursor before calling getAtQuery, so we simulate
+    // a cursor sitting right after '@read' in 'Write some content in @read about...'
+    // by passing only the text up to the cursor.
+    expect(getAtQuery("Write some content in @read")).toBe("read")
+  })
+
+  it("returns an empty string when @ is in the middle of a prompt with cursor right after @", () => {
+    expect(getAtQuery("Write some content in @")).toBe("")
+  })
+})
 
 describe("fuzzyScore", () => {
   it("returns -1 when the query characters don't all appear in order", () => {
