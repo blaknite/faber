@@ -53,6 +53,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
     clearMergeMessage,
   } = useAppState(initialTasks)
   const [mode, setMode] = useState<Mode>("normal")
+  const [diffFiles, setDiffFiles] = useState<string[]>([])
 
   const refreshTasks = useCallback(() => {
     const state = readState(repoRoot)
@@ -208,6 +209,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
               repoRoot={repoRoot}
               task={diffTask}
               disabled={mode === "continue" || mode === "switch_branch"}
+              onDiffFiles={setDiffFiles}
             />
           ) : null
         })() : paneTaskId && paneView === "log" ? (() => {
@@ -245,6 +247,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
           selectedTask={selectedTask}
           currentBranch={currentBranch}
           bindings={normalBindings}
+          diffFiles={diffFiles}
           onBranchSubmit={(branch) => handleSwitchBranch(branch)}
           onBranchCancel={() => setMode("normal")}
           onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
