@@ -164,7 +164,7 @@ Faber works just as well when your repo is on a feature branch. Agents will bran
 The typical flow:
 
 1. Launch faber in your repo as usual.
-2. Switch to your feature branch (`git checkout feature-branch` in another terminal, or before launching faber).
+2. Switch to your feature branch by pressing `b` from the task list and typing the branch name.
 3. Create tasks as normal. Each agent branches off the feature branch tip, isolated from both `main` and each other.
 4. Review and merge each task into the feature branch using the diff view (`f` then `m`), same as any other task.
 
