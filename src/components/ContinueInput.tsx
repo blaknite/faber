@@ -83,11 +83,10 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
     const spaceIdx = after.search(/\s/)
     const rest = spaceIdx === -1 ? "" : after.slice(spaceIdx)
 
-    // Add a trailing space so the user can keep typing after the mention
-    const newText = before + file + " " + rest
+    const newText = before + file + rest
     textarea.replaceText(newText)
-    // Position the cursor right after the inserted file and its trailing space
-    textarea.cursorOffset = lastAt + 1 + file.length + 1
+    // Position the cursor right after the inserted file
+    textarea.cursorOffset = lastAt + 1 + file.length
     setSuggestions([])
     setSelectedSuggestion(0)
   }
