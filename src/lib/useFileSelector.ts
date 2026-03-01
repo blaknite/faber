@@ -61,10 +61,48 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     }
 
     const lowerQuery = query.toLowerCase()
-    const matches = projectFilesRef.current.filter((f) => {
-      const filename = f.split("/").pop() ?? f
-      return f.toLowerCase().startsWith(lowerQuery) || filename.toLowerCase().startsWith(lowerQuery)
-    })
+
+    // Score a candidate string against the query using a simple fuzzy algorithm.
+    // Returns -1 if the query characters don't all appear in order, otherwise
+    // returns a score where lower is better. Consecutive matched characters and
+    // matches at the start of the string are rewarded.
+    const fuzzyScore = (candidate: string): number => {
+      const lower = candidate.toLowerCase()
+      let qi = 0
+      let score = 0
+      let lastMatchIdx = -1
+
+      for (let ci = 0; ci < lower.length && qi < lowerQuery.length; ci++) {
+        if (lower[ci] === lowerQuery[qi]) {
+          // Consecutive matches cost nothing; gaps add to the score (higher = worse).
+          const gap = ci - lastMatchIdx - 1
+          score += lastMatchIdx === -1 ? ci : gap
+          lastMatchIdx = ci
+          qi++
+        }
+      }
+
+      // Not all query characters were found -- no match.
+      if (qi < lowerQuery.length) return -1
+
+      return score
+    }
+
+    const matches = projectFilesRef.current
+      .map((f) => {
+        const filename = f.split("/").pop() ?? f
+        const pathScore = fuzzyScore(f)
+        const nameScore = fuzzyScore(filename)
+        // Take whichever score is better (lower), ignoring -1 (no match).
+        let best = -1
+        if (pathScore !== -1 && nameScore !== -1) best = Math.min(pathScore, nameScore)
+        else if (pathScore !== -1) best = pathScore
+        else if (nameScore !== -1) best = nameScore
+        return { f, score: best }
+      })
+      .filter(({ score }) => score !== -1)
+      .sort((a, b) => a.score - b.score)
+      .map(({ f }) => f)
 
     setSuggestions(matches)
     setSelectedSuggestion(0)
