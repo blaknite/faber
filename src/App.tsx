@@ -226,7 +226,7 @@ function AppInner({ repoRoot, repoName, initialTasks, onExit }: Props) {
             selectedId={selectedTask?.id ?? null}
             filterMode={filterMode}
             onFilterChange={setFilterMode}
-            inputActive={mode === "input" || mode === "continue" || mode === "switch_branch"}
+            inputActive={mode === "input"}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
             onSelectTask={(id) => {
