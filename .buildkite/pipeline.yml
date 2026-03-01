@@ -73,6 +73,12 @@ steps:
     if: build.branch == "main"
     depends_on: set-version
 
+  - label: ":pencil: Generate release notes"
+    key: generate-release-notes
+    command: bin/generate-release-notes
+    if: build.branch == "main"
+    depends_on: set-version
+
   - label: ":github: Release"
     key: release
     command: bin/release
@@ -80,6 +86,7 @@ steps:
       GH_TOKEN: FABER_RELEASE_TOKEN
     if: build.branch == "main"
     depends_on:
+      - generate-release-notes
       - build-darwin-arm64
       - build-darwin-x64
       - build-linux-x64
