@@ -46,6 +46,7 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
             bottom: borderHeight + 2,
             left: 0,
             right: 0,
+            paddingTop: 1,
             height: visibleCount,
             zIndex: 10,
           }}
