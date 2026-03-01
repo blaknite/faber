@@ -9,6 +9,9 @@ if [ -n "$LAST_TAG" ]; then
   LAST_SHA="$(git ls-remote origin "refs/tags/${LAST_TAG}" | awk '{print $1}')"
 fi
 
+echo "Previous release: ${LAST_TAG:-(none)}"
+echo "Previous release SHA: ${LAST_SHA:-(none)}"
+
 if [ -n "${LAST_SHA:-}" ]; then
   COMMITS="$(git log "${LAST_SHA}..HEAD" --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
 else
