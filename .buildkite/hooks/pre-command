@@ -1,6 +1,4 @@
 #!/bin/bash
 set -e
 
-FABER_VERSION="$(buildkite-agent meta-data get version 2>/dev/null || echo "")"
-export FABER_VERSION
-buildkite-agent env set "FABER_VERSION=${FABER_VERSION}"
+export FABER_VERSION="$(buildkite-agent meta-data get version 2>&1 || true)"
