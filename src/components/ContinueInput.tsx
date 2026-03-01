@@ -33,9 +33,9 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
   // textarea height + 1 spacer + 1 label
   const borderHeight = textareaHeight + 2
 
-  // Each suggestion row is 1 line; cap visible rows at 8 so it doesn't
+  // Each suggestion row is 1 line; cap visible rows at 6 so it doesn't
   // dominate the screen when there are many files.
-  const visibleCount = Math.min(suggestions.length, 8)
+  const visibleCount = Math.min(suggestions.length, 6)
 
   return (
     <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111", height: borderHeight + 2 }}>
@@ -51,7 +51,7 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
           }}
           backgroundColor="#1a1a1a"
         >
-          {suggestions.slice(0, 8).map((file, i) => {
+          {suggestions.slice(0, 6).map((file, i) => {
             const isSelected = i === selectedSuggestion
             return (
               <box

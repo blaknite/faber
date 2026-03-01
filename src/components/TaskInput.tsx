@@ -36,8 +36,8 @@ export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
   // textarea height + 1 spacer + 1 label
   const borderHeight = textareaHeight + 2
 
-  // Each suggestion row is 1 line; cap visible rows at 8.
-  const visibleCount = Math.min(suggestions.length, 8)
+  // Each suggestion row is 1 line; cap visible rows at 6.
+  const visibleCount = Math.min(suggestions.length, 6)
 
   return (
     <box style={{ paddingBottom: 1, paddingLeft: 1, paddingRight: 1, height: borderHeight + 2 }}>
@@ -66,7 +66,7 @@ export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
                 }}
                 backgroundColor="#1a1a1a"
               >
-                {suggestions.slice(0, 8).map((file, i) => {
+                {suggestions.slice(0, 6).map((file, i) => {
                   const isSelected = i === selectedSuggestion
                   return (
                     <box
