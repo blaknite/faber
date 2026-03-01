@@ -27,6 +27,14 @@ For this to work, the skill needs to be available in your agent's environment.
 ## Installation
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/blaknite/faber/main/install.sh | bash
+```
+
+This downloads the latest release binary for your OS and architecture, installs it to `~/.faber/bin`, and adds it to your PATH.
+
+**Building from source**
+
+```bash
 bun install
 bun run build:bin   # produces a ./faber binary
 ```
