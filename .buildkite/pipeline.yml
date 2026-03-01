@@ -17,6 +17,15 @@ steps:
     if: build.branch == "main"
     depends_on: test
 
+  - label: ":mag: Debug version"
+    key: debug-version
+    command: |
+      echo "FABER_VERSION from env: '${FABER_VERSION}'"
+      echo "meta-data: '$(buildkite-agent meta-data get version)'"
+      env | grep FABER || echo "FABER_VERSION not in env"
+    if: build.branch == "main"
+    depends_on: set-version
+
   - label: ":hammer: Build (macOS arm64)"
     key: build-darwin-arm64
     command: |
