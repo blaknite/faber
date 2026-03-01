@@ -201,9 +201,12 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     const before = textBeforeCursor.slice(0, lastAt + 1)
 
     // Trailing space closes the mention so onContentChange won't re-open the list.
-    const newText = before + file + " " + textAfterCursor
+    // Only add the space if textAfterCursor doesn't already start with one, otherwise
+    // selecting a file mid-prompt produces a double space.
+    const needsSpace = !textAfterCursor.startsWith(" ")
+    const newText = before + file + (needsSpace ? " " : "") + textAfterCursor
     textarea.replaceText(newText)
-    textarea.cursorOffset = lastAt + 1 + file.length + 1
+    textarea.cursorOffset = lastAt + 1 + file.length + (needsSpace ? 1 : 0)
     setSuggestions([])
     setSelectedSuggestion(0)
   }
