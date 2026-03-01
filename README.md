@@ -45,6 +45,14 @@ Or run directly from source:
 bun run dev
 ```
 
+## Updating
+
+```bash
+faber update
+```
+
+Checks for a newer release on GitHub and replaces the running binary in-place if one is available. Supports macOS (arm64/x64) and Linux (arm64/x64).
+
 ## Usage
 
 ```bash
