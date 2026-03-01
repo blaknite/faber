@@ -151,7 +151,7 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
                 key.preventDefault()
                 return
               }
-              if (key.name === "tab") {
+              if (key.name === "tab" || key.name === "return") {
                 commitSuggestion(suggestions[selectedSuggestion]!)
                 key.preventDefault()
                 return
