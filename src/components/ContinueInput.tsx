@@ -103,19 +103,17 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
             bottom: borderHeight + 2,
             left: 1,
             right: 1,
-            height: visibleCount + 2,
+            height: visibleCount,
             zIndex: 10,
           }}
           backgroundColor="#1a1a1a"
-          border
-          borderColor="#444444"
         >
           {suggestions.slice(0, 8).map((file, i) => {
             const isSelected = i === selectedSuggestion
             return (
               <box
                 key={file}
-                style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#2a2a2a" : "#1a1a1a" }}
+                style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#ff6600" : "#1a1a1a" }}
               >
                 <text fg={isSelected ? "#ffffff" : "#888888"}>{file}</text>
               </box>
