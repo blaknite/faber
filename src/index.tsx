@@ -245,6 +245,7 @@ Examples:
     <App
       repoRoot={repoRoot}
       repoName={repoName}
+      version={VERSION}
       initialTasks={state.tasks}
       renderer={renderer}
       onExit={async () => {

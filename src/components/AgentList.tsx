@@ -15,6 +15,7 @@ interface Props {
   selectedId: string | null
   filterMode: FilterMode
   onFilterChange: (mode: FilterMode) => void
+  updateAvailable?: boolean
   width?: number | "auto" | `${number}%`
   inputActive: boolean
   onSubmit: (prompt: string, model: Model) => void
@@ -22,7 +23,7 @@ interface Props {
   onSelectTask: (id: string) => void
 }
 
-export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -71,7 +72,16 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
 
   return (
     <box style={{ ...containerStyle, flexDirection: "column" }}>
-      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, marginBottom: 1, flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#111111", height: 3 }}>
+      <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, marginBottom: 1, flexDirection: "row", justifyContent: "space-between", backgroundColor: "#111111", height: 3 }}>
+        {updateAvailable ? (
+          <text>
+            <span fg="#ff6600">update available</span>
+            <span fg="#555555">{" — run "}</span>
+            <span fg="#888888">faber update</span>
+          </text>
+        ) : (
+          <text>{""}</text>
+        )}
         <text>
           <span fg={filterMode === "active" ? "#ff6600" : "#555555"}>active</span>
           <span fg="#333333">{" / "}</span>

@@ -5,6 +5,22 @@ import { platform, arch } from "node:os"
 
 const REPO = "blaknite/faber"
 const GITHUB_API = `https://api.github.com/repos/${REPO}/releases/latest`
+const GITHUB_LATEST_RELEASE_URL = `https://github.com/${REPO}/releases/latest`
+
+// Resolve the latest release version by following GitHub's redirect from
+// /releases/latest to /releases/tag/vX.Y.Z. This avoids the GitHub API
+// entirely -- no auth, no rate limits, no extra tooling required.
+export async function fetchLatestVersion(): Promise<string | null> {
+  try {
+    const res = await fetch(GITHUB_LATEST_RELEASE_URL, { redirect: "manual" })
+    const location = res.headers.get("location")
+    if (!location) return null
+    const match = location.match(/\/releases\/tag\/v?([^/]+)$/)
+    return match ? match[1]! : null
+  } catch {
+    return null
+  }
+}
 
 // Map the current platform and architecture to the release asset name that
 // the CI pipeline produces. Mirrors the logic in install.sh.
