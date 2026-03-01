@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+
+FABER_VERSION="$(buildkite-agent meta-data get version)"
+
+# Install gh if not available
+(type gh > /dev/null 2>&1) || {
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+  apt-get update && apt-get install -y gh
+}
+
+# Download build artifacts
+buildkite-agent artifact download "faber-darwin-arm64" .
+buildkite-agent artifact download "faber-darwin-x64" .
+buildkite-agent artifact download "faber-linux-x64" .
+buildkite-agent artifact download "faber-linux-arm64" .
+
+# Create GitHub release
+gh release create "v${FABER_VERSION}" \
+  --title "v${FABER_VERSION}" \
+  --notes "Build [${BUILDKITE_BUILD_NUMBER}](${BUILDKITE_BUILD_URL}) from commit ${BUILDKITE_COMMIT:0:7}" \
+  faber-darwin-arm64 \
+  faber-darwin-x64 \
+  faber-linux-x64 \
+  faber-linux-arm64
