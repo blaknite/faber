@@ -1,5 +1,7 @@
 # faber
 
+[![Build status](https://badge.buildkite.com/8fb27e4a3237fe4b1eb4aee9e060756e262e9fa471ccbf6168.svg)](https://buildkite.com/blaknite/faber)
+
 A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, it spins up a git worktree and a [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
 
 <img width="1297" height="298" alt="Screenshot 2026-02-27 at 1 16 51 pm" src="https://github.com/user-attachments/assets/f669a614-34f9-429a-b82d-70207ad3aa01" />
