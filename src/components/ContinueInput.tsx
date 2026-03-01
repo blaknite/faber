@@ -69,7 +69,10 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
 
   // Replace the current @-mention with the selected file
   const commitSuggestion = (file: string) => {
-    const text = textareaRef.current?.plainText ?? ""
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const text = textarea.plainText
     const lastAt = text.lastIndexOf("@")
     if (lastAt === -1) return
 
@@ -81,7 +84,9 @@ export function ContinueInput({ onSubmit, onCancel, defaultModel, diffFiles = []
     const rest = spaceIdx === -1 ? "" : after.slice(spaceIdx)
 
     const newText = before + file + rest
-    textareaRef.current?.replaceText(newText)
+    textarea.replaceText(newText)
+    // Position the cursor right after the inserted file
+    textarea.cursorOffset = lastAt + 1 + file.length
     setSuggestions([])
     setSelectedSuggestion(0)
   }
