@@ -18,6 +18,97 @@ function getAtQuery(text: string): string | null {
   return after
 }
 
+// Score a candidate string against a query using a boundary-aware fuzzy
+// algorithm. Returns -1 if the query characters don't all appear in order.
+// Otherwise returns a score where lower is better.
+//
+// The core idea: matching at a word boundary (start of string, path separator,
+// CamelCase transition, underscore, or dot) is a much stronger signal than
+// matching mid-word. We reward those heavily so that "tin" ranks TaskInput
+// above ContinueInput -- the T at position 0 is a boundary match, giving it
+// a big advantage over the mid-word t-i-n run in ContinueInput.
+//
+// The algorithm tries all possible starting positions and picks the one that
+// produces the best score, avoiding the greedy trap of committing to an early
+// but weak mid-word match when a later boundary match would score better.
+export function fuzzyScore(candidate: string, query: string): number {
+  if (query.length === 0) return 0
+
+  const lower = candidate.toLowerCase()
+  const lowerQuery = query.toLowerCase()
+  const n = lower.length
+  const m = lowerQuery.length
+
+  // Precompute whether each position is a word boundary: start of string,
+  // after a separator (/ _ . -), or a CamelCase transition (lowercase -> uppercase).
+  const isBoundary = new Uint8Array(n)
+  for (let i = 0; i < n; i++) {
+    const ch = candidate[i]!
+    const prevCh = candidate[i - 1]
+    const isUppercase = ch >= "A" && ch <= "Z"
+    const prevIsLower = prevCh !== undefined && prevCh >= "a" && prevCh <= "z"
+    if (
+      i === 0 ||
+      prevCh === "/" ||
+      prevCh === "_" ||
+      prevCh === "." ||
+      prevCh === "-" ||
+      (isUppercase && prevIsLower)
+    ) {
+      isBoundary[i] = 1
+    }
+  }
+
+  // Score a greedy match starting from a given position in the candidate.
+  // Returns INF if not all query characters are found from that position onward.
+  // Boundary matches score -8, consecutive non-boundary matches score -4,
+  // mid-word matches score -1. Gaps between matches cost +2 per skipped char.
+  const INF = 1e9
+  const scoreFrom = (startCi: number): number => {
+    let score = 0
+    let ci = startCi
+    let lastMatchIdx = -1
+
+    for (let qi = 0; qi < m; qi++) {
+      let found = false
+      while (ci < n) {
+        if (lower[ci] === lowerQuery[qi]) {
+          const gap = lastMatchIdx === -1 ? 0 : ci - lastMatchIdx - 1
+          score += gap * 2
+          if (isBoundary[ci]) {
+            score += -8
+          } else if (lastMatchIdx !== -1 && gap === 0) {
+            score += -4
+          } else {
+            score += -1
+          }
+          lastMatchIdx = ci
+          ci++
+          found = true
+          break
+        }
+        ci++
+      }
+      if (!found) return INF
+    }
+
+    return score
+  }
+
+  // Try starting the match at every position where the first query character
+  // appears, and return the best (lowest) score found. This avoids the greedy
+  // trap of committing to an early but weak match when a later boundary match
+  // would rank higher.
+  let best = INF
+  for (let ci = 0; ci < n; ci++) {
+    if (lower[ci] !== lowerQuery[0]) continue
+    const s = scoreFrom(ci)
+    if (s < best) best = s
+  }
+
+  return best === INF ? -1 : best
+}
+
 interface UseFileSelectorOptions {
   repoRoot: string
   textareaRef: React.RefObject<TextareaRenderable | null>
@@ -60,39 +151,11 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
       return
     }
 
-    const lowerQuery = query.toLowerCase()
-
-    // Score a candidate string against the query using a simple fuzzy algorithm.
-    // Returns -1 if the query characters don't all appear in order, otherwise
-    // returns a score where lower is better. Consecutive matched characters and
-    // matches at the start of the string are rewarded.
-    const fuzzyScore = (candidate: string): number => {
-      const lower = candidate.toLowerCase()
-      let qi = 0
-      let score = 0
-      let lastMatchIdx = -1
-
-      for (let ci = 0; ci < lower.length && qi < lowerQuery.length; ci++) {
-        if (lower[ci] === lowerQuery[qi]) {
-          // Consecutive matches cost nothing; gaps add to the score (higher = worse).
-          const gap = ci - lastMatchIdx - 1
-          score += lastMatchIdx === -1 ? ci : gap
-          lastMatchIdx = ci
-          qi++
-        }
-      }
-
-      // Not all query characters were found -- no match.
-      if (qi < lowerQuery.length) return -1
-
-      return score
-    }
-
     const matches = projectFilesRef.current
       .map((f) => {
         const filename = f.split("/").pop() ?? f
-        const pathScore = fuzzyScore(f)
-        const nameScore = fuzzyScore(filename)
+        const pathScore = fuzzyScore(f, query)
+        const nameScore = fuzzyScore(filename, query)
         // Take whichever score is better (lower), ignoring -1 (no match).
         let best = -1
         if (pathScore !== -1 && nameScore !== -1) best = Math.min(pathScore, nameScore)
