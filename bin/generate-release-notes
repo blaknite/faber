@@ -5,10 +5,10 @@ set -euo pipefail
 LAST_TAG="$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
 
 if [ -n "$LAST_TAG" ]; then
-  COMMITS="$(git log "${LAST_TAG}..HEAD" --pretty=format:'- %s (%an)' --no-merges)"
+  COMMITS="$(git log "${LAST_TAG}..HEAD" --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
 else
   # No previous release, fall back to last 50 commits
-  COMMITS="$(git log -50 --pretty=format:'- %s (%an)' --no-merges)"
+  COMMITS="$(git log -50 --pretty=format:'commit %H%nauthor: %an%nsubject: %s%nbody: %b%n---' --no-merges)"
 fi
 
 if [ -z "$COMMITS" ]; then
