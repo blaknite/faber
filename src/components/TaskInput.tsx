@@ -64,14 +64,14 @@ export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
                   height: visibleCount,
                   zIndex: 10,
                 }}
-                backgroundColor="#1a1a1a"
+                backgroundColor="#111111"
               >
                 {suggestions.slice(0, 6).map((file, i) => {
                   const isSelected = i === selectedSuggestion
                   return (
                     <box
                       key={file}
-                      style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#D4963F" : "#1a1a1a" }}
+                      style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#D4963F" : "#111111" }}
                     >
                       <text fg={isSelected ? "#000000" : "#888888"}>{file}</text>
                     </box>
