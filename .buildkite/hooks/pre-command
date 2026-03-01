@@ -1,4 +1,6 @@
 #!/bin/bash
 set -e
 
-export FABER_VERSION="$(buildkite-agent meta-data get version 2>&1 || true)"
+if [[ "$BUILDKITE_STEP_KEY" =~ ^(build-.*|release)$ ]]; then
+  export FABER_VERSION="$(buildkite-agent meta-data get version)"
+fi
