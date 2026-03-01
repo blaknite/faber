@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-# Resolve the previous release's commit SHA via the GitHub API rather than
-# relying on the CI agent having release tags fetched in its local git clone.
+# Resolve the previous release's commit SHA via git ls-remote so we don't
+# depend on the CI agent having release tags fetched in its local git clone.
 LAST_TAG="$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
 
 if [ -n "$LAST_TAG" ]; then
-  LAST_SHA="$(gh api "repos/:owner/:repo/git/refs/tags/${LAST_TAG}" -q '.object.sha' 2>/dev/null || true)"
+  LAST_SHA="$(git ls-remote origin "refs/tags/${LAST_TAG}" | awk '{print $1}')"
 fi
 
 if [ -n "${LAST_SHA:-}" ]; then
