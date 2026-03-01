@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+
+# Find the previous release tag
+LAST_TAG="$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || true)"
+
+if [ -n "$LAST_TAG" ]; then
+  COMMITS="$(git log "${LAST_TAG}..HEAD" --pretty=format:'- %s (%an)' --no-merges)"
+else
+  # No previous release, fall back to last 50 commits
+  COMMITS="$(git log -50 --pretty=format:'- %s (%an)' --no-merges)"
+fi
+
+if [ -z "$COMMITS" ]; then
+  echo "No commits found, skipping release notes generation"
+  buildkite-agent meta-data set release-notes "No changes."
+  exit 0
+fi
+
+# Use Buildkite's hosted LLM feature to call the Anthropic API
+export ANTHROPIC_BASE_URL="${BUILDKITE_AGENT_ENDPOINT}/ai/anthropic"
+export ANTHROPIC_API_KEY="${BUILDKITE_AGENT_ACCESS_TOKEN}"
+
+PAYLOAD="$(jq -n \
+  --arg commits "$COMMITS" \
+  '{
+    model: "claude-opus-4-5",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: ("Write concise GitHub release notes for the following commits. Group changes by features, fixes, and other changes. Be direct and useful to end users. Do not include a preamble or sign-off.\n\nCommits:\n" + $commits)
+      }
+    ]
+  }')"
+
+RESPONSE="$(curl -fsSL \
+  --url "${ANTHROPIC_BASE_URL}/v1/messages" \
+  --header "anthropic-version: 2023-06-01" \
+  --header "content-type: application/json" \
+  --header "x-api-key: ${ANTHROPIC_API_KEY}" \
+  --data "$PAYLOAD")"
+
+NOTES="$(echo "$RESPONSE" | jq -r '.content[0].text')"
+
+buildkite-agent meta-data set release-notes "$NOTES"
