@@ -5,6 +5,7 @@ import { useAppState, sortDescending } from "./lib/useAppState.js"
 import { AgentLog } from "./components/AgentLog.js"
 import { DiffView } from "./components/DiffView.js"
 import { BottomBar } from "./components/BottomBar.js"
+import { BranchSelector } from "./components/BranchSelector.js"
 import { HeaderBar } from "./components/HeaderBar.js"
 import { InterstitialView } from "./components/InterstitialView.js"
 import { killAgent } from "./lib/agent.js"
@@ -259,10 +260,18 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
           selectedTask={selectedTask}
           currentBranch={currentBranch}
           bindings={normalBindings}
-          onBranchSubmit={(branch) => handleSwitchBranch(branch)}
-          onBranchCancel={() => setMode("normal")}
           onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
           onContinueCancel={() => setMode("normal")}
+        />
+      )}
+
+      {mode === "switch_branch" && (
+        <BranchSelector
+          repoRoot={repoRoot}
+          tasks={tasks}
+          currentBranch={currentBranch}
+          onSwitch={(branch) => handleSwitchBranch(branch)}
+          onCancel={() => setMode("normal")}
         />
       )}
     </box>
