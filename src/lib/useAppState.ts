@@ -7,6 +7,10 @@ export function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
 }
 
+export function filterByBranch(tasks: Task[], currentBranch: string): Task[] {
+  return tasks.filter((t) => t.baseBranch === "" || t.baseBranch === currentBranch)
+}
+
 export type FlashType = "success" | "error"
 export type PaneView = "log" | "diff"
 
@@ -55,9 +59,10 @@ export function useAppState(initialTasks: Task[]): AppState {
   const mergeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevTaskStatusesRef = useRef<Map<string, Task["status"]>>(new Map())
 
+  const branchTasks = filterByBranch(tasks, currentBranch)
   const visibleTasks = filterMode === "active"
-    ? tasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
-    : tasks
+    ? branchTasks.filter((t) => ACTIVE_STATUSES.includes(t.status))
+    : branchTasks
 
   const selectedTask = visibleTasks[selectedIdx] ?? null
 
