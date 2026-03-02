@@ -141,7 +141,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
       </box>
 
       {/* Branch list */}
-      <box style={{ paddingLeft: 1, paddingRight: 1, height: listHeight + 1 }}>
+      <box style={{ paddingTop: 1, paddingLeft: 1, paddingRight: 1, height: listHeight + 1 }}>
         <scrollbox scrollY scrollX={false} style={{ flexGrow: 1 }}>
           <box style={{ flexDirection: "column" }}>
             {filtered.length === 0 ? (
