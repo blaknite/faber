@@ -117,8 +117,8 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
   const modalWidth = 60
   const listRows = Math.min(filtered.length, 10)
   const listHeight = Math.max(listRows, 1)
-  // 3 = titlebar, 4 = input area (1 pad-top + 3 inner), 1 = gap, listHeight = list rows, 1 = bottom padding
-  const modalHeight = 3 + 4 + 1 + listHeight + 1
+  // 3 = titlebar, 3 = input area (3 inner), 1 = gap, listHeight = list rows, 1 = bottom padding
+  const modalHeight = 3 + 3 + 1 + listHeight + 1
 
   const modalTop = Math.floor((termHeight - modalHeight) / 2)
   const modalLeft = Math.floor((termWidth - modalWidth) / 2)
@@ -153,8 +153,8 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
         style={{
           paddingTop: 1,
           paddingBottom: 1,
-          paddingLeft: 1,
-          paddingRight: 1,
+          paddingLeft: 2,
+          paddingRight: 2,
           flexDirection: "row",
           justifyContent: "space-between",
           height: 3,
@@ -166,10 +166,9 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
       {/* Text input */}
       <box
         style={{
-          paddingTop: 1,
-          paddingLeft: 1,
-          paddingRight: 1,
-          height: 4,
+          paddingLeft: 2,
+          paddingRight: 2,
+          height: 3,
         }}
       >
         <box
@@ -196,7 +195,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
       </box>
 
       {/* Branch list */}
-      <box style={{ paddingTop: 1, paddingLeft: 1, paddingRight: 1, height: listHeight + 1 }}>
+      <box style={{ paddingTop: 1, paddingLeft: 2, paddingRight: 2, height: listHeight + 1 }}>
         <scrollbox ref={scrollRef} scrollY scrollX={false} style={{ flexGrow: 1 }}>
           <box style={{ flexDirection: "column" }}>
             {filtered.length === 0 ? (
