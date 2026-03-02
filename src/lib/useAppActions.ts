@@ -76,6 +76,7 @@ export function useAppActions({
       completedAt: null,
       exitCode: null,
       hasCommits: false,
+      baseBranch: currentBranch,
     }
 
     addTask(repoRoot, task)
@@ -99,7 +100,7 @@ export function useAppActions({
     }
 
     spawnAgent(task, repoRoot)
-  }, [repoRoot, updateTaskInState, setMode, setSelectedIdx, prevSelectedIdx])
+  }, [repoRoot, currentBranch, updateTaskInState, setMode, setSelectedIdx, prevSelectedIdx])
 
   const handleKill = useCallback((task: Task | null = selectedTask) => {
     if (!task || task.status !== "running" || !task.pid) return
