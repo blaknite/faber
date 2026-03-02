@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { TextareaRenderable } from "@opentui/core"
+import type { ScrollBoxRenderable, TextareaRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import { execSync } from "child_process"
 import type { Task } from "../types.js"
@@ -29,6 +29,7 @@ function loadBranches(repoRoot: string): string[] {
 
 export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCancel }: Props) {
   const textareaRef = useRef<TextareaRenderable>(null)
+  const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [filter, setFilter] = useState("")
   const [branches, setBranches] = useState<string[]>([])
   const [cursorIdx, setCursorIdx] = useState(-1)
@@ -49,6 +50,23 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
       return prev
     })
   }, [filtered.length])
+
+  // Scroll the list to keep the highlighted row visible
+  useEffect(() => {
+    if (!scrollRef.current || cursorIdx < 0) return
+
+    const scrollbox = scrollRef.current
+    const top = cursorIdx
+    const bottom = top + 1
+    const viewportHeight = scrollbox.viewport.height
+    const currentTop = scrollbox.scrollTop
+
+    if (top < currentTop) {
+      scrollbox.scrollTo(top)
+    } else if (bottom > currentTop + viewportHeight) {
+      scrollbox.scrollTo(bottom - viewportHeight)
+    }
+  }, [cursorIdx])
 
   // Count running/ready tasks per branch (branch name == task id)
   const taskCounts: Record<string, { running: number; ready: number }> = {}
@@ -148,7 +166,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
 
       {/* Branch list */}
       <box style={{ paddingTop: 1, paddingLeft: 1, paddingRight: 1, height: listHeight + 1 }}>
-        <scrollbox scrollY scrollX={false} style={{ flexGrow: 1 }}>
+        <scrollbox ref={scrollRef} scrollY scrollX={false} style={{ flexGrow: 1 }}>
           <box style={{ flexDirection: "column" }}>
             {filtered.length === 0 ? (
               <box style={{ height: 1 }}>
