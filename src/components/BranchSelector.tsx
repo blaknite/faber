@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/react"
 import { execSync } from "child_process"
 import type { Task } from "../types.js"
 
@@ -89,18 +90,23 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
     }
   }
 
+  const { width: termWidth, height: termHeight } = useTerminalDimensions()
+
   const modalWidth = 60
   const listRows = Math.min(filtered.length, 10)
   const listHeight = Math.max(listRows, 1)
   // 4 = input area (1 pad-top + 3 inner), 1 = gap, listHeight = list rows, 1 = bottom padding
   const modalHeight = 4 + 1 + listHeight + 1
 
+  const modalTop = Math.floor((termHeight - modalHeight) / 2)
+  const modalLeft = Math.floor((termWidth - modalWidth) / 2)
+
   return (
     <box
       style={{
         position: "absolute",
-        top: "50%",
-        left: "50%",
+        top: modalTop,
+        left: modalLeft,
         width: modalWidth,
         height: modalHeight,
         zIndex: 20,
