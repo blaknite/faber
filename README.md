@@ -172,6 +172,24 @@ The typical flow:
 
 When you're happy with the feature branch as a whole, merge it into `main` yourself outside of faber.
 
+## Branch selection and filtering
+
+### Switching branches
+
+Press `b` from the task list to open the branch switcher. A modal appears with a list of your repo's branches sorted by most recently committed, task branches excluded.
+
+Start typing to filter the list. The filter is a case-insensitive substring match, so `feat` matches `feature/auth`, `my-feat`, etc. Use `Up` / `Down` to move through the results, then `Enter` to switch.
+
+If you type a name that doesn't match anything, the list shows "no matches -- press enter to create". Pressing `Enter` at that point creates a new branch off the current `HEAD` and switches to it.
+
+### How tasks are scoped to a branch
+
+Each task records the branch that was checked out when it was dispatched. The task list is always filtered to only show tasks that belong to the current branch, so switching branches gives you a clean slate for that context.
+
+Tasks created before branch scoping was introduced show up on every branch.
+
+The active/all toggle (Tab) applies on top of that filter, so "active" means "active tasks on this branch".
+
 ## Development
 
 ```bash
