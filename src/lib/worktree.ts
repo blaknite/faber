@@ -81,17 +81,26 @@ export async function getProjectFiles(repoRoot: string): Promise<string[]> {
 }
 
 export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
+  // Rebase the task branch onto the main repo's current HEAD. Because the
+  // branch may be checked out in a worktree we can't reference it by name from
+  // outside that worktree -- we run the rebase from inside the worktree itself
+  // instead, using the main repo's HEAD SHA as the upstream.
+  const wtPath = worktreePath(repoRoot, slug)
+  const { stdout: headSha } = await execa("git", ["rev-parse", "HEAD"], { cwd: repoRoot })
   try {
-    await execa("git", ["merge", "--no-ff", slug], { cwd: repoRoot })
+    await execa("git", ["rebase", headSha.trim()], { cwd: wtPath })
   } catch (err) {
-    // Clean up any partial merge state so the repo isn't left dirty
+    // Rebase hit a conflict -- clean up and surface the error.
     try {
-      await execa("git", ["merge", "--abort"], { cwd: repoRoot })
+      await execa("git", ["rebase", "--abort"], { cwd: wtPath })
     } catch {
       // If abort fails there's nothing more we can do
     }
     throw err
   }
+
+  // The branch is now a linear extension of HEAD, so this must succeed.
+  await execa("git", ["merge", "--ff-only", slug], { cwd: repoRoot })
 }
 
 export async function pushBranch(repoRoot: string): Promise<void> {

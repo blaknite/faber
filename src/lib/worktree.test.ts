@@ -160,7 +160,9 @@ describe("getDiff", () => {
 })
 
 describe("mergeBranch", () => {
-  it("merges a branch with commits into the current branch", async () => {
+  it("happy path: rebase is a no-op and ff merge succeeds", async () => {
+    // Branch is cut from HEAD with no divergence on main -- rebase does nothing,
+    // ff-only merge moves HEAD forward.
     const wtPath = await createWorktree(tmpRoot, "merge-me")
     writeFileSync(join(wtPath, "merged.ts"), "export {}\n")
     git("add .", wtPath)
@@ -168,27 +170,51 @@ describe("mergeBranch", () => {
 
     await mergeBranch(tmpRoot, "merge-me")
 
-    // The file should now exist on the main branch
     const log = execSync("git log --oneline", { cwd: tmpRoot, encoding: "utf8" })
     expect(log).toContain("add merged.ts")
+    // Fast-forward: no merge commit, so only one extra line in the log
+    const lines = log.trim().split("\n")
+    expect(lines.length).toBe(2)
   })
 
-  it("throws on merge conflict and aborts cleanly", async () => {
-    // Create a worktree branch that modifies README.md
+  it("diverged branch: rebase replays commits, then ff merge succeeds", async () => {
+    // Create a branch, then advance main -- the branch is now behind HEAD.
+    const wtPath = await createWorktree(tmpRoot, "diverged-branch")
+    writeFileSync(join(wtPath, "feature.ts"), "export const a = 1\n")
+    git("add .", wtPath)
+    git('commit -m "add feature"', wtPath)
+
+    // Advance main with an unrelated commit
+    writeFileSync(join(tmpRoot, "other.ts"), "export const b = 2\n")
+    git("add .", tmpRoot)
+    git('commit -m "unrelated change on main"', tmpRoot)
+
+    await mergeBranch(tmpRoot, "diverged-branch")
+
+    const log = execSync("git log --oneline", { cwd: tmpRoot, encoding: "utf8" })
+    expect(log).toContain("add feature")
+    expect(log).toContain("unrelated change on main")
+    // Linear history: no merge commit
+    expect(log).not.toContain("Merge branch")
+  })
+
+  it("conflict during rebase: aborts cleanly and throws", async () => {
+    // Both main and the branch edit the same lines of README.md.
     const wtPath = await createWorktree(tmpRoot, "conflict-branch")
     writeFileSync(join(wtPath, "README.md"), "# branch version\n")
     git("add .", wtPath)
     git('commit -m "branch edit"', wtPath)
 
-    // Modify the same file on main so we get a conflict
+    // Advance main with a conflicting change so the rebase cannot replay cleanly
     writeFileSync(join(tmpRoot, "README.md"), "# main version\n")
     git("add .", tmpRoot)
     git('commit -m "main edit"', tmpRoot)
 
     await expect(mergeBranch(tmpRoot, "conflict-branch")).rejects.toThrow()
 
-    // The repo should not be left in a merge state
+    // The repo must not be left in a rebase or merge state
     const status = execSync("git status", { cwd: tmpRoot, encoding: "utf8" })
+    expect(status).not.toContain("rebase in progress")
     expect(status).not.toContain("You have unmerged paths")
   })
 })
