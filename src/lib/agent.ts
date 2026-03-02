@@ -33,7 +33,7 @@ export function spawnAgent(
 
   const agentPrompt = resumeSessionId
     ? (resumePrompt ?? DEFAULT_RESUME_PROMPT)
-    : `Load the skill \`working-in-faber\`\n\n${task.prompt}`
+    : `Load the skill \`working-in-faber\`\n\n${task.prompt}\n\nBase branch: ${task.baseBranch}`
 
   // The log shows what the user asked for, not the internal scaffolding we
   // prepend. For new tasks that's task.prompt; for resumes it's whatever
