@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { sortDescending } from "./useAppState.js"
+import { filterByBranch, sortDescending } from "./useAppState.js"
 import type { Task } from "../types.js"
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -15,6 +15,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     completedAt: null,
     exitCode: null,
     hasCommits: false,
+    baseBranch: "main",
     ...overrides,
   }
 }
@@ -65,5 +66,53 @@ describe("sortDescending", () => {
     // All have the same timestamp; localeCompare returns 0 so the sort should
     // be stable and preserve the original order.
     expect(result.map((t) => t.id)).toEqual(["a", "b", "c"])
+  })
+})
+
+describe("filterByBranch", () => {
+  it("returns only tasks whose baseBranch matches currentBranch", () => {
+    const matching = makeTask({ id: "match", baseBranch: "feature-x" })
+    const other = makeTask({ id: "other", baseBranch: "main" })
+    const result = filterByBranch([matching, other], "feature-x")
+    expect(result.map((t) => t.id)).toEqual(["match"])
+  })
+
+  it("includes tasks with an empty baseBranch regardless of currentBranch", () => {
+    const legacy = makeTask({ id: "legacy", baseBranch: "" })
+    const other = makeTask({ id: "other", baseBranch: "main" })
+    const result = filterByBranch([legacy, other], "feature-x")
+    expect(result.map((t) => t.id)).toEqual(["legacy"])
+  })
+
+  it("includes both matching and legacy tasks together", () => {
+    const matching = makeTask({ id: "match", baseBranch: "feature-x" })
+    const legacy = makeTask({ id: "legacy", baseBranch: "" })
+    const other = makeTask({ id: "other", baseBranch: "main" })
+    const result = filterByBranch([matching, legacy, other], "feature-x")
+    expect(result.map((t) => t.id)).toEqual(["match", "legacy"])
+  })
+
+  it("shows only legacy tasks when currentBranch is empty (initial state)", () => {
+    // When currentBranch hasn't loaded yet it's "". Legacy tasks (baseBranch "")
+    // still show up; tasks created on a specific branch don't match until the
+    // branch is resolved.
+    const legacy = makeTask({ id: "legacy", baseBranch: "" })
+    const withBranch = makeTask({ id: "with-branch", baseBranch: "main" })
+    const result = filterByBranch([legacy, withBranch], "")
+    expect(result.map((t) => t.id)).toEqual(["legacy"])
+  })
+
+  it("returns an empty array when no tasks match", () => {
+    const task = makeTask({ id: "a", baseBranch: "other" })
+    expect(filterByBranch([task], "feature-x")).toEqual([])
+  })
+
+  it("does not mutate the original array", () => {
+    const tasks = [
+      makeTask({ id: "a", baseBranch: "main" }),
+      makeTask({ id: "b", baseBranch: "feature-x" }),
+    ]
+    filterByBranch(tasks, "feature-x")
+    expect(tasks).toHaveLength(2)
   })
 })
