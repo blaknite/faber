@@ -33,7 +33,7 @@ instead of crashing.
 
 ## Running a task
 
-Use `faber dispatch`:
+Use `faber run`:
 
 ```bash
 faber run "your prompt here"
@@ -45,4 +45,35 @@ Or for a specific project directory use:
 faber run "your prompt here" --dir <projectDir>
 ```
 
+You can also pass `--model` to choose the model for the task. The default is `smart`:
+
+```bash
+faber run "your prompt here" --model smart
+```
+
+Valid model labels are `smart`, `fast`, and `deep`.
+
 That's it. Faber handles the rest.
+
+## Watching a task
+
+After dispatching a task headlessly, you can wait for it to finish using `faber watch`:
+
+```bash
+faber watch <taskId>
+```
+
+The task ID is the slug printed by `faber run` (e.g. `a3f2-fix-the-login-bug`). `faber watch` blocks until the task is no longer running, then exits. This is useful in scripts that dispatch a task and need to wait for the result before continuing.
+
+If the task is already finished when you run `faber watch`, it exits immediately.
+
+Example:
+
+```bash
+faber run "Fix the login bug"
+# Dispatching task: a3f2-fix-the-login-bug
+
+faber watch a3f2-fix-the-login-bug
+# Watching task a3f2-fix-the-login-bug (status: running)
+# Task a3f2-fix-the-login-bug finished (status: ready)
+```
