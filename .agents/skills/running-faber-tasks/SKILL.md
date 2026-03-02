@@ -45,10 +45,10 @@ Or for a specific project directory use:
 faber run "your prompt here" --dir <projectDir>
 ```
 
-You can also pass `--model` to choose the model for the task:
+You can also pass `--model` to choose the model for the task. The default is `smart`:
 
 ```bash
-faber run "your prompt here" --model deep
+faber run "your prompt here" --model smart
 ```
 
 Valid model labels are `smart`, `fast`, and `deep`.
