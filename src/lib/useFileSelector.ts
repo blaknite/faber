@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
-import { getProjectFiles } from "./worktree.js"
+import { getProjectDirectories, getProjectFiles } from "./worktree.js"
 
 // Pull the @-query out of the text up to the cursor position. Returns the
 // partial filename the user has typed after the last "@" that hasn't been
@@ -132,18 +132,20 @@ interface UseFileSelectorResult {
 // Returns true from onKeyDown when it has consumed the key (so the caller
 // knows not to process it further), false otherwise.
 export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOptions): UseFileSelectorResult {
-  const [projectFiles, setProjectFiles] = useState<string[]>([])
+  const [projectEntries, setProjectEntries] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [selectedSuggestion, setSelectedSuggestion] = useState(0)
 
-  // Load the file list once on mount. We don't need to reload it because
-  // git ls-files is cheap and the list won't change meaningfully mid-session.
+  // Load files and directories once on mount. Directories come back with a
+  // trailing slash so the user can tell them apart from files in the list.
   useEffect(() => {
-    getProjectFiles(repoRoot).then(setProjectFiles).catch(() => {})
+    Promise.all([getProjectFiles(repoRoot), getProjectDirectories(repoRoot)])
+      .then(([files, dirs]) => setProjectEntries([...files, ...dirs]))
+      .catch(() => {})
   }, [repoRoot])
 
-  const projectFilesRef = useRef(projectFiles)
-  projectFilesRef.current = projectFiles
+  const projectFilesRef = useRef(projectEntries)
+  projectFilesRef.current = projectEntries
 
   const onContentChange = () => {
     const textarea = textareaRef.current
@@ -163,9 +165,12 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
 
     const matches = projectFilesRef.current
       .map((f) => {
-        const filename = f.split("/").pop() ?? f
+        // Strip the trailing slash from directories when scoring against the
+        // basename -- "src/" should match on "src", not on the empty string
+        // that follows the slash.
+        const basename = f.replace(/\/$/, "").split("/").pop() ?? f
         const pathScore = fuzzyScore(f, query)
-        const nameScore = fuzzyScore(filename, query)
+        const nameScore = fuzzyScore(basename, query)
         // Take whichever score is better (lower), ignoring -1 (no match).
         let best = -1
         if (pathScore !== -1 && nameScore !== -1) best = Math.min(pathScore, nameScore)

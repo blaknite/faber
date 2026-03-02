@@ -6,6 +6,8 @@ import { execSync } from "node:child_process"
 import {
   createWorktree,
   getDiff,
+  getProjectDirectories,
+  getProjectFiles,
   gitFetchHeadPath,
   gitHeadPath,
   hasUnpushedCommits,
@@ -237,5 +239,76 @@ describe("hasUnpushedCommits", () => {
     // Our test repo has no remote, so this should return true
     const result = await hasUnpushedCommits(tmpRoot)
     expect(result).toBe(true)
+  })
+})
+
+describe("getProjectFiles", () => {
+  it("returns tracked files relative to the repo root", async () => {
+    const files = await getProjectFiles(tmpRoot)
+    expect(files).toContain("README.md")
+  })
+
+  it("does not include directories", async () => {
+    mkdirSync(join(tmpRoot, "src"), { recursive: true })
+    writeFileSync(join(tmpRoot, "src", "index.ts"), "export {}\n")
+    git("add .")
+    git('commit -m "add src/index.ts"')
+
+    const files = await getProjectFiles(tmpRoot)
+    expect(files).toContain("src/index.ts")
+    // Directories themselves must not appear in the file list.
+    expect(files.every((f) => !f.endsWith("/"))).toBe(true)
+  })
+})
+
+describe("getProjectDirectories", () => {
+  it("returns an empty array when there are no subdirectories", async () => {
+    // The initial repo only has README.md at the root, so no directories.
+    const dirs = await getProjectDirectories(tmpRoot)
+    expect(dirs).toEqual([])
+  })
+
+  it("returns directories with trailing slashes", async () => {
+    mkdirSync(join(tmpRoot, "src"), { recursive: true })
+    writeFileSync(join(tmpRoot, "src", "index.ts"), "export {}\n")
+    git("add .")
+    git('commit -m "add src/index.ts"')
+
+    const dirs = await getProjectDirectories(tmpRoot)
+    expect(dirs).toContain("src/")
+  })
+
+  it("includes ancestor directories for deeply nested files", async () => {
+    mkdirSync(join(tmpRoot, "src", "lib"), { recursive: true })
+    writeFileSync(join(tmpRoot, "src", "lib", "util.ts"), "export {}\n")
+    git("add .")
+    git('commit -m "add nested file"')
+
+    const dirs = await getProjectDirectories(tmpRoot)
+    expect(dirs).toContain("src/")
+    expect(dirs).toContain("src/lib/")
+  })
+
+  it("deduplicates directories shared by multiple files", async () => {
+    mkdirSync(join(tmpRoot, "src"), { recursive: true })
+    writeFileSync(join(tmpRoot, "src", "a.ts"), "export {}\n")
+    writeFileSync(join(tmpRoot, "src", "b.ts"), "export {}\n")
+    git("add .")
+    git('commit -m "add two files in src"')
+
+    const dirs = await getProjectDirectories(tmpRoot)
+    const srcDirs = dirs.filter((d) => d === "src/")
+    expect(srcDirs).toHaveLength(1)
+  })
+
+  it("does not include filenames", async () => {
+    mkdirSync(join(tmpRoot, "src"), { recursive: true })
+    writeFileSync(join(tmpRoot, "src", "index.ts"), "export {}\n")
+    git("add .")
+    git('commit -m "add src/index.ts"')
+
+    const dirs = await getProjectDirectories(tmpRoot)
+    expect(dirs).not.toContain("src/index.ts")
+    expect(dirs.every((d) => d.endsWith("/"))).toBe(true)
   })
 })

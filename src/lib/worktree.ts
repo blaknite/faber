@@ -80,6 +80,23 @@ export async function getProjectFiles(repoRoot: string): Promise<string[]> {
   return stdout.split("\n").filter(Boolean)
 }
 
+// Returns all unique directories that contain tracked files, relative to the
+// repo root. Derived from `git ls-files` so it respects .gitignore. Each
+// directory is returned with a trailing slash to distinguish it from files.
+export async function getProjectDirectories(repoRoot: string): Promise<string[]> {
+  const { stdout } = await execa("git", ["ls-files"], { cwd: repoRoot })
+  const files = stdout.split("\n").filter(Boolean)
+  const seen = new Set<string>()
+  for (const file of files) {
+    const parts = file.split("/")
+    // Accumulate each ancestor directory (stop before the filename itself).
+    for (let i = 1; i < parts.length; i++) {
+      seen.add(parts.slice(0, i).join("/") + "/")
+    }
+  }
+  return Array.from(seen).sort()
+}
+
 export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
   // Rebase the task branch onto the main repo's current HEAD. Because the
   // branch may be checked out in a worktree we can't reference it by name from
