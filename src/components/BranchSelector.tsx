@@ -117,8 +117,8 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
   const modalWidth = 60
   const listRows = Math.min(filtered.length, 10)
   const listHeight = Math.max(listRows, 1)
-  // 3 = titlebar, 3 = input area (3 inner), 1 = gap, listHeight = list rows, 1 = bottom padding
-  const modalHeight = 3 + 3 + 1 + listHeight + 1
+  // 3 = titlebar, 1 = input, 1 = gap, listHeight = list rows, 1 = bottom padding
+  const modalHeight = 3 + 1 + 1 + listHeight + 1
 
   const modalTop = Math.floor((termHeight - modalHeight) / 2)
   const modalLeft = Math.floor((termWidth - modalWidth) / 2)
@@ -161,6 +161,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
         }}
       >
         <text fg="#555555">switch branch</text>
+        <text fg="#333333">[enter] switch  [esc] cancel</text>
       </box>
 
       {/* Text input */}
@@ -168,13 +169,13 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
         style={{
           paddingLeft: 2,
           paddingRight: 2,
-          height: 3,
+          height: 1,
         }}
       >
         <box
           border={["left"]}
           borderColor="#666666"
-          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: 3 }}
+          style={{ paddingLeft: 1, paddingRight: 1, height: 1 }}
         >
           <textarea
             ref={textareaRef}
@@ -189,8 +190,6 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
             onKeyDown={handleKeyDown}
             focused
           />
-          <box style={{ height: 1 }} />
-          <text fg="#333333">[enter] switch  [esc] cancel</text>
         </box>
       </box>
 
