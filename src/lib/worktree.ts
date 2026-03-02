@@ -81,8 +81,7 @@ export async function getProjectFiles(repoRoot: string): Promise<string[]> {
 }
 
 // Returns all unique directories that contain tracked files, relative to the
-// repo root. Derived from `git ls-files` so it respects .gitignore. Each
-// directory is returned with a trailing slash to distinguish it from files.
+// repo root. Derived from `git ls-files` so it respects .gitignore.
 export async function getProjectDirectories(repoRoot: string): Promise<string[]> {
   const { stdout } = await execa("git", ["ls-files"], { cwd: repoRoot })
   const files = stdout.split("\n").filter(Boolean)
@@ -91,7 +90,7 @@ export async function getProjectDirectories(repoRoot: string): Promise<string[]>
     const parts = file.split("/")
     // Accumulate each ancestor directory (stop before the filename itself).
     for (let i = 1; i < parts.length; i++) {
-      seen.add(parts.slice(0, i).join("/") + "/")
+      seen.add(parts.slice(0, i).join("/"))
     }
   }
   return Array.from(seen).sort()

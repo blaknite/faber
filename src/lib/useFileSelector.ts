@@ -165,10 +165,7 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
 
     const matches = projectFilesRef.current
       .map((f) => {
-        // Strip the trailing slash from directories when scoring against the
-        // basename -- "src/" should match on "src", not on the empty string
-        // that follows the slash.
-        const basename = f.replace(/\/$/, "").split("/").pop() ?? f
+        const basename = f.split("/").pop() ?? f
         const pathScore = fuzzyScore(f, query)
         const nameScore = fuzzyScore(basename, query)
         // Take whichever score is better (lower), ignoring -1 (no match).

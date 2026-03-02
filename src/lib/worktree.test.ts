@@ -268,14 +268,14 @@ describe("getProjectDirectories", () => {
     expect(dirs).toEqual([])
   })
 
-  it("returns directories with trailing slashes", async () => {
+  it("returns directories without trailing slashes", async () => {
     mkdirSync(join(tmpRoot, "src"), { recursive: true })
     writeFileSync(join(tmpRoot, "src", "index.ts"), "export {}\n")
     git("add .")
     git('commit -m "add src/index.ts"')
 
     const dirs = await getProjectDirectories(tmpRoot)
-    expect(dirs).toContain("src/")
+    expect(dirs).toContain("src")
   })
 
   it("includes ancestor directories for deeply nested files", async () => {
@@ -285,8 +285,8 @@ describe("getProjectDirectories", () => {
     git('commit -m "add nested file"')
 
     const dirs = await getProjectDirectories(tmpRoot)
-    expect(dirs).toContain("src/")
-    expect(dirs).toContain("src/lib/")
+    expect(dirs).toContain("src")
+    expect(dirs).toContain("src/lib")
   })
 
   it("deduplicates directories shared by multiple files", async () => {
@@ -297,7 +297,7 @@ describe("getProjectDirectories", () => {
     git('commit -m "add two files in src"')
 
     const dirs = await getProjectDirectories(tmpRoot)
-    const srcDirs = dirs.filter((d) => d === "src/")
+    const srcDirs = dirs.filter((d) => d === "src")
     expect(srcDirs).toHaveLength(1)
   })
 
@@ -309,6 +309,5 @@ describe("getProjectDirectories", () => {
 
     const dirs = await getProjectDirectories(tmpRoot)
     expect(dirs).not.toContain("src/index.ts")
-    expect(dirs.every((d) => d.endsWith("/"))).toBe(true)
   })
 })
