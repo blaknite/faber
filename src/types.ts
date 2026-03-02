@@ -36,6 +36,7 @@ export interface Task {
   completedAt: string | null
   exitCode: number | null
   hasCommits: boolean     // true when the task branch has commits
+  baseBranch: string      // the branch that was checked out when the task was created
 }
 
 export interface State {

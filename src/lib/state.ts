@@ -60,7 +60,12 @@ export function ensureFaberDir(repoRoot: string): void {
 export function readState(repoRoot: string): State {
   const path = statePath(repoRoot)
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as State
+    const state = JSON.parse(readFileSync(path, "utf8")) as State
+    // Normalize fields that may be missing in state files written by older versions.
+    for (const task of state.tasks) {
+      if (task.baseBranch === undefined) task.baseBranch = ""
+    }
+    return state
   } catch {
     return { tasks: [] }
   }
