@@ -18,12 +18,13 @@ interface Props {
   updateAvailable?: boolean
   width?: number | "auto" | `${number}%`
   inputActive: boolean
+  currentBranch?: string
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
   onSelectTask: (id: string) => void
 }
 
-export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, onSubmit, onCancel, onSelectTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onSubmit, onCancel, onSelectTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -93,7 +94,7 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
 
       {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <text fg="#333333">{filterMode === "active" ? "No active tasks." : "No tasks yet."}</text>
+          <text fg="#333333">{filterMode === "active" ? "No active tasks." : currentBranch ? `No tasks for \`${currentBranch}\`.` : "No tasks yet."}</text>
         </box>
       ) : (
         <box style={{ flexGrow: 1, paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 }}>
