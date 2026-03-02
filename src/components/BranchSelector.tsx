@@ -39,9 +39,12 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
     setBranches(loadBranches(repoRoot))
   }, [repoRoot])
 
+  const taskBranches = new Set(tasks.map((t) => t.id))
+  const nonTaskBranches = branches.filter((b) => !taskBranches.has(b))
+
   const filtered = filter
-    ? branches.filter((b) => b.toLowerCase().includes(filter.toLowerCase()))
-    : branches
+    ? nonTaskBranches.filter((b) => b.toLowerCase().includes(filter.toLowerCase()))
+    : nonTaskBranches
 
   // Clamp cursor when the filtered list shrinks
   useEffect(() => {
