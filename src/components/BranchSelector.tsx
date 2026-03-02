@@ -120,7 +120,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
   // 3 = titlebar, 1 = input, 1 = gap, listHeight = list rows, 1 = bottom padding
   const modalHeight = 3 + 1 + 1 + listHeight + 1
 
-  const modalTop = Math.floor((termHeight - modalHeight) / 2)
+  const modalTop = Math.floor((termHeight - modalHeight) / 3)
   const modalLeft = Math.floor((termWidth - modalWidth) / 2)
 
   return (
