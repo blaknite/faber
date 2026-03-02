@@ -14,6 +14,30 @@ You are running inside a Faber worktree. Faber is a TUI that orchestrates autono
 - Other agents may be running in sibling worktrees on their own branches at the same time.
 - When you finish, your work needs to be committed to your branch so it can be reviewed and merged.
 
+## Inspecting changes relative to the base branch
+
+The initial prompt Faber sends you includes a "Base branch" label. That's the branch your task branch was cut from. Because worktrees share the same git object store, that branch is available by name without any fetch.
+
+To see what your task branch has added on top of it:
+
+```
+git diff <baseBranch>...HEAD
+```
+
+To list the commits on your branch that aren't on the base branch:
+
+```
+git log <baseBranch>..HEAD --oneline
+```
+
+If you want to see what conflicts would exist if your branch were merged into the base branch, you can do a dry run without touching the working tree:
+
+```
+git merge-tree $(git merge-base HEAD <baseBranch>) HEAD <baseBranch>
+```
+
+Conflict markers in that output mean there are overlapping edits. You can use this to decide whether to reorganize your commits, but don't perform the merge yourself. Faber handles merging. Your job is to commit your work cleanly on your own branch and stop there.
+
 ## Handling tool failures
 
 If a tool call fails or permission is rejected, you must continue your work. You MUST NOT stop. Retry the call or try another option.
