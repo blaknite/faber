@@ -196,7 +196,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
     { key: "c", label: "continue", disabled: !selectedTask?.sessionId || selectedTask?.status === "running" },
     { key: "x", label: "done", disabled: !selectedTask || selectedTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !selectedTask },
-    { key: "b", label: "switch branch", disabled: !selectedTask },
+    { key: "b", label: "switch branch" },
     { key: "p", label: "push", disabled: !isDirty },
   ]
 
