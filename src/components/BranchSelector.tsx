@@ -1,0 +1,183 @@
+import { useEffect, useRef, useState } from "react"
+import type { TextareaRenderable } from "@opentui/core"
+import { execSync } from "child_process"
+import type { Task } from "../types.js"
+
+interface Props {
+  repoRoot: string
+  tasks: Task[]
+  currentBranch: string
+  onSwitch: (branch: string) => void
+  onCancel: () => void
+}
+
+function loadBranches(repoRoot: string): string[] {
+  try {
+    const out = execSync(
+      'git branch --sort=-committerdate --format="%(refname:short)"',
+      { cwd: repoRoot, encoding: "utf8" }
+    )
+    return out
+      .split("\n")
+      .map((b) => b.trim())
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCancel }: Props) {
+  const textareaRef = useRef<TextareaRenderable>(null)
+  const [filter, setFilter] = useState("")
+  const [branches, setBranches] = useState<string[]>([])
+  const [cursorIdx, setCursorIdx] = useState(-1)
+
+  useEffect(() => {
+    setBranches(loadBranches(repoRoot))
+  }, [repoRoot])
+
+  const filtered = filter
+    ? branches.filter((b) => b.toLowerCase().includes(filter.toLowerCase()))
+    : branches
+
+  // Clamp cursor when the filtered list shrinks
+  useEffect(() => {
+    setCursorIdx((prev) => {
+      if (filtered.length === 0) return -1
+      if (prev >= filtered.length) return filtered.length - 1
+      return prev
+    })
+  }, [filtered.length])
+
+  // Count running/ready tasks per branch (branch name == task id)
+  const taskCounts: Record<string, { running: number; ready: number }> = {}
+  for (const task of tasks) {
+    if (!taskCounts[task.id]) taskCounts[task.id] = { running: 0, ready: 0 }
+    if (task.status === "running") taskCounts[task.id].running++
+    if (task.status === "ready") taskCounts[task.id].ready++
+  }
+
+  function handleSubmit() {
+    if (cursorIdx >= 0 && cursorIdx < filtered.length) {
+      onSwitch(filtered[cursorIdx]!)
+    } else {
+      const trimmed = filter.trim()
+      if (trimmed) onSwitch(trimmed)
+    }
+  }
+
+  function handleKeyDown(key: { name: string; preventDefault: () => void }) {
+    if (key.name === "escape") {
+      onCancel()
+      key.preventDefault()
+      return
+    }
+    if (key.name === "up") {
+      setCursorIdx((prev) => (prev <= 0 ? filtered.length - 1 : prev - 1))
+      key.preventDefault()
+      return
+    }
+    if (key.name === "down") {
+      setCursorIdx((prev) => (prev >= filtered.length - 1 ? 0 : prev + 1))
+      key.preventDefault()
+      return
+    }
+    if (key.name === "return") {
+      handleSubmit()
+      key.preventDefault()
+      return
+    }
+  }
+
+  const modalWidth = 60
+  const listRows = Math.min(filtered.length, 10)
+  const listHeight = Math.max(listRows, 1)
+  // 4 = input area (1 pad-top + 3 inner), 1 = gap, listHeight = list rows, 1 = bottom padding
+  const modalHeight = 4 + 1 + listHeight + 1
+
+  return (
+    <box
+      style={{
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        width: modalWidth,
+        height: modalHeight,
+        zIndex: 20,
+        backgroundColor: "#111111",
+        flexDirection: "column",
+      }}
+    >
+      {/* Text input */}
+      <box
+        style={{
+          paddingTop: 1,
+          paddingLeft: 1,
+          paddingRight: 1,
+          height: 4,
+        }}
+      >
+        <box
+          border={["left"]}
+          borderColor="#666666"
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: 3 }}
+        >
+          <textarea
+            ref={textareaRef}
+            minHeight={1}
+            maxHeight={1}
+            onContentChange={() => {
+              const val = textareaRef.current?.plainText ?? ""
+              setFilter(val)
+              setCursorIdx(-1)
+            }}
+            onSubmit={handleSubmit}
+            onKeyDown={handleKeyDown}
+            focused
+          />
+          <box style={{ height: 1 }} />
+          <text fg="#555555">filter or new branch  <span fg="#333333">[enter] switch  [esc] cancel</span></text>
+        </box>
+      </box>
+
+      {/* Branch list */}
+      <box style={{ paddingLeft: 1, paddingRight: 1, height: listHeight + 1 }}>
+        <scrollbox scrollY scrollX={false} style={{ flexGrow: 1 }}>
+          <box style={{ flexDirection: "column" }}>
+            {filtered.length === 0 ? (
+              <box style={{ height: 1 }}>
+                <text fg="#444444">{filter ? "no matches -- press enter to create" : "no branches"}</text>
+              </box>
+            ) : (
+              filtered.map((branch, i) => {
+                const isCurrent = branch === currentBranch
+                const isSelected = i === cursorIdx
+                const counts = taskCounts[branch]
+                const hasRunning = counts && counts.running > 0
+                const hasReady = counts && counts.ready > 0
+
+                let indicator = ""
+                if (hasRunning || hasReady) {
+                  const parts: string[] = []
+                  if (hasRunning) parts.push(`${counts!.running} running`)
+                  if (hasReady) parts.push(`${counts!.ready} ready`)
+                  indicator = `  [${parts.join(", ")}]`
+                }
+
+                const bgColor = isSelected ? "#D4963F" : "#111111"
+                const fgColor = isSelected ? "#000000" : isCurrent ? "#ffffff" : "#888888"
+                const marker = isCurrent ? "* " : "  "
+
+                return (
+                  <box key={branch} style={{ height: 1, backgroundColor: bgColor }}>
+                    <text fg={fgColor}>{marker}{branch}{indicator}</text>
+                  </box>
+                )
+              })
+            )}
+          </box>
+        </scrollbox>
+      </box>
+    </box>
+  )
+}

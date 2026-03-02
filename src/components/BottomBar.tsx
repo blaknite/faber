@@ -1,5 +1,4 @@
 import { useSpinnerFrame } from "../lib/tick.js"
-import { BranchInput } from "./BranchInput.js"
 import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
 import type { Task, Mode, Model } from "../types.js"
@@ -41,8 +40,6 @@ interface Props {
   selectedTask: Task | null
   currentBranch: string
   bindings: Binding[]
-  onBranchSubmit: (branch: string) => void
-  onBranchCancel: () => void
   onContinueSubmit: (prompt?: string, model?: Model) => void
   onContinueCancel: () => void
 }
@@ -56,8 +53,6 @@ export function BottomBar({
   selectedTask,
   currentBranch,
   bindings,
-  onBranchSubmit,
-  onBranchCancel,
   onContinueSubmit,
   onContinueCancel,
 }: Props) {
@@ -70,10 +65,6 @@ export function BottomBar({
         <text fg={flashColor}>{flashMessage}</text>
       </box>
     )
-  }
-
-  if (mode === "switch_branch") {
-    return <BranchInput onSubmit={onBranchSubmit} onCancel={onBranchCancel} />
   }
 
   if (mode === "continue") {
