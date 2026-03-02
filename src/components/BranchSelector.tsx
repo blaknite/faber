@@ -191,7 +191,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
             focused
           />
           <box style={{ height: 1 }} />
-          <text fg="#555555">[enter] switch  [esc] cancel</text>
+          <text fg="#333333">[enter] switch  [esc] cancel</text>
         </box>
       </box>
 
