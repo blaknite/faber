@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { RGBA } from "@opentui/core"
 import type { TextareaRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import { execSync } from "child_process"
@@ -102,18 +103,30 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
   const modalLeft = Math.floor((termWidth - modalWidth) / 2)
 
   return (
-    <box
-      style={{
-        position: "absolute",
-        top: modalTop,
-        left: modalLeft,
-        width: modalWidth,
-        height: modalHeight,
-        zIndex: 20,
-        backgroundColor: "#111111",
-        flexDirection: "column",
-      }}
-    >
+    <>
+      <box
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: termWidth,
+          height: termHeight,
+          zIndex: 15,
+          backgroundColor: RGBA.fromValues(0, 0, 0, 0.5),
+        }}
+      />
+      <box
+        style={{
+          position: "absolute",
+          top: modalTop,
+          left: modalLeft,
+          width: modalWidth,
+          height: modalHeight,
+          zIndex: 20,
+          backgroundColor: "#111111",
+          flexDirection: "column",
+        }}
+      >
       {/* Text input */}
       <box
         style={{
@@ -185,5 +198,6 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
         </scrollbox>
       </box>
     </box>
+    </>
   )
 }
