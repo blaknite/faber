@@ -160,7 +160,7 @@ export function BranchSelector({ repoRoot, tasks, currentBranch, onSwitch, onCan
           height: 3,
         }}
       >
-        <text fg="#555555">filter or new branch</text>
+        <text fg="#555555">switch branch</text>
         <text fg="#333333">[enter] switch  [esc] cancel</text>
       </box>
 
