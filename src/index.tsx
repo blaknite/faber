@@ -2,9 +2,9 @@ import { createCliRenderer } from "@opentui/core"
 import { createRoot } from "@opentui/react"
 import { resolve, join } from "node:path"
 import { homedir } from "node:os"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath } from "./lib/state.js"
+import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
 import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
@@ -81,6 +81,7 @@ Usage: faber [command] [options]
 Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
+  watch <taskId>    Watch a task and exit when it stops running
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
@@ -95,6 +96,7 @@ Examples:
   faber
   faber run "Fix the login bug"
   faber run "Refactor the auth module" --model deep
+  faber watch a3f2-fix-the-login-bug
   faber setup --dir /path/to/repo`)
     exit(0)
   }
@@ -192,6 +194,24 @@ Examples:
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const model = parseModelFlag(args)
     await runHeadless(repoRoot, prompt, model)
+    return
+  }
+
+  // faber watch <taskId> [--dir <repo>]
+  // Watches a task's status and exits when it stops running.
+  if (command === "watch") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error("Usage: faber watch <taskId> [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    await watchTask(repoRoot, taskId)
     return
   }
 
@@ -335,6 +355,66 @@ async function setup(repoRoot: string) {
   }
 
   console.log("Faber setup complete.")
+}
+
+// Poll state.json until the given task is no longer running, then exit.
+// Uses fs.watch for low-latency change detection, with a 1-second fallback
+// interval to handle cases where file-system events are dropped (common on
+// macOS with FSEvents under high I/O).
+async function watchTask(repoRoot: string, taskId: string): Promise<void> {
+  const statePath = stateFilePath(repoRoot)
+
+  function getStatus(): string | null {
+    const state = readState(repoRoot)
+    const task = state.tasks.find((t) => t.id === taskId)
+    return task ? task.status : null
+  }
+
+  const initial = getStatus()
+  if (initial === null) {
+    console.error(`Task "${taskId}" not found`)
+    exit(1)
+  }
+
+  console.log(`Watching task ${taskId} (status: ${initial})`)
+
+  if (initial !== "running") {
+    console.log(`Task ${taskId} is not running (status: ${initial})`)
+    exit(0)
+  }
+
+  return new Promise<void>((resolve) => {
+    let settled = false
+
+    function check() {
+      if (settled) return
+      const status = getStatus()
+      if (status === null) {
+        // Task was removed from state.
+        settled = true
+        watcher.close()
+        clearInterval(interval)
+        console.log(`Task ${taskId} was removed`)
+        resolve()
+        exit(0)
+      }
+      if (status !== "running") {
+        settled = true
+        watcher.close()
+        clearInterval(interval)
+        console.log(`Task ${taskId} finished (status: ${status})`)
+        resolve()
+        exit(0)
+      }
+    }
+
+    const watcher = fsWatch(statePath, () => check())
+    const interval = setInterval(check, 1000)
+
+    watcher.on("error", () => {
+      // If the watch itself errors, fall back to polling only.
+    })
+  })
 }
 
 main().catch((err) => {
