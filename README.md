@@ -124,7 +124,7 @@ faber run "add tests for UserService" --model fast
 | `Tab` | Toggle between side-by-side and inline layout |
 | `c` | Continue task |
 | `l` | Switch to log view |
-| `m` | Merge branch into HEAD (git merge --no-ff, confirms with y/n) |
+| `m` | Rebase branch onto HEAD and fast-forward merge (confirms with y/n) |
 | `x` | Mark task as done |
 | `d` | Delete task and worktree |
 | `,` / `.` | Cycle to next / previous active task |
@@ -156,7 +156,7 @@ When an agent finishes with commits on its branch, the task is marked "ready to 
 1. Select the task and press `enter`. If the branch has commits, you go straight to the diff view. Otherwise you land on the log, where `f` takes you to the diff.
 2. The diff view runs `git diff HEAD...{branch}` (three-dot syntax), so you see exactly what the agent changed relative to the point where work began, regardless of anything that landed on `HEAD` in the meantime.
 3. The diff renders with character-level highlighting and two layout modes: side-by-side (default) and inline. Press `Tab` to switch between them.
-4. When you're happy with the changes, press `m`. You'll get a `[y/n]` confirmation prompt, then faber runs `git merge --no-ff {branch}` from the repo root. The `--no-ff` flag forces a merge commit so the history clearly records that these commits came from an agent task. If the merge fails (conflicts, etc.), faber automatically aborts and leaves your repo clean.
+4. When you're happy with the changes, press `m`. You'll get a `[y/n]` confirmation prompt, then faber rebases the task branch onto the current `HEAD` and fast-forward merges it in. The result is a linear history with no merge commits. If the rebase hits a conflict, faber automatically aborts and leaves your repo clean.
 5. After merging, the task moves to "done". The worktree and branch are still there so you can review the log or diff again. When you're done with them, press `d` to delete the worktree and branch in one go.
 
 ## Working with feature branches
