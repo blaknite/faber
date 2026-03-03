@@ -116,8 +116,10 @@ export function fuzzyScore(candidate: string, query: string): number {
 }
 
 // A single autocomplete suggestion. Files carry their path as the value;
-// tasks carry their ID. The filterText field holds the full task prompt so
-// it can be searched during fuzzy matching without being rendered anywhere.
+// tasks carry their ID. The filterText field holds the LLM-generated summary
+// of the task so it can be searched during fuzzy matching without being
+// rendered anywhere. When absent the selector falls back to matching on the
+// task slug alone.
 export interface Suggestion {
   type: "file" | "task"
   value: string
@@ -162,7 +164,7 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
       return state.tasks.map((t): Suggestion => ({
         type: "task",
         value: t.id,
-        filterText: t.prompt.slice(0, 200),
+        ...(t.filterText !== undefined ? { filterText: t.filterText } : {}),
       }))
     } catch {
       return []
