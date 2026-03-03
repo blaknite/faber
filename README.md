@@ -105,7 +105,7 @@ faber read <taskId> --dir /path/to/repo
 
 ### Cross-task references
 
-Agents can pull context from other tasks by referencing them with `@taskId` in a prompt. When you submit a prompt containing a task reference, faber injects a `<task-reference>` block that tells the agent what the referenced task was about and how to read its output. The agent then calls `faber read <taskId>` to fetch the log and use whatever it needs.
+Agents can pull context from other tasks by referencing them with `@taskId` in a prompt. Selecting a task from the autocomplete inserts the task ID (e.g. `@a3f2-fix-login-bug`) into the prompt as plain text. Faber doesn't do anything special with it beyond that -- the `working-in-faber` skill, which is injected into every agent prompt, teaches the agent to recognise the `@taskId` pattern and run `faber read <taskId>` to pull the output and extract whatever context it needs.
 
 This is useful when one task builds on the work of another -- for example, pointing a "write tests" task at a completed "refactor UserService" task so the agent can see exactly what changed before writing assertions.
 
