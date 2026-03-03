@@ -10,7 +10,8 @@ import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { checkAndUpdate } from "./lib/update.js"
-import { formatElapsed } from "./lib/logParser.js"
+import { formatElapsed, readLogEntries } from "./lib/logParser.js"
+import { formatLog } from "./lib/formatLog.js"
 import type { Task, TaskStatus } from "./types.js"
 import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 
@@ -90,6 +91,7 @@ Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
   list              Print all tasks as a table
+  read <taskId>     Print the log for a task
   watch <taskId>    Watch a task and exit when it stops running
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
@@ -101,6 +103,8 @@ Options:
   --model <label>   Model to use for the task: smart, fast, or deep
                     (only applies to the run command)
   --status <status> Filter tasks by status (only applies to the list command)
+  --full            Include tool call block content (only applies to the read command)
+  --json            Output raw JSON (only applies to the read command)
 
 Examples:
   faber
@@ -108,6 +112,8 @@ Examples:
   faber run "Refactor the auth module" --model deep
   faber list
   faber list --status ready
+  faber read a3f2-fix-the-login-bug
+  faber read a3f2-fix-the-login-bug --full
   faber watch a3f2-fix-the-login-bug
   faber setup --dir /path/to/repo`)
     exit(0)
@@ -219,6 +225,30 @@ Examples:
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const model = parseModelFlag(args)
     await runHeadless(repoRoot, prompt, model)
+    return
+  }
+
+  // faber read <taskId> [--full] [--json] [--dir <repo>]
+  // Print the log for a task. By default shows the prompt and text output with
+  // tool calls summarised as one-liners. --full adds block content; --json
+  // outputs the raw LogEntry array.
+  if (command === "read") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error("Usage: faber read <taskId> [--full] [--json] [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const full = args.includes("--full")
+    const json = args.includes("--json")
+    const entries = readLogEntries(repoRoot, taskId)
+    const output = formatLog(entries, { full, json })
+    console.log(output)
     return
   }
 
