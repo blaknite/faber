@@ -97,6 +97,7 @@ Commands:
   watch <taskId>    Watch a task and exit when it stops running
   diff <taskId>     Print the unified diff for a task's branch
   merge <taskId>    Merge a ready task branch and remove its worktree
+  done <taskId>     Mark a ready task as done without merging or cleaning up
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
@@ -234,6 +235,19 @@ Options:
 Examples:
   faber merge a3f2-fix-the-login-bug
   faber merge a3f2-fix-the-login-bug --dir /path/to/repo`)
+        exit(0)
+      case "done":
+        console.log(`Usage: faber done <taskId> [options]
+
+Mark a ready task as done. The worktree and branch are left intact -- this is
+a pure bookkeeping action. Use "faber merge" instead if you want to merge the
+changes and remove the worktree.
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber done a3f2-fix-the-login-bug`)
         exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
@@ -503,6 +517,34 @@ Check for a new release on GitHub and install it if one is available.`)
       exit(1)
     }
     await removeWorktree(repoRoot, taskId)
+    updateTask(repoRoot, taskId, { status: "done" })
+    return
+  }
+
+  // faber done <taskId> [--dir <repo>]
+  // Marks a ready task as done without touching the worktree or branch.
+  if (command === "done") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error("Usage: faber done <taskId> [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const state = readState(repoRoot)
+    const task = state.tasks.find((t) => t.id === taskId)
+    if (!task) {
+      console.error(`Task "${taskId}" not found`)
+      exit(1)
+    }
+    if (task.status !== "ready") {
+      console.error(`Task "${taskId}" has status "${task.status}" -- only "ready" tasks can be marked done`)
+      exit(1)
+    }
     updateTask(repoRoot, taskId, { status: "done" })
     return
   }
