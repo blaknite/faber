@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } 
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
-import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
+import { createWorktree, worktreeHasCommits, readCurrentBranch } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
@@ -437,6 +437,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
 
   const slug = generateSlug(prompt)
   const worktree = `.worktrees/${slug}`
+  const baseBranch = readCurrentBranch(repoRoot)
   const task: Task = {
     id: slug,
     prompt,
@@ -449,6 +450,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
     completedAt: null,
     exitCode: null,
     hasCommits: false,
+    baseBranch,
   }
 
   addTask(repoRoot, task)
