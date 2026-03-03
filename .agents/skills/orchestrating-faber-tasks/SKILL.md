@@ -7,9 +7,9 @@ description: Runs a full multi-task orchestration loop from start to finish. Use
 
 This skill covers the full loop: break a goal into sub-tasks, dispatch them in parallel, wait for results, route each one, and repeat until the work is done.
 
-For the primitives, load the supporting skills:
-- `running-faber-tasks` -- how to run and watch tasks
-- `reading-faber-tasks` -- how to read task logs and list tasks
+Load these supporting skills before starting -- they cover the primitives this skill builds on:
+- `running-faber-tasks` -- how to write prompts, run tasks, and watch for completion
+- `reading-faber-tasks` -- how to list tasks and read their logs
 - `merging-faber-tasks` -- how to route a finished task (merge, done, or continue)
 
 ## The loop at a glance
@@ -37,34 +37,11 @@ A task must sequence when:
 
 If in doubt, lean toward sequencing. Two tasks that conflict on the same file are harder to recover from than a slightly longer wall clock time.
 
-## Step 2: Write self-contained prompts
+## Step 2: Write prompts and dispatch the batch
 
-Each sub-task runs in its own isolated worktree. The agent starts cold -- it has only what you put in the prompt and what it can discover from the code. Don't assume it knows the goal of the wider effort.
+Write prompts following the guidance in `running-faber-tasks`. Each sub-task runs in its own isolated worktree, so the agent starts cold -- include everything it needs in the prompt.
 
-A good sub-task prompt includes:
-
-- **What to do** -- specific enough that the agent can start without guessing
-- **What done looks like** -- the expected behaviour or test outcome
-- **Relevant constraints** -- known pitfalls, things to avoid, related files to check
-- **Base branch** -- always include `Base branch: <branch>` at the end
-
-Example:
-
-```
-Add request validation to the POST /api/exports endpoint.
-
-The endpoint currently accepts any body. It should reject requests missing
-the `format` field (valid values: csv, json, xlsx) with a 422 and a
-descriptive error message.
-
-Add tests covering the happy path and each invalid input case.
-
-Base branch: main
-```
-
-Keep prompts focused. A task that tries to do too much is hard to review and hard to continue if it goes sideways. If the scope feels large, split it.
-
-## Step 3: Dispatch the batch
+Always end each sub-task prompt with `Base branch: <branch>` so the agent knows where it was cut from.
 
 Run all independent tasks upfront. Capture the task ID from each `faber run` output -- you'll need them to watch and route.
 
@@ -74,116 +51,66 @@ faber run "Add validation to POST /api/exports. ... Base branch: main"
 
 faber run "Add validation to POST /api/imports. ... Base branch: main"
 # Dispatching task: c3d4-add-import-validation
-
-faber run "Write integration tests for the validation middleware. ... Base branch: main"
-# Dispatching task: e5f6-validation-integration-tests
 ```
 
 Note which tasks are independent and which are waiting on others. Don't dispatch a dependent task until the task it depends on has been merged.
 
-## Step 4: Wait for the batch
+## Step 3: Wait for the batch
 
-Watch all running tasks. Run multiple `faber watch` calls in parallel -- each one blocks until its task finishes, and they don't interfere with each other.
+Watch all running tasks in parallel -- each one blocks until its task finishes, and they don't interfere with each other.
 
 ```bash
 faber watch a1b2-add-export-validation &
 faber watch c3d4-add-import-validation &
-faber watch e5f6-validation-integration-tests &
 wait
 ```
 
-If you can't run them in the background, run them sequentially. The order doesn't matter much -- each one exits as soon as its task is ready.
+If you can't run them in the background, run them sequentially. The order doesn't matter -- each one exits as soon as its task is ready.
 
-## Step 5: Route each finished task
+## Step 4: Route each finished task
 
-Once a task finishes, run through the `merging-faber-tasks` decision loop for it: read the log, inspect the diff, then pick merge, done, or continue.
+Once a task finishes, run through the `merging-faber-tasks` decision loop: read the log, inspect the diff, then pick merge, done, or continue.
 
 Do this for each task in the batch before dispatching the next round.
 
-### Mixed outcomes
+Don't wait for all tasks to finish before acting on the ones that are ready. Merge what's clean, continue what needs fixing, and move to the next round with whatever is left.
 
-A batch rarely finishes cleanly all at once. Expect a mix:
+## Step 5: Dispatch follow-up tasks
 
-- **Merged** -- the work is in, no further action needed for this task
-- **Done (no commits)** -- the agent correctly found nothing to change; move on
-- **Continued** -- the output needed correction; re-watch this task before the next round
+After dependent tasks are merged, dispatch the work that was waiting on them.
 
-Don't wait for all tasks to merge before acting on the ones that are ready. Merge what's clean, continue what needs fixing, and move to the next round with whatever is left.
-
-Example routing after a batch finishes:
-
-```bash
-# a1b2 looks good
-faber read a1b2-add-export-validation   # log looks clean
-faber diff a1b2-add-export-validation   # diff looks right
-faber merge a1b2-add-export-validation
-
-# c3d4 missed a case
-faber read c3d4-add-import-validation   # agent skipped the 422 for missing format
-faber continue c3d4-add-import-validation "The 422 response for a missing format field is missing. Add it and update the tests."
-faber watch c3d4-add-import-validation
-faber merge c3d4-add-import-validation
-
-# e5f6 made no commits -- the tests already existed
-faber done e5f6-validation-integration-tests
-```
-
-## Step 6: Dispatch follow-up tasks
-
-After the first round is merged, you can dispatch tasks that depended on that work.
-
-```bash
-# Now that validation is in, dispatch the dependent task
-faber run "Update the API docs to document the new 422 responses for /api/exports and /api/imports. ... Base branch: main"
-# Dispatching task: g7h8-update-api-docs
-```
-
-Keep track of what's been merged and what's still in flight. A simple mental (or written) list works:
+Keep track of what's been merged and what's still in flight. A simple list works:
 
 ```
 Round 1 (parallel):
   a1b2-add-export-validation    -> merged
   c3d4-add-import-validation    -> merged (after continue)
-  e5f6-validation-integration-tests -> done
 
 Round 2 (depends on round 1):
   g7h8-update-api-docs          -> watching...
 ```
 
-## Step 7: Recognise when you're done
+## Step 6: Recognise when you're done
 
 The goal is complete when:
 - All tasks are either merged or done
 - No tasks are running or waiting
 - Nothing from the original goal is unaddressed
 
-Run `faber list` to confirm nothing is still running or stuck in a ready state:
-
-```bash
-faber list
-```
-
-If everything is `done` and the goal is met, the orchestration loop is finished.
+Run `faber list` to confirm nothing is still running or stuck in a ready state. If everything is `done` and the goal is met, the orchestration loop is finished.
 
 ## Handling failures and stuck tasks
 
-If a task fails or the agent stops without finishing:
-
-```bash
-faber continue <taskId> "<corrected direction>"
-faber watch <taskId>
-```
-
 If a task fails the same way twice, the prompt is probably wrong. Rewrite it with more context, a different scope, or a more constrained goal before continuing.
 
-If a task keeps failing and the work can be done a different way, consider dismissing it and dispatching a new task with a different approach:
+If a task keeps failing and the work can be done a different way, dismiss it and dispatch a replacement:
 
 ```bash
 faber done <taskId>   # dismiss the stuck task
 faber run "..."       # dispatch a replacement with a different framing
 ```
 
-If a merge fails due to a conflict, follow the conflict recovery steps in `merging-faber-tasks`. Two tasks that touched the same file is the most common cause -- give the second agent enough context about what the first one changed so it can resolve the conflict cleanly.
+If a merge fails due to a conflict, follow the conflict recovery steps in `merging-faber-tasks`.
 
 ## Example: full orchestration
 
@@ -196,8 +123,9 @@ faber run "Add Redis client config. The rate limiter will use Redis as the store
 # Dispatching task: bb22-redis-client-config
 
 # Wait for both
-faber watch aa11-rate-limiting-middleware
-faber watch bb22-redis-client-config
+faber watch aa11-rate-limiting-middleware &
+faber watch bb22-redis-client-config &
+wait
 
 # Route them
 faber read aa11-rate-limiting-middleware && faber diff aa11-rate-limiting-middleware
