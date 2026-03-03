@@ -162,7 +162,7 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
       return state.tasks.map((t): Suggestion => ({
         type: "task",
         value: t.id,
-        filterText: t.prompt,
+        filterText: t.prompt.slice(0, 200),
       }))
     } catch {
       return []
