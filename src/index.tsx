@@ -10,7 +10,8 @@ import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { checkAndUpdate } from "./lib/update.js"
-import type { Task } from "./types.js"
+import { formatElapsed } from "./lib/logParser.js"
+import type { Task, TaskStatus } from "./types.js"
 import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 
 // Single exit point for the process. Everything routes through here so it's
@@ -23,6 +24,13 @@ function exit(code: number): never {
 function parseDirFlag(args: string[]): string | null {
   const i = args.indexOf("--dir")
   if (i !== -1 && args[i + 1]) return resolve(args[i + 1]!)
+  return null
+}
+
+// Parse --status <value> from an args array. Returns the status string or null.
+function parseStatusFlag(args: string[]): TaskStatus | null {
+  const i = args.indexOf("--status")
+  if (i !== -1 && args[i + 1]) return args[i + 1] as TaskStatus
   return null
 }
 
@@ -81,6 +89,7 @@ Usage: faber [command] [options]
 Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
+  list              Print all tasks as a table
   watch <taskId>    Watch a task and exit when it stops running
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
@@ -91,11 +100,14 @@ Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
   --model <label>   Model to use for the task: smart, fast, or deep
                     (only applies to the run command)
+  --status <status> Filter tasks by status (only applies to the list command)
 
 Examples:
   faber
   faber run "Fix the login bug"
   faber run "Refactor the auth module" --model deep
+  faber list
+  faber list --status ready
   faber watch a3f2-fix-the-login-bug
   faber setup --dir /path/to/repo`)
     exit(0)
@@ -105,6 +117,19 @@ Examples:
   if (command === "version") {
     console.log(VERSION)
     exit(0)
+  }
+
+  // faber list [--dir <repo>] [--status <status>]
+  if (command === "list") {
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const statusFilter = parseStatusFlag(args)
+    listTasks(repoRoot, statusFilter)
+    return
   }
 
   // faber finish <taskId> <exitCode>
@@ -417,7 +442,46 @@ async function watchTask(repoRoot: string, taskId: string): Promise<void> {
   })
 }
 
-main().catch((err) => {
-  console.error(err)
-  exit(1)
-})
+// Print tasks as a table: ID, status, elapsed time, and truncated prompt.
+// The prompt column is sized to fill the remaining terminal width.
+export function listTasks(repoRoot: string, statusFilter: TaskStatus | null): void {
+  const state = readState(repoRoot)
+  let tasks = state.tasks
+
+  if (statusFilter !== null) {
+    tasks = tasks.filter((t) => t.status === statusFilter)
+  }
+
+  if (tasks.length === 0) {
+    return
+  }
+
+  const now = Date.now()
+
+  const idWidth = Math.max(...tasks.map((t) => t.id.length))
+  const statusWidth = Math.max(...tasks.map((t) => t.status.length))
+  const elapsedWidth = Math.max(...tasks.map((t) => formatElapsed(t.startedAt, t.completedAt, now).length))
+
+  // Use stdout columns if available, otherwise fall back to 80.
+  const termWidth = process.stdout.columns ?? 80
+  // 3 spaces between each of the 4 columns, so 9 spaces total as separators.
+  const separators = 9
+  const promptWidth = Math.max(10, termWidth - idWidth - statusWidth - elapsedWidth - separators)
+
+  for (const task of tasks) {
+    const id = task.id.padEnd(idWidth)
+    const status = task.status.padEnd(statusWidth)
+    const elapsed = formatElapsed(task.startedAt, task.completedAt, now).padEnd(elapsedWidth)
+    const prompt = task.prompt.length > promptWidth
+      ? task.prompt.slice(0, promptWidth - 3) + "..."
+      : task.prompt
+    console.log(`${id}   ${status}   ${elapsed}   ${prompt}`)
+  }
+}
+
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(err)
+    exit(1)
+  })
+}
