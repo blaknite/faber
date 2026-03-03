@@ -599,9 +599,10 @@ export function listTasks(repoRoot: string, statusFilter: TaskStatus | null): vo
     const id = task.id.padEnd(idWidth)
     const status = task.status.padEnd(statusWidth)
     const elapsed = formatElapsed(task.startedAt, task.completedAt, now).padEnd(elapsedWidth)
-    const prompt = task.prompt.length > promptWidth
-      ? task.prompt.slice(0, promptWidth - 3) + "..."
-      : task.prompt
+    const displayText = task.summaryText ?? task.prompt
+    const prompt = displayText.length > promptWidth
+      ? displayText.slice(0, promptWidth - 3) + "..."
+      : displayText
     console.log(`${id}   ${status}   ${elapsed}   ${prompt}`)
   }
 }

@@ -92,6 +92,22 @@ describe("listTasks", () => {
     expect(lines[0]).toContain("Fix the crash")
   })
 
+  it("uses summaryText instead of prompt when present", () => {
+    const prompt = "Fix the crash when users with no avatar try to log in"
+    const summaryText = "fix avatar crash on login"
+    writeState(tmpRoot, { tasks: [makeTask({ prompt, summaryText })] })
+    listTasks(tmpRoot, null)
+    expect(lines[0]).toContain(summaryText)
+    expect(lines[0]).not.toContain(prompt)
+  })
+
+  it("falls back to prompt when summaryText is absent", () => {
+    const prompt = "Fix the crash when users with no avatar try to log in"
+    writeState(tmpRoot, { tasks: [makeTask({ prompt })] })
+    listTasks(tmpRoot, null)
+    expect(lines[0]).toContain("Fix the crash")
+  })
+
   it("truncates long prompts with ellipsis", () => {
     const prompt = "A".repeat(500)
     writeState(tmpRoot, { tasks: [makeTask({ prompt })] })
