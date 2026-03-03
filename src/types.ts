@@ -27,6 +27,7 @@ export function resolveModel(input: string): Model | null {
 export interface Task {
   id: string              // e.g. "a3f2-resolve-issue-uic-002"
   prompt: string          // the raw prompt sent to opencode
+  filterText?: string     // LLM-generated summary of the prompt, used for fuzzy matching in the selector
   model: Model            // the opencode model to use
   status: TaskStatus
   pid: number | null      // null after process exits
