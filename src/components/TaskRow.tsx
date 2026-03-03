@@ -1,9 +1,24 @@
 import { createTextAttributes } from "@opentui/core"
 import type { BoxRenderable } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/react"
 import type { Task } from "../types.js"
 import { useSpinnerFrame } from "../lib/tick.js"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
 import { formatElapsed } from "../lib/logParser.js"
+
+// Characters consumed by the layout surrounding the summary text:
+//   AgentList outer paddingLeft (1) + AgentList inner paddingLeft (1)
+//   + TaskRow border left (1) + TaskRow paddingLeft (1)
+//   + summary box border left (1) + summary box paddingLeft (1)
+//   + summary box paddingRight (1) + TaskRow paddingRight (1)
+//   + AgentList inner paddingRight (1) + AgentList outer paddingRight (1)
+//   + scrollbox content paddingRight (1)
+const SUMMARY_HORIZONTAL_OVERHEAD = 11
+
+function truncateWithEllipsis(text: string, maxWidth: number): string {
+  if (text.length <= maxWidth) return text
+  return text.slice(0, Math.max(0, maxWidth - 1)) + "\u2026"
+}
 
 function RunningStatus({ task, selected }: { task: Task; selected: boolean }) {
   const frame = useSpinnerFrame()
@@ -37,6 +52,12 @@ function StaticStatus({ task, selected }: { task: Task; selected: boolean }) {
 }
 
 export function TaskRow({ task, index, selected, cardRef }: Props) {
+  const { width: termWidth } = useTerminalDimensions()
+  const summaryText = truncateWithEllipsis(
+    (task.summaryText || task.prompt).split("\n")[0],
+    termWidth - SUMMARY_HORIZONTAL_OVERHEAD,
+  )
+
   return (
     <box key={task.id} ref={cardRef} style={{ flexDirection: "column" }}>
       {index > 0 && <box border={["top"]} borderColor="#222222" />}
@@ -65,9 +86,9 @@ export function TaskRow({ task, index, selected, cardRef }: Props) {
         <box
           border={["left"]}
           borderColor="#ffffff"
-          style={{ marginTop: 1, paddingLeft: 1 }}
+          style={{ marginTop: 1, paddingLeft: 1, paddingRight: 1 }}
         >
-          <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} wrapMode="none" truncate>{(task.summaryText || task.prompt).split("\n")[0]}</text>
+          <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} wrapMode="none">{summaryText}</text>
         </box>
       </box>
     </box>
