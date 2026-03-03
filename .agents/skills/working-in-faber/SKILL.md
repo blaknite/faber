@@ -40,34 +40,7 @@ Conflict markers in that output mean there are overlapping edits. You can use th
 
 ## Reading other tasks
 
-While you're working, other agents may be running in parallel on sibling tasks. You can inspect them using `faber list` and `faber read`.
-
-`faber list` prints a table of all tasks with their ID, status, elapsed time, and prompt:
-
-```bash
-faber list
-```
-
-Filter by status to narrow it down:
-
-```bash
-faber list --status running
-faber list --status ready
-```
-
-`faber read` prints the log for a specific task. Pass the task ID (the slug from `faber list`):
-
-```bash
-faber read a3f2-fix-the-login-bug
-```
-
-By default, tool calls are summarised as one-liners. Use `--full` to see the complete output including bash output, file contents, and diffs:
-
-```bash
-faber read a3f2-fix-the-login-bug --full
-```
-
-This is useful when you need to understand what another task has already done before you start work that might overlap with it.
+While you're working, other agents may be running in parallel on sibling tasks. Load the `reading-faber-tasks` skill to inspect them.
 
 ## Handling tool failures
 
