@@ -76,7 +76,7 @@ export function useKeyboardRouter({
     }
 
     if (key.name === "escape") {
-      if (mode === "kill" || mode === "delete" || mode === "merge" || mode === "push") { setMode("normal"); return }
+      if (mode === "kill" || mode === "delete" || mode === "done" || mode === "merge" || mode === "push") { setMode("normal"); return }
       if (paneTaskId !== null) { setPaneTaskId(null); return }
       return
     }
@@ -102,6 +102,12 @@ export function useKeyboardRouter({
         setMode("normal")
         return
       }
+      if (key.name === "n" || key.name === "q") { setMode("normal"); return }
+      return
+    }
+
+    if (mode === "done") {
+      if (key.name === "y") { handleMarkDone(activeTask); setMode("normal"); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
@@ -151,7 +157,7 @@ export function useKeyboardRouter({
           return
         }
         if (key.name === "x") {
-          if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
+          if (paneTask && paneTask.status === "ready") setMode("done")
           return
         }
         if (key.name === "d") {
@@ -175,7 +181,7 @@ export function useKeyboardRouter({
           return
         }
         if (key.name === "x") {
-          if (paneTask && paneTask.status === "ready") handleMarkDone(paneTask)
+          if (paneTask && paneTask.status === "ready") setMode("done")
           return
         }
         if (key.name === "d") {
@@ -202,7 +208,7 @@ export function useKeyboardRouter({
     }
     if (key.name === "b") { setMode("switch_branch"); return }
     if (key.name === "x") {
-      if (selectedTask && selectedTask.status === "ready") handleMarkDone(selectedTask)
+      if (selectedTask && selectedTask.status === "ready") setMode("done")
       return
     }
     if (key.name === "d") {

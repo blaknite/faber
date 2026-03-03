@@ -79,6 +79,10 @@ export function BottomBar({
     return <ConfirmPrompt message={`Delete ${activeTask.id}?`} />
   }
 
+  if (mode === "done" && activeTask) {
+    return <ConfirmPrompt message={`Mark ${activeTask.id} as done?`} />
+  }
+
   if (mode === "merge" && activeTask) {
     return <ConfirmPrompt message={`Merge ${activeTask.id} into HEAD?`} />
   }
