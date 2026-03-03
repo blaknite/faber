@@ -79,19 +79,28 @@ export async function getDiff(repoRoot: string, slug: string): Promise<string> {
   return stdout
 }
 
-// Returns all files tracked by git that are not gitignored, relative to the
-// repo root. Uses `git ls-files` so the result respects .gitignore and any
-// other git exclude rules.
-export async function getProjectFiles(repoRoot: string): Promise<string[]> {
-  const { stdout } = await execa("git", ["ls-files"], { cwd: repoRoot })
-  return stdout.split("\n").filter(Boolean)
+// Returns all files visible to git (tracked + untracked, but not gitignored),
+// relative to the repo root. Combines `git ls-files` for tracked files and
+// `git ls-files --others --exclude-standard` for untracked ones.
+async function getAllProjectFiles(repoRoot: string): Promise<string[]> {
+  const [{ stdout: tracked }, { stdout: untracked }] = await Promise.all([
+    execa("git", ["ls-files"], { cwd: repoRoot }),
+    execa("git", ["ls-files", "--others", "--exclude-standard"], { cwd: repoRoot }),
+  ])
+  const files = [...tracked.split("\n"), ...untracked.split("\n")].filter(Boolean)
+  return [...new Set(files)].sort()
 }
 
-// Returns all unique directories that contain tracked files, relative to the
-// repo root. Derived from `git ls-files` so it respects .gitignore.
+// Returns all files visible to git (tracked + untracked, but not gitignored),
+// relative to the repo root.
+export async function getProjectFiles(repoRoot: string): Promise<string[]> {
+  return getAllProjectFiles(repoRoot)
+}
+
+// Returns all unique directories that contain tracked or untracked files,
+// relative to the repo root. Respects .gitignore via `git ls-files`.
 export async function getProjectDirectories(repoRoot: string): Promise<string[]> {
-  const { stdout } = await execa("git", ["ls-files"], { cwd: repoRoot })
-  const files = stdout.split("\n").filter(Boolean)
+  const files = await getAllProjectFiles(repoRoot)
   const seen = new Set<string>()
   for (const file of files) {
     const parts = file.split("/")
