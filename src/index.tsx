@@ -4,7 +4,7 @@ import { resolve, join } from "node:path"
 import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
+import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
@@ -98,6 +98,7 @@ Commands:
   diff <taskId>     Print the unified diff for a task's branch
   merge <taskId>    Merge a ready task branch and remove its worktree
   done <taskId>     Mark a ready task as done without merging or cleaning up
+  delete <taskId>   Delete a task and remove its worktree and branch
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
@@ -248,6 +249,20 @@ Options:
 
 Examples:
   faber done a3f2-fix-the-login-bug`)
+        exit(0)
+      case "delete":
+        console.log(`Usage: faber delete <taskId> [options]
+
+Delete a task and remove its worktree and branch. This is destructive and
+cannot be undone. You will be asked to confirm unless --yes is passed.
+
+Options:
+  --yes             Skip the confirmation prompt (useful in scripts and agents)
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber delete a3f2-fix-the-login-bug
+  faber delete a3f2-fix-the-login-bug --yes`)
         exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
@@ -546,6 +561,69 @@ Check for a new release on GitHub and install it if one is available.`)
       exit(1)
     }
     updateTask(repoRoot, taskId, { status: "done" })
+    return
+  }
+
+  // faber delete <taskId> [--yes] [--dir <repo>]
+  // Removes the task from state, removes its worktree, and deletes its branch.
+  // Destructive and irreversible -- requires confirmation unless --yes is set.
+  if (command === "delete") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error("Usage: faber delete <taskId> [--yes] [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const state = readState(repoRoot)
+    const task = state.tasks.find((t) => t.id === taskId)
+    if (!task) {
+      console.error(`Task "${taskId}" not found`)
+      exit(1)
+    }
+    if (task.status === "running") {
+      console.error(`Task "${taskId}" is currently running. Stop it before deleting.`)
+      exit(1)
+    }
+    const skipConfirm = args.includes("--yes")
+    if (!skipConfirm) {
+      process.stdout.write(`Delete task "${taskId}" and remove its worktree and branch? This cannot be undone. [y/N] `)
+      const confirmed = await new Promise<boolean>((resolve) => {
+        let input = ""
+        process.stdin.setEncoding("utf8")
+        process.stdin.setRawMode?.(true)
+        process.stdin.resume()
+        process.stdin.on("data", (chunk: string) => {
+          const char = chunk.toString()
+          if (char === "\r" || char === "\n") {
+            process.stdin.setRawMode?.(false)
+            process.stdin.pause()
+            process.stdout.write("\n")
+            resolve(input.toLowerCase() === "y")
+          } else if (char === "\u0003") {
+            // Ctrl-C
+            process.stdin.setRawMode?.(false)
+            process.stdin.pause()
+            process.stdout.write("\n")
+            resolve(false)
+          } else {
+            input += char
+            process.stdout.write(char)
+          }
+        })
+      })
+      if (!confirmed) {
+        console.log("Aborted.")
+        exit(0)
+      }
+    }
+    await removeWorktree(repoRoot, taskId)
+    removeTask(repoRoot, taskId)
+    console.log(`Deleted task "${taskId}"`)
     return
   }
 
