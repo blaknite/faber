@@ -84,6 +84,3 @@ faber watch a3f2-fix-the-login-bug
 # Task a3f2-fix-the-login-bug finished (status: ready)
 ```
 
-## Once a task finishes
-
-When `faber watch` exits, the task status will be `ready`. Load the `merging-faber-tasks` skill to decide what to do next: read the log, inspect the diff, then merge, dismiss, or continue the task.
