@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
-import { getProjectDirectories, getProjectFiles } from "./worktree.js"
+import { getProjectDirectories, getProjectFiles, gitIndexPath } from "./worktree.js"
+import { useFileWatch } from "./useFileWatch.js"
 
 // Pull the @-query out of the text up to the cursor position. Returns the
 // partial filename the user has typed after the last "@" that hasn't been
@@ -136,13 +137,28 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [selectedSuggestion, setSelectedSuggestion] = useState(0)
 
-  // Load files and directories once on mount. Directories come back with a
+  // Fetch files and directories and update state. Directories come back with a
   // trailing slash so the user can tell them apart from files in the list.
-  useEffect(() => {
+  const fetchEntries = useCallback(() => {
     Promise.all([getProjectFiles(repoRoot), getProjectDirectories(repoRoot)])
       .then(([files, dirs]) => setProjectEntries([...files, ...dirs]))
       .catch(() => {})
   }, [repoRoot])
+
+  // Load on mount.
+  useEffect(() => {
+    fetchEntries()
+  }, [fetchEntries])
+
+  // Re-fetch when .git/index changes -- git rewrites it whenever the working
+  // tree changes, so this fires when new files are created or staged. Debounce
+  // by 200ms so bulk operations (e.g. npm install) don't hammer the fetch.
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onIndexChange = useCallback(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(fetchEntries, 200)
+  }, [fetchEntries])
+  useFileWatch(gitIndexPath(repoRoot), onIndexChange)
 
   const projectFilesRef = useRef(projectEntries)
   projectFilesRef.current = projectEntries

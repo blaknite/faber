@@ -45,6 +45,13 @@ export function gitFetchHeadPath(repoRoot: string): string {
   return join(repoRoot, ".git", "FETCH_HEAD")
 }
 
+// Returns the path to .git/index, which git rewrites whenever the working tree
+// changes -- new files added, files staged, etc. Watching this is a reliable
+// proxy for "the set of tracked files has changed".
+export function gitIndexPath(repoRoot: string): string {
+  return join(repoRoot, ".git", "index")
+}
+
 // Reads the current branch name directly from .git/HEAD without spawning a
 // subprocess. Returns an empty string if HEAD is detached or unreadable.
 export function readCurrentBranch(repoRoot: string): string {
