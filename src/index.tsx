@@ -102,7 +102,8 @@ Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
   --model <label>   Model to use for the task: smart, fast, or deep
                     (only applies to the run command)
-  --status <status> Filter tasks by status (only applies to the list command)
+  --status <value>  Filter tasks by status (only applies to the list command)
+                    Valid values: running, ready, done, failed, stopped, unknown
   --full            Include tool call block content (only applies to the read command)
   --json            Output raw JSON (only applies to the read command)
 
@@ -115,8 +116,98 @@ Examples:
   faber read a3f2-fix-the-login-bug
   faber read a3f2-fix-the-login-bug --full
   faber watch a3f2-fix-the-login-bug
-  faber setup --dir /path/to/repo`)
+  faber setup --dir /path/to/repo
+
+Run "faber <command> --help" for help on a specific command.`)
     exit(0)
+  }
+
+  // faber <command> --help
+  // Per-command help. Check for --help in the args before dispatching any command.
+  if (args.includes("--help") || args.includes("-h")) {
+    switch (command) {
+      case "run":
+        console.log(`Usage: faber run "<prompt>" [options]
+
+Dispatch a task headlessly without the TUI. A new git worktree is created and
+an agent is spawned immediately. Use "faber watch <taskId>" to wait for it to
+finish, or "faber read <taskId>" to see its output.
+
+Options:
+  --model <label>   Model to use: smart (default), fast, or deep
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber run "Fix the login bug"
+  faber run "Refactor the auth module" --model deep
+  faber run "Add tests for the billing flow" --dir /path/to/repo`)
+        exit(0)
+      case "list":
+        console.log(`Usage: faber list [options]
+
+Print all tasks as a table showing ID, status, elapsed time, and prompt.
+
+Options:
+  --status <value>  Filter by status: running, ready, done, failed, stopped, unknown
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber list
+  faber list --status running
+  faber list --status ready`)
+        exit(0)
+      case "read":
+        console.log(`Usage: faber read <taskId> [options]
+
+Print the log for a task. By default shows the prompt and text output with tool
+calls summarised as one-liners.
+
+Options:
+  --full            Include full tool call block content
+  --json            Output the raw log as JSON
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber read a3f2-fix-the-login-bug
+  faber read a3f2-fix-the-login-bug --full
+  faber read a3f2-fix-the-login-bug --json`)
+        exit(0)
+      case "watch":
+        console.log(`Usage: faber watch <taskId> [options]
+
+Watch a task and exit when it stops running. Useful for scripting: the exit
+code is 0 regardless of how the task finished.
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber watch a3f2-fix-the-login-bug
+  faber run "Fix the login bug" && faber watch \$(faber list --status running | head -1 | awk '{print \$1}')`)
+        exit(0)
+      case "setup":
+        console.log(`Usage: faber setup [options]
+
+Initialise .faber/ and .worktrees/ in the repo and add them to .gitignore.
+Safe to run multiple times.
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to cwd)
+
+Examples:
+  faber setup
+  faber setup --dir /path/to/repo`)
+        exit(0)
+      case "update":
+        console.log(`Usage: faber update
+
+Check for a new release on GitHub and install it if one is available.`)
+        exit(0)
+      default:
+        // Unknown command with --help: fall through to the main dispatcher,
+        // which will handle it (likely erroring out with a usage message).
+        break
+    }
   }
 
   // faber version
