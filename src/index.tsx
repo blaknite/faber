@@ -7,7 +7,7 @@ import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
-import { spawnAgent } from "./lib/agent.js"
+import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { checkAndUpdate } from "./lib/update.js"
@@ -91,6 +91,7 @@ Usage: faber [command] [options]
 Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
+  continue <taskId> Resume a stopped or failed task
   list              Print all tasks as a table
   read <taskId>     Print the log for a task
   watch <taskId>    Watch a task and exit when it stops running
@@ -114,6 +115,8 @@ Examples:
   faber
   faber run "Fix the login bug"
   faber run "Refactor the auth module" --model deep
+  faber continue a3f2-fix-the-login-bug
+  faber continue a3f2-fix-the-login-bug "do X instead"
   faber list
   faber list --status ready
   faber read a3f2-fix-the-login-bug
@@ -130,6 +133,23 @@ Run "faber <command> --help" for help on a specific command.`)
   // Per-command help. Check for --help in the args before dispatching any command.
   if (args.includes("--help") || args.includes("-h")) {
     switch (command) {
+      case "continue":
+        console.log(`Usage: faber continue <taskId> ["<prompt>"] [options]
+
+Resume a stopped, failed, or unknown task. The agent restarts in the same
+session so it retains context from the previous run.
+
+Arguments:
+  <taskId>          The task ID to resume
+  "<prompt>"        Optional follow-up prompt (default: resume from interruption)
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber continue a3f2-fix-the-login-bug
+  faber continue a3f2-fix-the-login-bug "do X instead"`)
+        exit(0)
       case "run":
         console.log(`Usage: faber run "<prompt>" [options]
 
@@ -333,6 +353,24 @@ Check for a new release on GitHub and install it if one is available.`)
       console.error("Failed to write task status:", (err as Error).message)
     }
     exit(exitCode)
+  }
+
+  // faber continue <taskId> ["<prompt>"] [--dir <repo>]
+  if (command === "continue") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error('Usage: faber continue <taskId> ["<prompt>"] [--dir <repo>]')
+      exit(1)
+    }
+    const prompt = args[2] && !args[2].startsWith("-") ? args[2] : undefined
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    continueTask(repoRoot, taskId, prompt)
+    return
   }
 
   // faber run "<prompt>" [--dir <repo>] [--model <label>]
@@ -663,6 +701,41 @@ async function watchTask(repoRoot: string, taskId: string): Promise<void> {
       // If the watch itself errors, fall back to polling only.
     })
   })
+}
+
+// Resume a stopped, failed, or unknown task by patching its state and
+// re-spawning the agent in the same session. Exits with 1 if the task cannot
+// be resumed. Prints the task ID to stdout so callers can pipe it into
+// `faber watch`.
+export function continueTask(repoRoot: string, taskId: string, prompt?: string): void {
+  const state = readState(repoRoot)
+  const task = state.tasks.find((t) => t.id === taskId)
+
+  if (!task) {
+    console.error(`Task "${taskId}" not found`)
+    exit(1)
+  }
+
+  if (!task.sessionId) {
+    console.error(`Task "${taskId}" has no session ID and cannot be resumed`)
+    exit(1)
+  }
+
+  if (task.status === "running") {
+    console.error(`Task "${taskId}" is already running`)
+    exit(1)
+  }
+
+  updateTask(repoRoot, taskId, {
+    status: "running",
+    completedAt: null,
+    exitCode: null,
+  })
+
+  const resumePrompt = prompt ?? DEFAULT_RESUME_PROMPT
+  spawnAgent(task, repoRoot, task.sessionId, resumePrompt)
+
+  console.log(taskId)
 }
 
 // Print tasks as a table: ID, status, elapsed time, and truncated prompt.
