@@ -473,7 +473,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
 
   spawnAgent(task, repoRoot)
   generateFilterText(prompt, repoRoot).then(filterText => {
-    if (filterText) updateTask(repoRoot, slug, { filterText })
+    if (filterText) updateTask(repoRoot, slug, { summaryText: filterText })
   })
   console.log(`Task ${slug} running`)
 }

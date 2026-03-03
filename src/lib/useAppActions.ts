@@ -102,7 +102,7 @@ export function useAppActions({
 
     spawnAgent(task, repoRoot)
     generateFilterText(prompt, repoRoot).then(filterText => {
-      if (filterText) updateTask(repoRoot, task.id, { filterText })
+      if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
     })
   }, [repoRoot, currentBranch, updateTaskInState, setMode, setSelectedIdx, prevSelectedIdx])
 
