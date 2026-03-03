@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } 
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
-import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff } from "./lib/worktree.js"
+import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
@@ -95,6 +95,7 @@ Commands:
   read <taskId>     Print the log for a task
   watch <taskId>    Watch a task and exit when it stops running
   diff <taskId>     Print the unified diff for a task's branch
+  merge <taskId>    Merge a ready task branch and remove its worktree
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
@@ -200,6 +201,19 @@ Options:
 Examples:
   faber diff a3f2-fix-the-login-bug
   faber diff a3f2`)
+        exit(0)
+      case "merge":
+        console.log(`Usage: faber merge <taskId> [options]
+
+Merge a ready task branch into the current branch via rebase and remove its
+worktree. The task must have status "ready" and at least one commit.
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber merge a3f2-fix-the-login-bug
+  faber merge a3f2-fix-the-login-bug --dir /path/to/repo`)
         exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
@@ -411,6 +425,47 @@ Check for a new release on GitHub and install it if one is available.`)
       console.error(`Update failed: ${err.message}`)
       exit(1)
     }
+    return
+  }
+
+  // faber merge <taskId> [--dir <repo>]
+  // Rebase the task branch onto the current HEAD, fast-forward merge it, and
+  // remove the worktree. Exits 1 if the task is not found, not ready, has no
+  // commits, or the rebase hits a conflict.
+  if (command === "merge") {
+    const taskId = args[1]
+    if (!taskId) {
+      console.error("Usage: faber merge <taskId> [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const state = readState(repoRoot)
+    const task = state.tasks.find((t) => t.id === taskId)
+    if (!task) {
+      console.error(`Task "${taskId}" not found`)
+      exit(1)
+    }
+    if (task.status !== "ready") {
+      console.error(`Task "${taskId}" has status "${task.status}" -- only "ready" tasks can be merged`)
+      exit(1)
+    }
+    if (!task.hasCommits) {
+      console.error(`Task "${taskId}" has no commits. Use "faber done" to dismiss it instead.`)
+      exit(1)
+    }
+    try {
+      await mergeBranch(repoRoot, taskId)
+    } catch (err: any) {
+      console.error(`Merge failed: ${err.message}`)
+      exit(1)
+    }
+    await removeWorktree(repoRoot, taskId)
+    updateTask(repoRoot, taskId, { status: "done" })
     return
   }
 
