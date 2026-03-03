@@ -83,3 +83,40 @@ faber watch a3f2-fix-the-login-bug
 # Watching task a3f2-fix-the-login-bug (status: running)
 # Task a3f2-fix-the-login-bug finished (status: ready)
 ```
+
+## Once a task finishes
+
+When `faber watch` exits, the task status will be `ready`. At that point you have a few options depending on what the agent produced.
+
+**Review the changes first:**
+
+```bash
+faber diff a3f2-fix-the-login-bug
+```
+
+This prints the unified diff between the task branch and its base branch. If the task has no commits yet, the output is empty (not an error).
+
+**Merge the branch into your current branch:**
+
+```bash
+faber merge a3f2-fix-the-login-bug
+```
+
+This rebases the task branch onto HEAD, fast-forward merges it, removes the worktree, and marks the task done. The task must be `ready` and have at least one commit.
+
+**Dismiss a task without merging:**
+
+```bash
+faber done a3f2-fix-the-login-bug
+```
+
+This marks the task as done without touching the worktree or branch. Use this when you've already merged manually, or when you want to dismiss the task and come back to the branch later.
+
+**Resume a stopped or failed task:**
+
+```bash
+faber continue a3f2-fix-the-login-bug
+faber continue a3f2-fix-the-login-bug "try a different approach"
+```
+
+This restarts the agent in the same session so it retains context from the previous run. The optional second argument lets you give the agent new direction before it resumes. After continuing, you can `faber watch` the task again to wait for it to finish.
