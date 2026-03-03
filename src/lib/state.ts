@@ -64,6 +64,10 @@ export function readState(repoRoot: string): State {
     // Normalize fields that may be missing in state files written by older versions.
     for (const task of state.tasks) {
       if (task.baseBranch === undefined) task.baseBranch = ""
+      // Migrate filterText to summaryText for backwards compatibility
+      if ((task as any).filterText !== undefined && task.summaryText === undefined) {
+        task.summaryText = (task as any).filterText
+      }
     }
     return state
   } catch {
