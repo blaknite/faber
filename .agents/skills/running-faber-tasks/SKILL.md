@@ -83,3 +83,34 @@ faber watch a3f2-fix-the-login-bug
 # Watching task a3f2-fix-the-login-bug (status: running)
 # Task a3f2-fix-the-login-bug finished (status: ready)
 ```
+
+## Reading task output
+
+Once a task finishes, use `faber list` and `faber read` to inspect the results.
+
+`faber list` shows all tasks with their ID, status, elapsed time, and prompt:
+
+```bash
+faber list
+```
+
+Filter to just the tasks you care about:
+
+```bash
+faber list --status ready
+faber list --status failed
+```
+
+`faber read` prints the full log for a task. Give it the task ID from `faber list`:
+
+```bash
+faber read a3f2-fix-the-login-bug
+```
+
+By default, tool calls are summarised as one-liners so the output stays readable. Use `--full` to expand everything, including bash output, file contents, and diffs:
+
+```bash
+faber read a3f2-fix-the-login-bug --full
+```
+
+This is the main way to get results back from sub-tasks you dispatched. Read the output to understand what the agent did, whether it succeeded, and what was produced.
