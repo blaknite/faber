@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } 
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
-import { createWorktree, worktreeHasCommits, readCurrentBranch } from "./lib/worktree.js"
+import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
 import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
@@ -94,6 +94,7 @@ Commands:
   list              Print all tasks as a table
   read <taskId>     Print the log for a task
   watch <taskId>    Watch a task and exit when it stops running
+  diff <taskId>     Print the unified diff for a task's branch
   setup             Initialise .faber/ and .worktrees/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
@@ -117,6 +118,7 @@ Examples:
   faber read a3f2-fix-the-login-bug
   faber read a3f2-fix-the-login-bug --full
   faber watch a3f2-fix-the-login-bug
+  faber diff a3f2-fix-the-login-bug
   faber setup --dir /path/to/repo
 
 Run "faber <command> --help" for help on a specific command.`)
@@ -185,6 +187,19 @@ Options:
 Examples:
   faber watch a3f2-fix-the-login-bug
   faber run "Fix the login bug" && faber watch \$(faber list --status running | head -1 | awk '{print \$1}')`)
+        exit(0)
+      case "diff":
+        console.log(`Usage: faber diff <taskId> [options]
+
+Print the unified diff for a task's branch against its base branch. Outputs
+nothing (not an error) when the task has no commits yet.
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber diff a3f2-fix-the-login-bug
+  faber diff a3f2`)
         exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
@@ -359,6 +374,32 @@ Check for a new release on GitHub and install it if one is available.`)
       exit(1)
     }
     await watchTask(repoRoot, taskId)
+    return
+  }
+
+  // faber diff <taskId> [--dir <repo>]
+  // Prints the unified diff for a task's branch. Empty output is not an error
+  // (it just means the task has no commits yet).
+  if (command === "diff") {
+    const taskIdArg = args[1]
+    if (!taskIdArg) {
+      console.error("Usage: faber diff <taskId> [--dir <repo>]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    const state = readState(repoRoot)
+    const task = state.tasks.find((t) => t.id.startsWith(taskIdArg))
+    if (!task) {
+      console.error(`Task "${taskIdArg}" not found`)
+      exit(1)
+    }
+    const diff = await getDiff(repoRoot, task.id)
+    if (diff) process.stdout.write(diff + "\n")
     return
   }
 
