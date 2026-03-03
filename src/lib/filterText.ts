@@ -12,7 +12,7 @@ export async function generateFilterText(prompt: string, repoRoot: string): Prom
     const fastModel = MODELS.find((m) => m.label === "Fast")?.value
     if (!fastModel) throw new Error("Fast model not found in MODELS")
 
-    const metaPrompt = `Summarise this task in 2-3 sentences focusing on key nouns and actions. Output only the summary, no explanation. Task: ${prompt}`
+    const metaPrompt = `You are given a task prompt exactly as a user typed it. Write a brief summary focusing on key nouns and actions. Do not ask for clarification, do not use tools, and do not explain your reasoning. Even if the prompt is short or unclear, do your best. Output only the summary. Task prompt: ${prompt}`
 
     const { stdout } = await execa(opencodebin, ["run", "--model", fastModel, metaPrompt], { cwd: repoRoot })
     return stdout.trim()
