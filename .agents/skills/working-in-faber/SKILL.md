@@ -40,27 +40,7 @@ Conflict markers in that output mean there are overlapping edits. You can use th
 
 ## Reading other tasks
 
-When your prompt contains a reference like `@123456-some-slug`, that's a faber task reference. The pattern is a bare `@` followed by a task slug: a short hex prefix, a hyphen, then a descriptive name. It points to another faber task by its ID, and you should read it before proceeding.
-
-To read a task's output:
-
-```
-faber read <taskId>
-```
-
-By default this returns a summary. If you need the full tool output, use:
-
-```
-faber read <taskId> --full
-```
-
-If you don't know the exact task ID, list all tasks to find it:
-
-```
-faber list
-```
-
-Don't pull in everything raw. Use a sub-agent to run `faber read` and summarise what's relevant to your task. Ask it to extract only the context you actually need rather than dumping the whole output into your working context.
+When your prompt contains a reference like `@123456-some-slug`, that's a faber task reference. The pattern is a bare `@` followed by a task slug: a short hex prefix, a hyphen, then a descriptive name. It points to another faber task by its ID. Load the `reading-faber-tasks` skill to learn how to read it.
 
 ## Handling tool failures
 
