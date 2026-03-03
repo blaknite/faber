@@ -38,6 +38,30 @@ git merge-tree $(git merge-base HEAD <baseBranch>) HEAD <baseBranch>
 
 Conflict markers in that output mean there are overlapping edits. You can use this to decide whether to reorganize your commits, but don't perform the merge yourself. Faber handles merging. Your job is to commit your work cleanly on your own branch and stop there.
 
+## Reading other tasks
+
+When your prompt contains a reference like `@123456-some-slug`, that's a faber task reference. The pattern is a bare `@` followed by a task slug: a short hex prefix, a hyphen, then a descriptive name. It points to another faber task by its ID, and you should read it before proceeding.
+
+To read a task's output:
+
+```
+faber read <taskId>
+```
+
+By default this returns a summary. If you need the full tool output, use:
+
+```
+faber read <taskId> --full
+```
+
+If you don't know the exact task ID, list all tasks to find it:
+
+```
+faber list
+```
+
+Don't pull in everything raw. Use a sub-agent to run `faber read` and summarise what's relevant to your task. Ask it to extract only the context you actually need rather than dumping the whole output into your working context.
+
 ## Handling tool failures
 
 If a tool call fails or permission is rejected, you must continue your work. You MUST NOT stop. Retry the call or try another option.
