@@ -82,6 +82,33 @@ faber run "fix the login bug" --dir /path/to/repo
 faber run "add tests for UserService" --model fast
 ```
 
+### List tasks
+
+Print a table of all tasks with their ID, status, elapsed time, and a truncated prompt:
+
+```bash
+faber list
+faber list --dir /path/to/repo
+faber list --status running     # filter by status (running, done, failed, etc.)
+```
+
+### Read a task log
+
+Print a task's prompt and the agent's text output, with tool calls summarised as one-liners:
+
+```bash
+faber read <taskId>
+faber read <taskId> --full      # include full tool block content
+faber read <taskId> --json      # raw LogEntry[] as JSON
+faber read <taskId> --dir /path/to/repo
+```
+
+### Cross-task references
+
+Agents can pull context from other tasks by referencing them with `@taskId` in a prompt. When you submit a prompt containing a task reference, faber injects a `<task-reference>` block that tells the agent what the referenced task was about and how to read its output. The agent then calls `faber read <taskId>` to fetch the log and use whatever it needs.
+
+This is useful when one task builds on the work of another -- for example, pointing a "write tests" task at a completed "refactor UserService" task so the agent can see exactly what changed before writing assertions.
+
 ### TUI keybindings
 
 **Task list**
@@ -139,7 +166,7 @@ faber run "add tests for UserService" --model fast
 | `Tab` | Cycle through models (or select file suggestion if autocomplete is open) |
 | `Escape` | Cancel (or clear text if the field is non-empty) |
 
-When typing `@` in a prompt, faber opens a file autocomplete. Use `Up` / `Down` to navigate suggestions and `Tab` or `Enter` to select one. `Escape` dismisses the list.
+When typing `@` in a prompt, faber opens an autocomplete showing both files and tasks. Each suggestion is labelled with its type. Selecting a file inserts its path; selecting a task inserts the task ID (e.g. `@a3f2-fix-login-bug`). Use `Up` / `Down` to navigate and `Tab` or `Enter` to select. `Escape` dismisses the list.
 
 ### Models
 
