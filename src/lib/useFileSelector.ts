@@ -116,12 +116,12 @@ export function fuzzyScore(candidate: string, query: string): number {
 }
 
 // A single autocomplete suggestion. Files carry their path as the value;
-// tasks carry their ID. The description field holds a short preview of the
-// task prompt so the user can tell tasks apart at a glance.
+// tasks carry their ID. The filterText field holds the full task prompt so
+// it can be searched during fuzzy matching without being rendered anywhere.
 export interface Suggestion {
   type: "file" | "task"
   value: string
-  description?: string
+  filterText?: string
 }
 
 interface UseFileSelectorOptions {
@@ -162,7 +162,7 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
       return state.tasks.map((t): Suggestion => ({
         type: "task",
         value: t.id,
-        description: t.prompt.slice(0, 60),
+        filterText: t.prompt,
       }))
     } catch {
       return []
@@ -224,11 +224,10 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
         const basename = entry.value.split("/").pop() ?? entry.value
         const pathScore = fuzzyScore(entry.value, query)
         const nameScore = fuzzyScore(basename, query)
+        const filterScore = entry.filterText !== undefined ? fuzzyScore(entry.filterText, query) : -1
         // Take whichever score is better (lower), ignoring -1 (no match).
-        let best = -1
-        if (pathScore !== -1 && nameScore !== -1) best = Math.min(pathScore, nameScore)
-        else if (pathScore !== -1) best = pathScore
-        else if (nameScore !== -1) best = nameScore
+        const candidates = [pathScore, nameScore, filterScore].filter((s) => s !== -1)
+        const best = candidates.length > 0 ? Math.min(...candidates) : -1
         return { entry, score: best }
       })
       .filter(({ score }) => score !== -1)

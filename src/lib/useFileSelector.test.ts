@@ -122,19 +122,18 @@ describe("fuzzyScore", () => {
 })
 
 describe("fuzzyScore with mixed file and task entries", () => {
-  // Helper: score a Suggestion against a query using its value field.
+  // Helper: score a Suggestion against a query using its value and filterText fields.
   function scoreSuggestion(s: Suggestion, query: string): number {
     const basename = s.value.split("/").pop() ?? s.value
     const pathScore = fuzzyScore(s.value, query)
     const nameScore = fuzzyScore(basename, query)
-    if (pathScore !== -1 && nameScore !== -1) return Math.min(pathScore, nameScore)
-    if (pathScore !== -1) return pathScore
-    if (nameScore !== -1) return nameScore
-    return -1
+    const filterScore = s.filterText !== undefined ? fuzzyScore(s.filterText, query) : -1
+    const candidates = [pathScore, nameScore, filterScore].filter((sc) => sc !== -1)
+    return candidates.length > 0 ? Math.min(...candidates) : -1
   }
 
   const fileSuggestion = (value: string): Suggestion => ({ type: "file", value })
-  const taskSuggestion = (value: string, description?: string): Suggestion => ({ type: "task", value, description })
+  const taskSuggestion = (value: string, filterText?: string): Suggestion => ({ type: "task", value, filterText })
 
   it("returns a valid score for file suggestions", () => {
     const s = fileSuggestion("src/lib/agent.ts")
@@ -205,11 +204,31 @@ describe("fuzzyScore with mixed file and task entries", () => {
     const file = fileSuggestion("src/lib/state.ts")
     expect(file.type).toBe("file")
     expect(file.value).toBe("src/lib/state.ts")
-    expect(file.description).toBeUndefined()
+    expect(file.filterText).toBeUndefined()
 
     const task = taskSuggestion("a3f2-fix-login-bug", "Fix login")
     expect(task.type).toBe("task")
     expect(task.value).toBe("a3f2-fix-login-bug")
-    expect(task.description).toBe("Fix login")
+    expect(task.filterText).toBe("Fix login")
+  })
+
+  it("a query matching words in the prompt (not the slug) returns the right task", () => {
+    const entries: Suggestion[] = [
+      fileSuggestion("src/lib/agent.ts"),
+      taskSuggestion("a3f2-fix-login-bug", "Fix the broken authentication flow on the login page"),
+      taskSuggestion("b9c1-add-dark-mode", "Add a dark mode toggle to the settings panel"),
+    ]
+
+    // "authentication" only appears in the first task's filterText, not in its slug or any file path.
+    const query = "authn"
+    const matches = entries
+      .map((e) => ({ e, score: scoreSuggestion(e, query) }))
+      .filter(({ score }) => score !== -1)
+      .sort((a, b) => a.score - b.score)
+      .map(({ e }) => e)
+
+    expect(matches.length).toBe(1)
+    expect(matches[0]!.value).toBe("a3f2-fix-login-bug")
+    expect(matches[0]!.type).toBe("task")
   })
 })
