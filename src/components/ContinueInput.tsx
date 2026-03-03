@@ -52,14 +52,20 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
           }}
           backgroundColor="#111111"
         >
-          {suggestions.slice(0, 6).map((file, i) => {
+          {suggestions.slice(0, 6).map((suggestion, i) => {
             const isSelected = i === selectedSuggestion
             return (
               <box
-                key={file}
+                key={suggestion.value}
                 style={{ height: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: isSelected ? "#D4963F" : "#111111" }}
               >
-                <text fg={isSelected ? "#000000" : "#888888"}>{file}</text>
+                {suggestion.type === "task" ? (
+                  <text fg={isSelected ? "#000000" : "#888888"}>
+                    {"# "}{suggestion.value}{suggestion.description ? <span fg={isSelected ? "#5a3a00" : "#555555"}>{"  "}{suggestion.description}</span> : null}
+                  </text>
+                ) : (
+                  <text fg={isSelected ? "#000000" : "#888888"}>{suggestion.value}</text>
+                )}
               </box>
             )
           })}

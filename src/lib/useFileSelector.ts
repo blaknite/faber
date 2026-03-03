@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { getProjectDirectories, getProjectFiles, gitIndexPath } from "./worktree.js"
 import { useFileWatch } from "./useFileWatch.js"
+import { readState, stateFilePath } from "./state.js"
 
 // Pull the @-query out of the text up to the cursor position. Returns the
 // partial filename the user has typed after the last "@" that hasn't been
@@ -114,13 +115,22 @@ export function fuzzyScore(candidate: string, query: string): number {
   return best === INF ? -1 : best
 }
 
+// A single autocomplete suggestion. Files carry their path as the value;
+// tasks carry their ID. The description field holds a short preview of the
+// task prompt so the user can tell tasks apart at a glance.
+export interface Suggestion {
+  type: "file" | "task"
+  value: string
+  description?: string
+}
+
 interface UseFileSelectorOptions {
   repoRoot: string
   textareaRef: React.RefObject<TextareaRenderable | null>
 }
 
 interface UseFileSelectorResult {
-  suggestions: string[]
+  suggestions: Suggestion[]
   selectedSuggestion: number
   hasSuggestions: boolean
   onContentChange: () => void
@@ -133,17 +143,39 @@ interface UseFileSelectorResult {
 // Returns true from onKeyDown when it has consumed the key (so the caller
 // knows not to process it further), false otherwise.
 export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOptions): UseFileSelectorResult {
-  const [projectEntries, setProjectEntries] = useState<string[]>([])
-  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [projectEntries, setProjectEntries] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [selectedSuggestion, setSelectedSuggestion] = useState(0)
 
   // Fetch files and directories and update state. Directories come back with a
   // trailing slash so the user can tell them apart from files in the list.
-  const fetchEntries = useCallback(() => {
-    Promise.all([getProjectFiles(repoRoot), getProjectDirectories(repoRoot)])
-      .then(([files, dirs]) => setProjectEntries([...files, ...dirs]))
-      .catch(() => {})
+  const fetchFileEntries = useCallback((): Promise<Suggestion[]> => {
+    return Promise.all([getProjectFiles(repoRoot), getProjectDirectories(repoRoot)])
+      .then(([files, dirs]) => [...files, ...dirs].map((f): Suggestion => ({ type: "file", value: f })))
+      .catch(() => [])
   }, [repoRoot])
+
+  // Read tasks synchronously from state.json and return them as suggestions.
+  const readTaskEntries = useCallback((): Suggestion[] => {
+    try {
+      const state = readState(repoRoot)
+      return state.tasks.map((t): Suggestion => ({
+        type: "task",
+        value: t.id,
+        description: t.prompt.slice(0, 60),
+      }))
+    } catch {
+      return []
+    }
+  }, [repoRoot])
+
+  // Reload both files and tasks, then merge into a single list.
+  const fetchEntries = useCallback(() => {
+    fetchFileEntries().then((fileEntries) => {
+      const taskEntries = readTaskEntries()
+      setProjectEntries([...fileEntries, ...taskEntries])
+    })
+  }, [fetchFileEntries, readTaskEntries])
 
   // Load on mount.
   useEffect(() => {
@@ -160,8 +192,16 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
   }, [fetchEntries])
   useFileWatch(gitIndexPath(repoRoot), onIndexChange)
 
-  const projectFilesRef = useRef(projectEntries)
-  projectFilesRef.current = projectEntries
+  // Re-fetch tasks when state.json changes, using the same 200ms debounce.
+  const stateDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onStateChange = useCallback(() => {
+    if (stateDebounceTimer.current) clearTimeout(stateDebounceTimer.current)
+    stateDebounceTimer.current = setTimeout(fetchEntries, 200)
+  }, [fetchEntries])
+  useFileWatch(stateFilePath(repoRoot), onStateChange, { pollUntilExists: true })
+
+  const projectEntriesRef = useRef(projectEntries)
+  projectEntriesRef.current = projectEntries
 
   const onContentChange = () => {
     const textarea = textareaRef.current
@@ -173,34 +213,34 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     const textBeforeCursor = text.slice(0, cursor)
     const query = getAtQuery(textBeforeCursor)
 
-    if (query === null || projectFilesRef.current.length === 0) {
+    if (query === null || projectEntriesRef.current.length === 0) {
       setSuggestions([])
       setSelectedSuggestion(0)
       return
     }
 
-    const matches = projectFilesRef.current
-      .map((f) => {
-        const basename = f.split("/").pop() ?? f
-        const pathScore = fuzzyScore(f, query)
+    const matches = projectEntriesRef.current
+      .map((entry) => {
+        const basename = entry.value.split("/").pop() ?? entry.value
+        const pathScore = fuzzyScore(entry.value, query)
         const nameScore = fuzzyScore(basename, query)
         // Take whichever score is better (lower), ignoring -1 (no match).
         let best = -1
         if (pathScore !== -1 && nameScore !== -1) best = Math.min(pathScore, nameScore)
         else if (pathScore !== -1) best = pathScore
         else if (nameScore !== -1) best = nameScore
-        return { f, score: best }
+        return { entry, score: best }
       })
       .filter(({ score }) => score !== -1)
       .sort((a, b) => a.score - b.score)
-      .map(({ f }) => f)
+      .map(({ entry }) => entry)
 
     setSuggestions(matches)
     setSelectedSuggestion(0)
   }
 
-  // Replace the current @-mention with the selected file.
-  const commitSuggestion = (file: string) => {
+  // Replace the current @-mention with the selected suggestion value.
+  const commitSuggestion = (suggestion: Suggestion) => {
     const textarea = textareaRef.current
     if (!textarea) return
 
@@ -224,10 +264,11 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     //
     // Either way we always advance the cursor past the space (added or pre-existing)
     // so that onContentChange sees whitespace after the mention and closes the list.
+    const value = suggestion.value
     const needsSpace = !textAfterCursor.startsWith(" ")
-    const newText = before + file + (needsSpace ? " " : "") + textAfterCursor
+    const newText = before + value + (needsSpace ? " " : "") + textAfterCursor
     textarea.replaceText(newText)
-    textarea.cursorOffset = lastAt + 1 + file.length + 1
+    textarea.cursorOffset = lastAt + 1 + value.length + 1
     setSuggestions([])
     setSelectedSuggestion(0)
   }

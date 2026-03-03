@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { fuzzyScore, getAtQuery } from "./useFileSelector.js"
+import type { Suggestion } from "./useFileSelector.js"
 
 describe("getAtQuery", () => {
   it("returns null when there is no @", () => {
@@ -117,5 +118,98 @@ describe("fuzzyScore", () => {
     const score = fuzzyScore("src/components/TaskInput.tsx", "task")
     expect(score).not.toBe(-1)
     expect(isFinite(score)).toBe(true)
+  })
+})
+
+describe("fuzzyScore with mixed file and task entries", () => {
+  // Helper: score a Suggestion against a query using its value field.
+  function scoreSuggestion(s: Suggestion, query: string): number {
+    const basename = s.value.split("/").pop() ?? s.value
+    const pathScore = fuzzyScore(s.value, query)
+    const nameScore = fuzzyScore(basename, query)
+    if (pathScore !== -1 && nameScore !== -1) return Math.min(pathScore, nameScore)
+    if (pathScore !== -1) return pathScore
+    if (nameScore !== -1) return nameScore
+    return -1
+  }
+
+  const fileSuggestion = (value: string): Suggestion => ({ type: "file", value })
+  const taskSuggestion = (value: string, description?: string): Suggestion => ({ type: "task", value, description })
+
+  it("returns a valid score for file suggestions", () => {
+    const s = fileSuggestion("src/lib/agent.ts")
+    expect(scoreSuggestion(s, "agent")).not.toBe(-1)
+  })
+
+  it("returns a valid score for task suggestions", () => {
+    const s = taskSuggestion("a3f2-fix-login-bug", "Fix the login bug on the settings page")
+    expect(scoreSuggestion(s, "a3f2")).not.toBe(-1)
+  })
+
+  it("task ID query narrows to task matches and not file paths", () => {
+    const entries: Suggestion[] = [
+      fileSuggestion("src/lib/agent.ts"),
+      fileSuggestion("src/components/TaskInput.tsx"),
+      taskSuggestion("a3f2-fix-login-bug", "Fix the login bug"),
+      taskSuggestion("b9c1-add-dark-mode", "Add dark mode toggle"),
+    ]
+
+    const query = "a3f2"
+    const matches = entries
+      .map((e) => ({ e, score: scoreSuggestion(e, query) }))
+      .filter(({ score }) => score !== -1)
+      .sort((a, b) => a.score - b.score)
+      .map(({ e }) => e)
+
+    // Only the task with "a3f2" in the ID should match this query.
+    expect(matches.length).toBe(1)
+    expect(matches[0]!.value).toBe("a3f2-fix-login-bug")
+    expect(matches[0]!.type).toBe("task")
+  })
+
+  it("file path query narrows to file matches and not task IDs", () => {
+    const entries: Suggestion[] = [
+      fileSuggestion("src/lib/agent.ts"),
+      fileSuggestion("src/components/TaskInput.tsx"),
+      taskSuggestion("a3f2-fix-login-bug", "Fix the login bug"),
+      taskSuggestion("b9c1-add-dark-mode", "Add dark mode toggle"),
+    ]
+
+    const query = "src/"
+    const matches = entries
+      .map((e) => ({ e, score: scoreSuggestion(e, query) }))
+      .filter(({ score }) => score !== -1)
+      .sort((a, b) => a.score - b.score)
+      .map(({ e }) => e)
+
+    // Only files starting with src/ should match.
+    expect(matches.length).toBe(2)
+    expect(matches.every((m) => m.type === "file")).toBe(true)
+  })
+
+  it("empty query matches all entries", () => {
+    const entries: Suggestion[] = [
+      fileSuggestion("src/lib/agent.ts"),
+      taskSuggestion("a3f2-fix-login-bug", "Fix the login bug"),
+    ]
+
+    const query = ""
+    const matches = entries
+      .map((e) => ({ e, score: scoreSuggestion(e, query) }))
+      .filter(({ score }) => score !== -1)
+
+    expect(matches.length).toBe(2)
+  })
+
+  it("Suggestion type carries correct fields", () => {
+    const file = fileSuggestion("src/lib/state.ts")
+    expect(file.type).toBe("file")
+    expect(file.value).toBe("src/lib/state.ts")
+    expect(file.description).toBeUndefined()
+
+    const task = taskSuggestion("a3f2-fix-login-bug", "Fix login")
+    expect(task.type).toBe("task")
+    expect(task.value).toBe("a3f2-fix-login-bug")
+    expect(task.description).toBe("Fix login")
   })
 })
