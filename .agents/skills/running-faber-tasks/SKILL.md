@@ -83,7 +83,3 @@ faber watch a3f2-fix-the-login-bug
 # Watching task a3f2-fix-the-login-bug (status: running)
 # Task a3f2-fix-the-login-bug finished (status: ready)
 ```
-
-## Reading task output
-
-Once a task finishes, load the `reading-faber-tasks` skill to inspect the results.

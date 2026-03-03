@@ -38,10 +38,6 @@ git merge-tree $(git merge-base HEAD <baseBranch>) HEAD <baseBranch>
 
 Conflict markers in that output mean there are overlapping edits. You can use this to decide whether to reorganize your commits, but don't perform the merge yourself. Faber handles merging. Your job is to commit your work cleanly on your own branch and stop there.
 
-## Reading other tasks
-
-While you're working, other agents may be running in parallel on sibling tasks. Load the `reading-faber-tasks` skill to inspect them.
-
 ## Handling tool failures
 
 If a tool call fails or permission is rejected, you must continue your work. You MUST NOT stop. Retry the call or try another option.
