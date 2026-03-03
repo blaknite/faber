@@ -38,7 +38,6 @@ export interface Task {
   exitCode: number | null
   hasCommits: boolean     // true when the task branch has commits
   baseBranch: string      // the branch that was checked out when the task was created
-  filterText?: string     // LLM-generated summary used for fuzzy matching in the @-mention selector
 }
 
 export interface State {

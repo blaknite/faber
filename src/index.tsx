@@ -8,6 +8,7 @@ import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask,
 import { generateSlug } from "./lib/slug.js"
 import { createWorktree, worktreeHasCommits } from "./lib/worktree.js"
 import { spawnAgent } from "./lib/agent.js"
+import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
@@ -469,6 +470,9 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
   }
 
   spawnAgent(task, repoRoot)
+  generateFilterText(prompt, repoRoot).then(filterText => {
+    if (filterText) updateTask(repoRoot, slug, { filterText })
+  })
   console.log(`Task ${slug} running`)
 }
 

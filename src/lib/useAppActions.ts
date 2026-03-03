@@ -6,6 +6,7 @@ import { addTask, removeTask, updateTask } from "./state.js"
 import { createWorktree } from "./worktree.js"
 import { generateSlug } from "./slug.js"
 import { logTaskFailure } from "./failureLog.js"
+import { generateFilterText } from "./filterText.js"
 import type { Task, Mode, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
 import type { FlashType, PaneView } from "./useAppState.js"
@@ -100,6 +101,9 @@ export function useAppActions({
     }
 
     spawnAgent(task, repoRoot)
+    generateFilterText(prompt, repoRoot).then(filterText => {
+      if (filterText) updateTask(repoRoot, task.id, { filterText })
+    })
   }, [repoRoot, currentBranch, updateTaskInState, setMode, setSelectedIdx, prevSelectedIdx])
 
   const handleKill = useCallback((task: Task | null = selectedTask) => {
