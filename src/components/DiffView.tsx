@@ -122,7 +122,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
       ) : diff == null ? (
         showLoading ? <DiffLoadingSpinner /> : null
       ) : (
-        <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} />
+        <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} disabled={disabled} />
       )}
     </box>
   )

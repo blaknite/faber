@@ -15,6 +15,7 @@ export interface DiffViewerProps {
   viewMode?: ViewMode
   hideHeader?: boolean
   headerContent?: React.ReactNode
+  disabled?: boolean
 }
 
 // Pair up removed/added lines within a hunk for character-level highlighting.
@@ -374,7 +375,7 @@ function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () =
   )
 }
 
-export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent }: DiffViewerProps) {
+export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent, disabled }: DiffViewerProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [internalViewMode, setInternalViewMode] = useState<ViewMode>(controlledViewMode ?? "side-by-side")
 
@@ -384,6 +385,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
   const parsed = useMemo(() => parseDiff(diff), [diff])
 
   useKeyboard((key) => {
+    if (disabled) return
     const scroll = scrollRef.current
     if (key.name === "k" || key.name === "up") {
       if (!scroll) return
