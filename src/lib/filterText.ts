@@ -12,7 +12,7 @@ export async function generateFilterText(prompt: string, repoRoot: string): Prom
     const fastModel = MODELS.find((m) => m.label === "Fast")?.value
     if (!fastModel) throw new Error("Fast model not found in MODELS")
 
-    const metaPrompt = `You are given a task prompt exactly as a user typed it. Write a brief summary focusing on key nouns and actions. Do not ask for clarification, do not use tools, and do not explain your reasoning. Even if the prompt is short or unclear, do your best. Output only the summary text itself, with no label, prefix, or formatting. Task prompt: ${prompt}`
+    const metaPrompt = `You are given a task prompt exactly as a user typed it. Write a brief summary focusing on key nouns and actions. Do not ask for clarification, do not use tools, and do not explain your reasoning. Even if the prompt is short or unclear, do your best. Output only the summary text itself, with no label, prefix, or formatting.\n\n<task_prompt>\n${prompt}\n</task_prompt>`
 
     const { stdout } = await execa(opencodebin, ["run", "--model", fastModel, metaPrompt], { cwd: repoRoot, timeout: 30_000, stdin: "ignore" })
     // Strip any "Label: " or "**Label:** " prefix the model adds despite instructions
