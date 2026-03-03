@@ -14,7 +14,7 @@ export async function generateFilterText(prompt: string, repoRoot: string): Prom
 
     const metaPrompt = `You are given a task prompt exactly as a user typed it. Write a brief summary focusing on key nouns and actions. Do not ask for clarification, do not use tools, and do not explain your reasoning. Even if the prompt is short or unclear, do your best. Output only the summary. Task prompt: ${prompt}`
 
-    const { stdout } = await execa(opencodebin, ["run", "--model", fastModel, metaPrompt], { cwd: repoRoot })
+    const { stdout } = await execa(opencodebin, ["run", "--model", fastModel, metaPrompt], { cwd: repoRoot, timeout: 30_000, stdin: "ignore" })
     return stdout.trim()
   } catch {
     return ""
