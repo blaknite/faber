@@ -164,7 +164,7 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
       return state.tasks.map((t): Suggestion => ({
         type: "task",
         value: t.id,
-        ...(t.filterText !== undefined ? { filterText: t.filterText } : {}),
+        ...(t.summaryText !== undefined ? { filterText: t.summaryText } : {}),
       }))
     } catch {
       return []
