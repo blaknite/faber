@@ -48,7 +48,7 @@ PAYLOAD="$(jq -n \
     messages: [
       {
         role: "user",
-        content: ("Write concise GitHub release notes for the following commits. Group changes by features, fixes, and other changes. Be direct and useful to end users. Do not include a preamble or sign-off.\n\nImportant: if a fix commit addresses a bug in a feature that was also introduced in this same set of commits, omit it from the release notes entirely. Users do not need to know about bugs that were found and fixed before the feature shipped.\n\nCommits:\n" + $commits)
+        content: ("Write concise GitHub release notes for the following commits. Group changes by features, fixes, and other changes. Be direct and useful to end users. Do not include a preamble or sign-off.\n\nImportant: if a fix commit addresses a bug in a feature that was also introduced in this same set of commits, omit it from the release notes entirely.\n\nCommits:\n" + $commits)
       }
     ]
   }')"
