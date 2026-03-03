@@ -67,7 +67,7 @@ export function TaskRow({ task, index, selected, cardRef }: Props) {
           borderColor="#ffffff"
           style={{ marginTop: 1, paddingLeft: 1 }}
         >
-          <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} truncate>{(task.summaryText || task.prompt).split("\n")[0]}</text>
+          <text fg={selected ? "#aaaaaa" : "#444444"} attributes={createTextAttributes({ italic: true })} wrapMode="none" truncate>{(task.summaryText || task.prompt).split("\n")[0]}</text>
         </box>
       </box>
     </box>
