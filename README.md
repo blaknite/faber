@@ -217,6 +217,45 @@ Tasks created before branch scoping was introduced show up on every branch.
 
 The active/all toggle (Tab) applies on top of that filter, so "active" means "active tasks on this branch".
 
+## Orchestrating tasks
+
+Faber isn't just for one-off fixes. You can give an agent the role of orchestrator -- something with full context on a goal that breaks it down, dispatches sub-tasks in parallel, reviews the results, and keeps going until the whole thing is done.
+
+This pattern works particularly well for implementing a product spec: the orchestrator reads the spec, identifies the independent pieces of work, dispatches them all at once, then routes each result as it finishes.
+
+### An example
+
+Say you have a spec for a new metrics export feature. Rather than tackling it yourself, you could dispatch a single orchestrating task:
+
+```bash
+faber run "Implement the metrics export feature described below.
+
+Break the work into independent sub-tasks and dispatch each one using faber run. Run parallel tasks in parallel -- don't wait for one to finish before starting another. Watch each task with faber watch, review the diff, then merge, continue, or discard based on what the agent produced. Repeat until everything from the spec is merged and nothing is outstanding.
+
+Spec:
+- Users can export their usage metrics from the settings page
+- Supported formats: CSV and JSON
+- Export is scoped to a date range (last 7 days, last 30 days, or custom)
+- Exports are generated server-side and streamed as a file download
+- The endpoint requires authentication; unauthenticated requests return 401
+
+Base branch: main"
+```
+
+The orchestrating agent takes it from there: it decomposes the spec, runs agents for the data model, the export endpoint, the frontend UI, and the tests -- each in its own isolated worktree -- then drives each one through review and merge.
+
+### How it works
+
+An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically.
+
+The key things to include in an orchestrating prompt:
+
+- The full goal or spec, with enough detail that sub-task agents can work independently
+- Explicit instruction to break the work into sub-tasks and dispatch them in parallel
+- The base branch, so the orchestrator passes it through to each sub-task
+
+The `orchestrating-faber-tasks` agent skill covers this pattern in more detail. If your agent environment has it available, it will be injected automatically.
+
 ## Development
 
 ```bash
