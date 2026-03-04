@@ -95,7 +95,7 @@ export function TaskRow({ task, index, selected, cardRef, repoRoot }: Props) {
               ? <StaticStatus task={task} selected={selected} />
               : <RunningStatus task={task} selected={selected} />}
           </text>
-          {task.sessionId ? <text fg={selected ? "#555555" : "#333333"}>{task.sessionId}{contextPercent !== null ? `  ${contextPercent}%` : ""}</text> : null}
+          {task.sessionId ? <text fg={selected ? "#555555" : "#333333"}>{task.sessionId}{contextPercent !== null ? ` • ${contextPercent}%` : ""}</text> : null}
         </box>
         <box
           border={["left"]}

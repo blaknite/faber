@@ -368,7 +368,7 @@ function TitleBar({ task, repoRoot }: { task: Task; repoRoot: string }) {
           task.sessionId ?? null,
           contextPercent !== null ? `${contextPercent}%` : null,
           stats.totalCost > 0 ? `$${stats.totalCost.toFixed(2)}` : null,
-        ].filter(Boolean).join("  ")}
+        ].filter(Boolean).join(" • ")}
       </text>
     </box>
   )
