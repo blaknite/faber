@@ -101,7 +101,7 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column" }}>
               {tasks.map((task, i) => (
-                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} />
+                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} repoRoot={repoRoot} />
               ))}
             </box>
           </scrollbox>
