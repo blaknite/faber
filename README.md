@@ -237,24 +237,26 @@ Spec:
 - Supported formats: CSV and JSON
 - Export is scoped to a date range (last 7 days, last 30 days, or custom)
 - Exports are generated server-side and streamed as a file download
-- The endpoint requires authentication; unauthenticated requests return 401
-
-Base branch: main"
+- The endpoint requires authentication; unauthenticated requests return 401"
 ```
 
 The orchestrating agent takes it from there: it decomposes the spec, runs agents for the data model, the export endpoint, the frontend UI, and the tests -- each in its own isolated worktree -- then drives each one through review and merge.
 
 ### How it works
 
-An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically.
+An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically. Faber injects the base branch into every prompt, so the orchestrator and each sub-task always know where they were cut from.
 
-The key things to include in an orchestrating prompt:
+The key thing to include in an orchestrating prompt is the full goal or spec, with enough detail that sub-task agents can work independently. Explicit instruction to break the work into parallel sub-tasks helps too -- agents don't parallelise by default unless you tell them to.
 
-- The full goal or spec, with enough detail that sub-task agents can work independently
-- Explicit instruction to break the work into sub-tasks and dispatch them in parallel
-- The base branch, so the orchestrator passes it through to each sub-task
+### Agent skills
 
-The `orchestrating-faber-tasks` agent skill covers this pattern in more detail. If your agent environment has it available, it will be injected automatically.
+The orchestration pattern relies on three agent skills that faber injects automatically:
+
+- `working-in-faber` -- injected into every prompt. Covers git worktree isolation, branch conventions, and commit expectations. This is what makes each sub-task agent aware of its environment.
+- `orchestrating-faber-tasks` -- teaches an agent how to decompose a goal, dispatch sub-tasks in parallel, and drive the whole thing through to completion. The orchestrating prompt above works because this skill is in scope.
+- `reviewing-faber-tasks` -- teaches an agent how to inspect a diff and decide whether to merge, continue, or discard. The orchestrator uses this when assessing each sub-task's output.
+
+For these to work, the skills need to be available in your agent's environment. See [Getting the best results](#getting-the-best-results).
 
 ## Development
 
