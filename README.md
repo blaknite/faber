@@ -244,19 +244,19 @@ The orchestrating agent takes it from there: it decomposes the spec, runs agents
 
 ### How it works
 
-An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically. Faber injects the base branch into every prompt, so the orchestrator and each sub-task always know where they were cut from.
+An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically.
 
 The key thing to include in an orchestrating prompt is the full goal or spec, with enough detail that sub-task agents can work independently. Explicit instruction to break the work into parallel sub-tasks helps too -- agents don't parallelise by default unless you tell them to.
 
 ### Agent skills
 
-The orchestration pattern relies on three agent skills that faber injects automatically:
+The orchestration pattern works because of three agent skills faber injects into prompts:
 
-- `working-in-faber` -- injected into every prompt. Covers git worktree isolation, branch conventions, and commit expectations. This is what makes each sub-task agent aware of its environment.
-- `orchestrating-faber-tasks` -- teaches an agent how to decompose a goal, dispatch sub-tasks in parallel, and drive the whole thing through to completion. The orchestrating prompt above works because this skill is in scope.
+- `working-in-faber` -- covers git worktree isolation, branch conventions, and commit expectations. This is what makes each sub-task agent aware of its environment.
+- `orchestrating-faber-tasks` -- teaches an agent how to decompose a goal, dispatch sub-tasks in parallel, and drive the whole thing through to completion.
 - `reviewing-faber-tasks` -- teaches an agent how to inspect a diff and decide whether to merge, continue, or discard. The orchestrator uses this when assessing each sub-task's output.
 
-For these to work, the skills need to be available in your agent's environment. See [Getting the best results](#getting-the-best-results).
+These skills need to be available in your agent's environment before faber can inject them. See [Getting the best results](#getting-the-best-results).
 
 ## Development
 
