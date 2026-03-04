@@ -121,6 +121,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
               stats.totalCost > 0 ? `$${stats.totalCost.toFixed(2)}` : null,
             ].filter(Boolean).join(" • ")}
           </text>
+          <text fg="#333333">|</text>
           <text>
             <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
             <span fg="#333333">{" / "}</span>
