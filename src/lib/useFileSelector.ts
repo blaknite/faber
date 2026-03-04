@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
-import { getProjectDirectories, getProjectFiles, gitIndexPath } from "./worktree.js"
+import { getProjectDirectories, getProjectFiles } from "./worktree.js"
 import { useFileWatch } from "./useFileWatch.js"
 import { readState, stateFilePath } from "./state.js"
 
@@ -185,21 +185,14 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
   }, [fetchEntries])
 
   // Re-fetch when the file set changes. Debounce by 200ms so bulk operations
-  // (e.g. npm install) don't hammer the fetch.
+  // (e.g. npm install) don't hammer the fetch. Watching the repo root
+  // recursively covers everything: new untracked files, staged changes,
+  // deletions -- any working tree mutation fires this.
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onFileSetChange = useCallback(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     debounceTimer.current = setTimeout(fetchEntries, 200)
   }, [fetchEntries])
-
-  // Watch .git/index for staged file changes. This fires when files are staged
-  // or unstaged but does NOT fire when new untracked files appear.
-  useFileWatch(gitIndexPath(repoRoot), onFileSetChange)
-
-  // Watch the repo root recursively to catch new untracked files. fs.watch with
-  // recursive uses FSEvents on macOS and ReadDirectoryChangesW on Windows, so
-  // it reliably fires when any file is created anywhere in the working tree.
-  // The debounce above means the two watchers don't cause double fetches.
   useFileWatch(repoRoot, onFileSetChange, { recursive: true })
 
   // Re-fetch tasks when state.json changes, using the same 200ms debounce.
