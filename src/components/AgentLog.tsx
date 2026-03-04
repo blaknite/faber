@@ -8,11 +8,12 @@ import { useKeyboard } from "@opentui/react"
 import { taskOutputPath } from "../lib/state.js"
 import {
   readLogEntries,
+  readLogStats,
   formatElapsed,
   formatElapsedMs,
 } from "../lib/logParser.js"
 import type { LogEntry } from "../lib/logParser.js"
-import { MODELS } from "../types.js"
+import { MODELS, getModelContextWindow } from "../types.js"
 import type { Task } from "../types.js"
 import { parseDiff, highlightLinePair, highlightSingleLine, SegmentedLine } from "../lib/diff/index.js"
 import type { DiffLine, Segment } from "../lib/diff/index.js"
@@ -347,7 +348,12 @@ function StaticStatus({ task }: { task: Task }) {
   )
 }
 
-function TitleBar({ task }: { task: Task }) {
+function TitleBar({ task, repoRoot }: { task: Task; repoRoot: string }) {
+  const stats = readLogStats(repoRoot, task.id)
+  const contextPercent = stats.totalTokens > 0
+    ? Math.round((stats.totalTokens / getModelContextWindow(task.model)) * 100)
+    : null
+
   return (
     <box style={{ flexDirection: "row", justifyContent: "space-between", flexGrow: 1 }}>
       <text>
@@ -357,7 +363,13 @@ function TitleBar({ task }: { task: Task }) {
           ? <StaticStatus task={task} />
           : <RunningStatus task={task} />}
       </text>
-      {task.sessionId ? <text fg="#666666">{task.sessionId}</text> : null}
+      <text fg="#666666">
+        {[
+          task.sessionId ?? null,
+          contextPercent !== null ? `${contextPercent}%` : null,
+          stats.totalCost > 0 ? `$${stats.totalCost.toFixed(2)}` : null,
+        ].filter(Boolean).join("  ")}
+      </text>
     </box>
   )
 }
@@ -404,7 +416,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
       style={{ flexDirection: "column", flexGrow: 1, paddingBottom: 1 }}
     >
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#111111", marginBottom: 1 }}>
-        <TitleBar task={task} />
+        <TitleBar task={task} repoRoot={repoRoot} />
       </box>
 
       <box style={{ flexGrow: 1, paddingLeft: 2, paddingRight: 2, paddingBottom: 1, overflow: "hidden" }}>
