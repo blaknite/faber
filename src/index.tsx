@@ -86,7 +86,7 @@ function sessionIdFromLog(repoRoot: string, taskId: string): string | null {
 declare const FABER_VERSION: string | undefined
 const VERSION = typeof FABER_VERSION !== "undefined" ? FABER_VERSION : "dev"
 
-async function main() {
+export async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
 
@@ -643,8 +643,14 @@ Check for a new release on GitHub and install it if one is available.`)
     return
   }
 
-  // faber [start] [--dir <repo>]
-  // "start" is an optional explicit subcommand; bare "faber" does the same thing.
+  // Unknown command -- anything that didn't match a known command above.
+  if (command && !command.startsWith("-")) {
+    console.error(`Unknown command: "${command}". Run "faber --help" for usage.`)
+    exit(1)
+  }
+
+  // faber [--dir <repo>]
+  // No command -- launch the TUI.
   const dirArg = parseDirFlag(args)
   const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
 
