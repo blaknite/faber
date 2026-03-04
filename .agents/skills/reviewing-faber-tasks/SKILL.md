@@ -14,7 +14,7 @@ Use `faber diff` to see what the task branch has on top of the base branch. Empt
 - Are there changes that weren't asked for?
 - Does anything look wrong or incomplete?
 
-If the diff alone doesn't give you enough to judge, delegate to a sub-agent to read the log and answer your specific questions. Ask it to return only what you need, not a full transcript.
+If the diff alone doesn't give you enough to judge, load the `reading-faber-logs` skill for guidance on how to approach that without blowing your context.
 
 ## Step 2: Route the task
 
