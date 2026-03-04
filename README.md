@@ -246,7 +246,7 @@ The orchestrating agent takes it from there: it decomposes the spec, runs agents
 
 An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically.
 
-The key thing to include in an orchestrating prompt is the full goal or spec, with enough detail that sub-task agents can work independently. Explicit instruction to break the work into parallel sub-tasks helps too -- agents don't parallelise by default unless you tell them to.
+The key thing to include in an orchestrating prompt is the full goal or spec, with enough detail that sub-task agents can work independently.
 
 ### Agent skills
 
