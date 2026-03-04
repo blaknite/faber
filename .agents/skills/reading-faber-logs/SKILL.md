@@ -17,7 +17,7 @@ Never load a task log into your own context. Spin up a sub-agent, give it the ta
 
 Example prompt to the sub-agent:
 
-> Read the log for Faber task @a3f2c1-fix-the-login-bug using `faber read a3f2c1-fix-the-login-bug`. Did the agent run the test suite, and if so, did they pass? Return only that.
+> Read the log for Faber task @a3f2c1-fix-the-login-bug. Did the agent run the test suite, and if so, did they pass? Return only that.
 
 Keep the question narrow. "What did the agent do?" produces a wall of text. "Did the tests pass?" produces one sentence.
 
