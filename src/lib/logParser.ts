@@ -31,6 +31,7 @@ export interface LogEvent {
       input: number
       output: number
     }
+    cost?: number
   }
   modelID?: string
 }
@@ -409,6 +410,32 @@ export function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
   }
 
   return entries
+}
+
+export function readLogStats(repoRoot: string, taskId: string): { totalTokens: number; totalCost: number } {
+  const path = taskOutputPath(repoRoot, taskId)
+  let raw: string
+  try {
+    raw = readFileSync(path, "utf8")
+  } catch {
+    return { totalTokens: 0, totalCost: 0 }
+  }
+  let totalTokens = 0
+  let totalCost = 0
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    try {
+      const event = JSON.parse(trimmed) as LogEvent
+      if (event.type === "step_finish" && event.part) {
+        totalTokens = event.part.tokens?.total ?? 0
+        totalCost += event.part.cost ?? 0
+      }
+    } catch {
+      // skip unparseable lines
+    }
+  }
+  return { totalTokens, totalCost }
 }
 
 export function formatElapsed(startedAt: string, completedAt: string | null, now: number): string {

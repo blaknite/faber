@@ -4,10 +4,10 @@ export type Mode = "normal" | "input" | "delete" | "kill" | "done" | "merge" | "
 
 export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"
 
-export const MODELS: { label: string; value: Model; color: string; dimColor: string }[] = [
-  { label: "Smart", value: "anthropic/claude-sonnet-4-6", color: "#0088ff", dimColor: "#1a4466" },
-  { label: "Fast", value: "anthropic/claude-haiku-4-5", color: "#00cc66", dimColor: "#1a4d36" },
-  { label: "Deep", value: "anthropic/claude-opus-4-6", color: "#9966ff", dimColor: "#3d2d55" },
+export const MODELS: { label: string; value: Model; color: string; dimColor: string; contextWindow: number }[] = [
+  { label: "Smart", value: "anthropic/claude-sonnet-4-6", color: "#0088ff", dimColor: "#1a4466", contextWindow: 200000 },
+  { label: "Fast", value: "anthropic/claude-haiku-4-5", color: "#00cc66", dimColor: "#1a4d36", contextWindow: 200000 },
+  { label: "Deep", value: "anthropic/claude-opus-4-6", color: "#9966ff", dimColor: "#3d2d55", contextWindow: 200000 },
 ]
 
 export const DEFAULT_MODEL: Model = "anthropic/claude-sonnet-4-6"
@@ -22,6 +22,11 @@ export function resolveModel(input: string): Model | null {
   const byValue = MODELS.find((m) => m.value.toLowerCase() === lower)
   if (byValue) return byValue.value
   return null
+}
+
+export function getModelContextWindow(model: Model): number {
+  const found = MODELS.find((m) => m.value === model)
+  return found?.contextWindow ?? 200000
 }
 
 export interface Task {
