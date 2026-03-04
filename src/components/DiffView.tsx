@@ -4,9 +4,10 @@ import { SyntaxStyle } from "@opentui/core"
 import { getDiff } from "../lib/worktree.js"
 import { DiffViewer } from "../lib/diff/index.js"
 import type { ViewMode } from "../lib/diff/index.js"
-import { readLogEntries, formatElapsed } from "../lib/logParser.js"
+import { readLogEntries, readLogStats, formatElapsed } from "../lib/logParser.js"
 import { useSpinnerFrame } from "../lib/tick.js"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
+import { getModelContextWindow } from "../types.js"
 import type { Task } from "../types.js"
 
 const syntaxStyle = SyntaxStyle.create()
@@ -65,6 +66,11 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
   const [showLoading, setShowLoading] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("side-by-side")
 
+  const stats = readLogStats(repoRoot, task.id)
+  const contextPercent = stats.totalTokens > 0
+    ? Math.round((stats.totalTokens / getModelContextWindow(task.model)) * 100)
+    : null
+
   useKeyboard((key) => {
     if (disabled) return
     if (key.name === "tab") {
@@ -107,12 +113,21 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
           {"  "}
           <span fg="#444444">diff vs HEAD</span>
         </text>
-        <text>
-          <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
-          <span fg="#333333">{" / "}</span>
-          <span fg={viewMode === "side-by-side" ? "#ff6600" : "#555555"}>side-by-side</span>
-          <span fg="#888888">{" [tab]"}</span>
-        </text>
+        <box style={{ flexDirection: "row", gap: 2 }}>
+          <text fg="#666666">
+            {[
+              task.sessionId ?? null,
+              contextPercent !== null ? `${contextPercent}%` : null,
+              stats.totalCost > 0 ? `$${stats.totalCost.toFixed(2)}` : null,
+            ].filter(Boolean).join(" • ")}
+          </text>
+          <text>
+            <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
+            <span fg="#333333">{" / "}</span>
+            <span fg={viewMode === "side-by-side" ? "#ff6600" : "#555555"}>side-by-side</span>
+            <span fg="#888888">{" [tab]"}</span>
+          </text>
+        </box>
       </box>
 
       {error != null ? (
