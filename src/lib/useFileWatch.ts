@@ -9,6 +9,11 @@ interface UseFileWatchOptions {
   // Incrementing this number tears down and restarts the watcher. Use it to
   // retry attaching to a file that may not have existed on the previous attempt.
   retryKey?: number
+  // When true, watches the path recursively so changes to files anywhere within
+  // the directory tree trigger the callback. Only meaningful when path is a
+  // directory. The mtime-based watchdog is disabled in this mode because a
+  // directory's mtime only reflects direct-child changes, not nested ones.
+  recursive?: boolean
 }
 
 // Watches a file for changes and calls callback whenever it is written.
@@ -44,10 +49,12 @@ export function useFileWatch(
       callback()
     }
 
+    const recursive = options?.recursive ?? false
+
     const startWatching = () => {
       if (watcher) return
       try {
-        watcher = watch(path, doRefresh)
+        watcher = watch(path, { recursive }, doRefresh)
         watcher.on("error", () => {
           watcher?.close()
           watcher = null
@@ -74,18 +81,23 @@ export function useFileWatch(
     const watchdog = setInterval(() => {
       if (!existsSync(path)) return
 
-      let currentMtime = 0
-      try {
-        currentMtime = statSync(path).mtimeMs
-      } catch {
-        return
-      }
+      // When watching recursively, directory mtime only reflects direct-child
+      // changes, not nested file creation/deletion, so we skip the mtime check
+      // and only use the watchdog to restart a dead watcher.
+      if (!recursive) {
+        let currentMtime = 0
+        try {
+          currentMtime = statSync(path).mtimeMs
+        } catch {
+          return
+        }
 
-      if (currentMtime > lastRefreshedMtime) {
-        doRefresh()
-        watcher?.close()
-        watcher = null
-        startWatching()
+        if (currentMtime > lastRefreshedMtime) {
+          doRefresh()
+          watcher?.close()
+          watcher = null
+          startWatching()
+        }
       }
 
       if (!watcher) startWatching()
@@ -96,5 +108,5 @@ export function useFileWatch(
       if (pollInterval) clearInterval(pollInterval)
       clearInterval(watchdog)
     }
-  }, [path, callback, options?.pollUntilExists, options?.retryKey])
+  }, [path, callback, options?.pollUntilExists, options?.retryKey, options?.recursive])
 }

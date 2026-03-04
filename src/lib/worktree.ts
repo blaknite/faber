@@ -45,9 +45,9 @@ export function gitFetchHeadPath(repoRoot: string): string {
   return join(repoRoot, ".git", "FETCH_HEAD")
 }
 
-// Returns the path to .git/index, which git rewrites whenever the working tree
-// changes -- new files added, files staged, etc. Watching this is a reliable
-// proxy for "the set of tracked files has changed".
+// Returns the path to .git/index, which git rewrites when files are staged or
+// unstaged. Watching this catches staging-related changes, but it does NOT fire
+// when new untracked files appear in the working tree.
 export function gitIndexPath(repoRoot: string): string {
   return join(repoRoot, ".git", "index")
 }

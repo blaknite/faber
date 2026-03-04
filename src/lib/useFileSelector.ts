@@ -184,15 +184,23 @@ export function useFileSelector({ repoRoot, textareaRef }: UseFileSelectorOption
     fetchEntries()
   }, [fetchEntries])
 
-  // Re-fetch when .git/index changes -- git rewrites it whenever the working
-  // tree changes, so this fires when new files are created or staged. Debounce
-  // by 200ms so bulk operations (e.g. npm install) don't hammer the fetch.
+  // Re-fetch when the file set changes. Debounce by 200ms so bulk operations
+  // (e.g. npm install) don't hammer the fetch.
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const onIndexChange = useCallback(() => {
+  const onFileSetChange = useCallback(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     debounceTimer.current = setTimeout(fetchEntries, 200)
   }, [fetchEntries])
-  useFileWatch(gitIndexPath(repoRoot), onIndexChange)
+
+  // Watch .git/index for staged file changes. This fires when files are staged
+  // or unstaged but does NOT fire when new untracked files appear.
+  useFileWatch(gitIndexPath(repoRoot), onFileSetChange)
+
+  // Watch the repo root recursively to catch new untracked files. fs.watch with
+  // recursive uses FSEvents on macOS and ReadDirectoryChangesW on Windows, so
+  // it reliably fires when any file is created anywhere in the working tree.
+  // The debounce above means the two watchers don't cause double fetches.
+  useFileWatch(repoRoot, onFileSetChange, { recursive: true })
 
   // Re-fetch tasks when state.json changes, using the same 200ms debounce.
   const stateDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
