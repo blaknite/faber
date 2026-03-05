@@ -276,7 +276,7 @@ function ToolRow({ entry }: { entry: LogEntry }) {
           style={{ paddingLeft: 1, marginTop: 0 }}
         >
           {entry.command.split("\n").map((line, i) => (
-            <text key={i} fg="#888888">{line}</text>
+            <text key={i} fg="#888888">{i === 0 ? `$ ${line}` : line}</text>
           ))}
         </box>
       ) : null}
