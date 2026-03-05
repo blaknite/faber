@@ -50,6 +50,8 @@ export interface LogEntry {
   icon?: string
   title?: string
   description?: string
+  // full command string for bash entries -- always shown untruncated in the block
+  command?: string
   blockContent?: string
   blockKind?: "text" | "diff"
   status?: string
@@ -128,14 +130,19 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
 
   // bash
   if (toolLower === "bash" || toolLower.includes("bash")) {
-    const command = str(input.command) || str(input.description) || tool
+    const command = str(input.command) || tool
+    const description = str(input.description)
     const output = str(metadata.output) || str(state?.output)
+    // Use the description (purpose) as the title when available, otherwise fall
+    // back to the first line of the command so the summary row stays readable.
+    const title = description || command.split("\n")[0]
     return {
       kind: "tool_use",
       timestamp: event.timestamp,
       tool,
       icon: "$",
-      title: command,
+      title,
+      command,
       blockContent: output || undefined,
       status,
       errorMessage,

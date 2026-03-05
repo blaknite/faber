@@ -269,6 +269,17 @@ function ToolRow({ entry }: { entry: LogEntry }) {
           </>
         ) : null}
       </box>
+      {entry.command ? (
+        <box
+          border={["left"]}
+          borderColor="#444444"
+          style={{ paddingLeft: 1, marginTop: 0 }}
+        >
+          {entry.command.split("\n").map((line, i) => (
+            <text key={i} fg="#888888">{line}</text>
+          ))}
+        </box>
+      ) : null}
       {isError && entry.errorMessage ? (
         <BlockContent content={entry.errorMessage} />
       ) : entry.blockContent && entry.blockKind === "diff" ? (
