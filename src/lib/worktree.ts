@@ -6,9 +6,11 @@ export function worktreePath(repoRoot: string, slug: string): string {
   return join(repoRoot, ".worktrees", slug)
 }
 
-export async function createWorktree(repoRoot: string, slug: string): Promise<string> {
+export async function createWorktree(repoRoot: string, slug: string, baseBranch?: string): Promise<string> {
   const path = worktreePath(repoRoot, slug)
-  await execa("git", ["worktree", "add", path, "-b", slug], { cwd: repoRoot })
+  const args = ["worktree", "add", path, "-b", slug]
+  if (baseBranch) args.push(baseBranch)
+  await execa("git", args, { cwd: repoRoot })
   return path
 }
 

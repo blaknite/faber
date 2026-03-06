@@ -110,6 +110,25 @@ describe("createWorktree", () => {
     const path = await createWorktree(tmpRoot, "another-wt")
     expect(path).toBe(join(tmpRoot, ".worktrees", "another-wt"))
   })
+
+  it("branches from baseBranch when provided", async () => {
+    // Create a second branch off main and add a commit that main doesn't have
+    git("checkout -b second-branch")
+    writeFileSync(join(tmpRoot, "second-branch-file.ts"), "export const x = 1\n")
+    git("add .")
+    git('commit -m "commit on second-branch"')
+    const secondBranchSha = execSync("git rev-parse HEAD", { cwd: tmpRoot, encoding: "utf8" }).trim()
+
+    // Switch back to main
+    git("checkout main")
+
+    // Create a worktree branching from second-branch
+    const wtPath = await createWorktree(tmpRoot, "from-second-branch", "second-branch")
+
+    // The worktree's HEAD should match second-branch's tip, not main's HEAD
+    const wtSha = execSync("git rev-parse HEAD", { cwd: wtPath, encoding: "utf8" }).trim()
+    expect(wtSha).toBe(secondBranchSha)
+  })
 })
 
 describe("removeWorktree", () => {

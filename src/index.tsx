@@ -44,6 +44,13 @@ function parseStatusFlag(args: string[]): TaskStatus | null {
   return null
 }
 
+// Parse --base <branch> from an args array. Returns the branch name or null.
+function parseBaseFlag(args: string[]): string | null {
+  const i = args.indexOf("--base")
+  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  return null
+}
+
 // Parse --model <value> from an args array, resolving it to a model ID.
 // Accepts case-insensitive labels (smart, fast, deep) or literal model ID strings.
 // Exits with an error if the value doesn't match any known model.
@@ -170,6 +177,7 @@ finish, or "faber read <taskId>" to see its output.
 Options:
   --model <label>   Model to use: smart (default), fast, or deep
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+  --base <branch>   Branch to create the worktree from (defaults to current branch)
 
 Examples:
   faber run "Fix the login bug"
@@ -410,17 +418,18 @@ Check for a new release on GitHub and install it if one is available.`)
     return
   }
 
-  // faber run "<prompt>" [--dir <repo>] [--model <label>]
+  // faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]
   if (command === "run") {
     const prompt = args[1]
     if (!prompt) {
-      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>]')
+      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]')
       exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const model = parseModelFlag(args)
-    await runHeadless(repoRoot, prompt, model)
+    const baseBranch = parseBaseFlag(args) ?? undefined
+    await runHeadless(repoRoot, prompt, model, baseBranch)
     return
   }
 
@@ -695,7 +704,7 @@ Check for a new release on GitHub and install it if one is available.`)
   renderer.start()
 }
 
-async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL) {
+async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
@@ -705,7 +714,7 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
 
   const slug = generateSlug(prompt)
   const worktree = `.worktrees/${slug}`
-  const baseBranch = readCurrentBranch(repoRoot)
+  const resolvedBaseBranch = baseBranch ?? readCurrentBranch(repoRoot)
   const task: Task = {
     id: slug,
     prompt,
@@ -718,14 +727,14 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
     completedAt: null,
     exitCode: null,
     hasCommits: false,
-    baseBranch,
+    baseBranch: resolvedBaseBranch,
   }
 
   addTask(repoRoot, task)
   console.log(`Dispatching task: ${slug}`)
 
   try {
-    await createWorktree(repoRoot, slug)
+    await createWorktree(repoRoot, slug, baseBranch)
   } catch (err: any) {
     console.error(`Failed to create worktree: ${err.message}`)
     logTaskFailure(repoRoot, {
