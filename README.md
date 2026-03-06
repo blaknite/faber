@@ -4,6 +4,8 @@
 
 A terminal UI for running multiple autonomous coding agents in parallel. Give it a prompt, it spins up a git worktree and a [opencode](https://opencode.ai) agent to work on it, while you keep dispatching more tasks.
 
+For an overview of the workflow -- how to think about using faber from idea to finished code -- see [WORKFLOW.md](WORKFLOW.md).
+
 <img width="1297" height="298" alt="Screenshot 2026-02-27 at 1 16 51 pm" src="https://github.com/user-attachments/assets/f669a614-34f9-429a-b82d-70207ad3aa01" />
 
 <img width="1298" height="398" alt="Screenshot 2026-02-27 at 1 17 04 pm" src="https://github.com/user-attachments/assets/f4f2f45e-2c95-4a24-8805-791571254f5e" />
