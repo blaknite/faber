@@ -1,8 +1,8 @@
 import { createCliRenderer } from "@opentui/core"
 import { createRoot } from "@opentui/react"
-import { resolve, join } from "node:path"
+import { resolve, join, dirname } from "node:path"
 import { homedir } from "node:os"
-import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
 import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { generateSlug } from "./lib/slug.js"
@@ -788,7 +788,134 @@ async function setup(repoRoot: string) {
     console.log(`Added to .gitignore: ${toAdd.join(", ")}`)
   }
 
+  // Offer to install faber's bundled skills to the global skills directory.
+  await installSkills()
+
   console.log("Faber setup complete.")
+}
+
+// Locate faber's bundled skills directory. In dev this is .agents/skills/ next
+// to the source tree. In a compiled binary, import.meta.dir resolves to the
+// directory containing the binary, so skills should be distributed there too.
+function findBundledSkillsDir(): string | null {
+  // Walk up from import.meta.dir looking for a .agents/skills directory.
+  // This handles both the dev case (source tree) and cases where skills are
+  // placed alongside a binary.
+  let dir = import.meta.dir
+  for (let i = 0; i < 4; i++) {
+    const candidate = join(dir, ".agents", "skills")
+    if (existsSync(candidate)) return candidate
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+// Resolve the global skills directory, preferring ~/.config/agents/skills and
+// falling back to ~/.claude/skills.
+function globalSkillsDir(): string {
+  const primary = join(homedir(), ".config", "agents", "skills")
+  if (existsSync(primary)) return primary
+  const secondary = join(homedir(), ".claude", "skills")
+  if (existsSync(secondary)) return secondary
+  // Neither exists yet -- default to the primary location.
+  return primary
+}
+
+// Prompt the user with a [y/N] question and return true if they answer yes.
+async function confirm(question: string): Promise<boolean> {
+  process.stdout.write(`${question} [y/N] `)
+  return new Promise<boolean>((resolve) => {
+    let input = ""
+    process.stdin.setEncoding("utf8")
+    process.stdin.setRawMode?.(true)
+    process.stdin.resume()
+    const handler = (chunk: string) => {
+      const char = chunk.toString()
+      if (char === "\r" || char === "\n") {
+        process.stdin.setRawMode?.(false)
+        process.stdin.pause()
+        process.stdin.removeListener("data", handler)
+        process.stdout.write("\n")
+        resolve(input.toLowerCase() === "y")
+      } else if (char === "\u0003") {
+        // Ctrl-C
+        process.stdin.setRawMode?.(false)
+        process.stdin.pause()
+        process.stdin.removeListener("data", handler)
+        process.stdout.write("\n")
+        resolve(false)
+      } else {
+        input += char
+        process.stdout.write(char)
+      }
+    }
+    process.stdin.on("data", handler)
+  })
+}
+
+async function installSkills(): Promise<void> {
+  const bundledDir = findBundledSkillsDir()
+  if (!bundledDir) {
+    // No bundled skills found -- nothing to install.
+    return
+  }
+
+  const skillNames = readdirSync(bundledDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+
+  if (skillNames.length === 0) return
+
+  const destDir = globalSkillsDir()
+
+  const shouldInstall = await confirm(
+    `Install ${skillNames.length} faber skill${skillNames.length === 1 ? "" : "s"} to ${destDir.replace(homedir(), "~")}?`
+  )
+  if (!shouldInstall) {
+    console.log("Skipped skill installation.")
+    return
+  }
+
+  mkdirSync(destDir, { recursive: true })
+
+  for (const skillName of skillNames) {
+    const srcSkillDir = join(bundledDir, skillName)
+    const destSkillDir = join(destDir, skillName)
+
+    // Collect files to copy from this skill's directory.
+    const files = readdirSync(srcSkillDir, { withFileTypes: true })
+      .filter((e) => e.isFile())
+      .map((e) => e.name)
+
+    for (const fileName of files) {
+      const srcFile = join(srcSkillDir, fileName)
+      const destFile = join(destSkillDir, fileName)
+
+      if (existsSync(destFile)) {
+        const srcContent = readFileSync(srcFile, "utf8")
+        const destContent = readFileSync(destFile, "utf8")
+
+        if (srcContent === destContent) {
+          // Identical -- nothing to do.
+          continue
+        }
+
+        // Conflict: the destination file exists and differs.
+        console.log(`\nConflict: ${destFile.replace(homedir(), "~")} already exists and differs from the bundled version.`)
+        const overwrite = await confirm("Overwrite with the bundled version?")
+        if (!overwrite) {
+          console.log(`Skipped ${skillName}/${fileName}.`)
+          continue
+        }
+      }
+
+      mkdirSync(destSkillDir, { recursive: true })
+      copyFileSync(srcFile, destFile)
+      console.log(`Installed skill: ${skillName}`)
+    }
+  }
 }
 
 // Poll state.json until the given task is no longer running, then exit.
