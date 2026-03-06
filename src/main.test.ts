@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
-import { main } from "./index.js"
+import { main, stripFlags } from "./index.js"
 
 // Mock out anything that would spawn real processes or touch the filesystem
 // in a way that would block the test from reaching the command dispatch.
@@ -40,6 +40,48 @@ beforeEach(() => {
 
 afterEach(() => {
   process.argv = originalArgv
+})
+
+describe("stripFlags", () => {
+  it("returns args unchanged when there are no flags", () => {
+    expect(stripFlags(["run", "Fix the bug"])).toEqual(["run", "Fix the bug"])
+  })
+
+  it("strips a value flag and its argument", () => {
+    expect(stripFlags(["run", "--model", "deep", "Fix the bug"])).toEqual(["run", "Fix the bug"])
+  })
+
+  it("strips a value flag that appears before the positional", () => {
+    expect(stripFlags(["run", "--base", "main", "Fix the bug"])).toEqual(["run", "Fix the bug"])
+  })
+
+  it("strips multiple value flags", () => {
+    expect(stripFlags(["run", "--model", "deep", "--base", "main", "Fix the bug"])).toEqual(["run", "Fix the bug"])
+  })
+
+  it("strips boolean flags", () => {
+    expect(stripFlags(["read", "--full", "a3f2-fix-login"])).toEqual(["read", "a3f2-fix-login"])
+  })
+
+  it("strips --yes", () => {
+    expect(stripFlags(["delete", "--yes", "a3f2-fix-login"])).toEqual(["delete", "a3f2-fix-login"])
+  })
+
+  it("strips --dir and its value", () => {
+    expect(stripFlags(["watch", "--dir", "/path/to/repo", "a3f2-fix-login"])).toEqual(["watch", "a3f2-fix-login"])
+  })
+
+  it("handles flags interspersed with positionals", () => {
+    expect(stripFlags(["continue", "--dir", "/repo", "a3f2-fix-login", "do X instead"])).toEqual([
+      "continue",
+      "a3f2-fix-login",
+      "do X instead",
+    ])
+  })
+
+  it("returns an empty array when given only flags", () => {
+    expect(stripFlags(["--model", "deep", "--base", "main"])).toEqual([])
+  })
 })
 
 describe("main", () => {

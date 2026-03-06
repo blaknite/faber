@@ -51,6 +51,36 @@ function parseBaseFlag(args: string[]): string | null {
   return null
 }
 
+// Strip all recognised flags and their values from an args array so that the
+// remainder contains only positional arguments. This lets callers use index
+// arithmetic (positional[1], positional[2], ...) without worrying about flags
+// appearing before positionals.
+//
+// Flags that consume a following value: --model, --dir, --base, --status
+// Boolean flags (no value): --full, --json, --yes, -h, --help
+//
+// The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
+// still work on the original args array before stripping.
+export function stripFlags(args: string[]): string[] {
+  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status"])
+  const result: string[] = []
+  let i = 0
+  while (i < args.length) {
+    const arg = args[i]!
+    if (VALUE_FLAGS.has(arg)) {
+      // skip this flag and its value
+      i += 2
+    } else if (arg.startsWith("-")) {
+      // boolean flag -- skip it but don't skip the next token
+      i += 1
+    } else {
+      result.push(arg)
+      i += 1
+    }
+  }
+  return result
+}
+
 // Parse --model <value> from an args array, resolving it to a model ID.
 // Accepts case-insensitive labels (smart, fast, deep) or literal model ID strings.
 // Exits with an error if the value doesn't match any known model.
@@ -329,8 +359,9 @@ Also offers to install or update faber's bundled skills.`)
   // Called via command chaining after opencode exits, passing the real exit code via $?.
   // This is the single place where task exit status is written to state.
   if (command === "finish") {
-    const taskId = args[1]
-    const exitCode = args[2] !== undefined ? parseInt(args[2], 10) : 0
+    const positional = stripFlags(args)
+    const taskId = positional[1]
+    const exitCode = positional[2] !== undefined ? parseInt(positional[2], 10) : 0
     if (!taskId) {
       console.error("Usage: faber finish <taskId> <exitCode>")
       exit(1)
@@ -403,12 +434,13 @@ Also offers to install or update faber's bundled skills.`)
 
   // faber continue <taskId> ["<prompt>"] [--dir <repo>]
   if (command === "continue") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error('Usage: faber continue <taskId> ["<prompt>"] [--dir <repo>]')
       exit(1)
     }
-    const prompt = args[2] && !args[2].startsWith("-") ? args[2] : undefined
+    const prompt = positional[2]
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd())
     if (!repoRoot) {
@@ -421,7 +453,8 @@ Also offers to install or update faber's bundled skills.`)
 
   // faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]
   if (command === "run") {
-    const prompt = args[1]
+    const positional = stripFlags(args)
+    const prompt = positional[1]
     if (!prompt) {
       console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]')
       exit(1)
@@ -439,7 +472,8 @@ Also offers to install or update faber's bundled skills.`)
   // tool calls summarised as one-liners. --full adds block content; --json
   // outputs the raw LogEntry array.
   if (command === "read") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber read <taskId> [--full] [--json] [--dir <repo>]")
       exit(1)
@@ -461,7 +495,8 @@ Also offers to install or update faber's bundled skills.`)
   // faber watch <taskId> [--dir <repo>]
   // Watches a task's status and exits when it stops running.
   if (command === "watch") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber watch <taskId> [--dir <repo>]")
       exit(1)
@@ -480,7 +515,8 @@ Also offers to install or update faber's bundled skills.`)
   // Prints the unified diff for a task's branch. Empty output is not an error
   // (it just means the task has no commits yet).
   if (command === "diff") {
-    const taskIdArg = args[1]
+    const positional = stripFlags(args)
+    const taskIdArg = positional[1]
     if (!taskIdArg) {
       console.error("Usage: faber diff <taskId> [--dir <repo>]")
       exit(1)
@@ -518,7 +554,8 @@ Also offers to install or update faber's bundled skills.`)
   // remove the worktree. Exits 1 if the task is not found, not ready, has no
   // commits, or the rebase hits a conflict.
   if (command === "merge") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber merge <taskId> [--dir <repo>]")
       exit(1)
@@ -557,7 +594,8 @@ Also offers to install or update faber's bundled skills.`)
   // faber done <taskId> [--dir <repo>]
   // Marks a ready task as done without touching the worktree or branch.
   if (command === "done") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber done <taskId> [--dir <repo>]")
       exit(1)
@@ -586,7 +624,8 @@ Also offers to install or update faber's bundled skills.`)
   // Removes the task from state, removes its worktree, and deletes its branch.
   // Destructive and irreversible -- requires confirmation unless --yes is set.
   if (command === "delete") {
-    const taskId = args[1]
+    const positional = stripFlags(args)
+    const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber delete <taskId> [--yes] [--dir <repo>]")
       exit(1)
