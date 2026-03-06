@@ -20,8 +20,6 @@ When someone says something like:
 
 Or when they paste a block of context (a Linear issue, a Slack conversation, a product spec) and want to turn it into work.
 
-If a PLAN.md already exists and just needs execution, skip this.
-
 ## Step 1: Clarify intent
 
 Before investigating anything, make sure you understand what the user wants and why. The goal is to get to a point where you could explain the work to someone else in a few sentences.

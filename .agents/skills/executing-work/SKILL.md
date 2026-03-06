@@ -7,7 +7,7 @@ description: Takes a plan and iteratively drives it to working code using Faber 
 
 Take a plan and turn it into working code. This skill orchestrates Faber tasks, reviews their output, and loops until everything in the plan is implemented and merged.
 
-The input is a PLAN.md. The output is working code on a branch, ready to ship.
+The output is working code on a branch, ready to ship.
 
 ## Step 1: Read the plan
 
