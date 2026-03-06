@@ -93,6 +93,12 @@ async function downloadToTemp(url: string): Promise<string> {
 }
 
 export async function checkAndUpdate(currentVersion: string): Promise<void> {
+  const script = process.argv[1]
+  if (!script?.startsWith('/$bunfs/')) {
+    console.log('Not running as a compiled binary -- update is only available for installed binaries.')
+    return
+  }
+
   const assetName = resolveAssetName()
   if (!assetName) {
     const os = platform()
@@ -105,7 +111,7 @@ export async function checkAndUpdate(currentVersion: string): Promise<void> {
   const release = await fetchLatestRelease()
   const latestVersion = release.tag_name.replace(/^v/, "")
 
-  if (currentVersion !== "dev" && currentVersion === latestVersion) {
+  if (currentVersion === latestVersion) {
     console.log(`Already up to date (${currentVersion}).`)
     return
   }
@@ -115,11 +121,7 @@ export async function checkAndUpdate(currentVersion: string): Promise<void> {
     throw new Error(`No release asset found for ${assetName}. Check https://github.com/${REPO}/releases`)
   }
 
-  if (currentVersion === "dev") {
-    console.log(`Downloading ${latestVersion}...`)
-  } else {
-    console.log(`Updating ${currentVersion} -> ${latestVersion}...`)
-  }
+  console.log(`Updating ${currentVersion} -> ${latestVersion}...`)
 
   const tmpPath = await downloadToTemp(asset.browser_download_url)
 
