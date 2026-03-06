@@ -21,8 +21,6 @@ A good prompt gives the agent enough to work independently. Three things matter:
 
 **What done looks like.** Describe the expected behaviour.
 
-Always end the prompt with `Base branch: <branch>` so the agent knows where its worktree was cut from.
-
 Example:
 
 ```
@@ -33,8 +31,6 @@ profile template. Add a fallback to a default avatar URL.
 
 Visiting a profile without an avatar should show the default image
 instead of crashing.
-
-Base branch: main
 ```
 
 ## Next steps
@@ -50,9 +46,7 @@ User#avatar_url returns nil when no avatar is set, which breaks the
 profile template. Add a fallback to a default avatar URL.
 
 Visiting a profile without an avatar should show the default image
-instead of crashing.
-
-Base branch: main"
+instead of crashing." --base main
 # Dispatching task: a3f2-fix-avatar-crash
 
 faber watch a3f2-fix-avatar-crash

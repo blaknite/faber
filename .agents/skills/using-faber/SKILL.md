@@ -25,6 +25,14 @@ To choose a model:
 faber run "your prompt here" --model smart
 ```
 
+To set the branch the worktree is created from:
+
+```bash
+faber run "your prompt here" --base <branch>
+```
+
+`--base` sets the branch the worktree is created from, and tells the agent where to diff from. Defaults to the current branch of the main checkout.
+
 Valid model labels are `fast`, `smart`, and `deep`:
 
 - `fast`: mechanical or well-scoped tasks where the path is obvious. Reformatting, renaming, boilerplate, simple one-file fixes.

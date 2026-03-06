@@ -38,6 +38,8 @@ Write prompts following the guidance in `running-faber-tasks`. Each sub-task run
 
 Also choose the right model for each task -- see `using-faber` for guidance on `fast`, `smart`, and `deep`.
 
+Use the `--base` flag to set the branch your sub-tasks should branch from. The orchestrator runs in its own worktree on its own branch -- use `--base $(git branch --show-current)` so child worktrees branch from the orchestrator's branch instead of the main checkout.
+
 Run all independent tasks upfront and capture each task ID. Don't dispatch a dependent task until the task it depends on has been merged.
 
 ## Step 3: Wait for the batch
@@ -77,10 +79,10 @@ If a task keeps failing and the work can be done a different way, delete it and 
 
 ```bash
 # Round 1: independent tasks, dispatch in parallel
-faber run "Add rate limiting middleware. Limit unauthenticated requests to 60/min. Base branch: main"
+faber run "Add rate limiting middleware. Limit unauthenticated requests to 60/min." --base $(git branch --show-current)
 # Dispatching task: aa11-rate-limiting-middleware
 
-faber run "Add Redis client config. The rate limiter will use Redis as the store. Base branch: main"
+faber run "Add Redis client config. The rate limiter will use Redis as the store." --base $(git branch --show-current)
 # Dispatching task: bb22-redis-client-config
 
 # Wait for both in parallel
@@ -98,7 +100,7 @@ faber watch bb22-redis-client-config
 faber merge bb22-redis-client-config
 
 # Round 2: depends on both being merged
-faber run "Wire the rate limiting middleware to the Redis client. Integration tests must pass. Base branch: main"
+faber run "Wire the rate limiting middleware to the Redis client. Integration tests must pass." --base $(git branch --show-current)
 # Dispatching task: cc33-wire-rate-limiter-to-redis
 
 faber watch cc33-wire-rate-limiter-to-redis
