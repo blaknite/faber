@@ -114,7 +114,7 @@ Commands:
   merge <taskId>    Merge a ready task branch and remove its worktree
   done <taskId>     Mark a ready task as done without merging or cleaning up
   delete <taskId>   Delete a task and remove its worktree and branch
-  setup             Initialise .faber/ and .worktrees/ in the repo
+  setup             Initialise .faber/, .worktrees/, and .plans/ in the repo
   update            Check for a new release and install it
   version           Print the version and exit
   help              Show this help message
@@ -283,7 +283,7 @@ Examples:
       case "setup":
         console.log(`Usage: faber setup [options]
 
-Initialise .faber/ and .worktrees/ in the repo and add them to .gitignore.
+Initialise .faber/, .worktrees/, and .plans/ in the repo and add them to .gitignore.
 Safe to run multiple times.
 
 Options:
@@ -761,14 +761,18 @@ async function setup(repoRoot: string) {
     exit(1)
   }
 
-  // Create .faber/ and .worktrees/
+  // Create .faber/, .worktrees/, and .plans/
   ensureFaberDir(repoRoot)
   const worktreesDir = join(repoRoot, ".worktrees")
   if (!existsSync(worktreesDir)) {
     mkdirSync(worktreesDir, { recursive: true })
   }
+  const plansDir = join(repoRoot, ".plans")
+  if (!existsSync(plansDir)) {
+    mkdirSync(plansDir, { recursive: true })
+  }
 
-  // Add .faber/ and .worktrees/ to the repo's .gitignore if not already present
+  // Add .faber/, .worktrees/, and .plans/ to the repo's .gitignore if not already present
   const gitignorePath = join(repoRoot, ".gitignore")
   const existing = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf8") : ""
   const lines = existing.split("\n")
@@ -776,6 +780,7 @@ async function setup(repoRoot: string) {
   const toAdd: string[] = []
   if (!lines.some((l) => l.trim() === ".faber/")) toAdd.push(".faber/")
   if (!lines.some((l) => l.trim() === ".worktrees/")) toAdd.push(".worktrees/")
+  if (!lines.some((l) => l.trim() === ".plans/")) toAdd.push(".plans/")
 
   if (toAdd.length > 0) {
     const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n" : ""
