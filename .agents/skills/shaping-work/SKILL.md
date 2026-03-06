@@ -81,7 +81,7 @@ Present what you find. If everything looks solid, say so and move on. If you fou
 - If something is high-risk (could cause the whole plan to fail or require a restart), flag it clearly and get the user's input before proceeding
 - For lower-risk concerns, propose the fix and apply it unless the user disagrees
 
-Update the PLAN.md with any changes.
+Update the PLAN.md with any changes, then check whether the plan is actually solid. If the challenge exposed gaps in intent, go back to step 1. If it revealed codebase unknowns, go back to step 2. If the plan structure needs rethinking, go back to step 3. Only move to the hand off when the plan passes through the challenge without needing to revisit anything.
 
 ## Step 5: Hand off
 
