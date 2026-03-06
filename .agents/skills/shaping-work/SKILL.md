@@ -5,7 +5,7 @@ description: Takes a rough idea and shapes it into an agent-ready plan. Use when
 
 # Shaping work
 
-Turn a rough idea into a plan that agents can execute. This is the thinking phase. No code gets written here.
+Turn a rough idea into a plan that agents can execute. No code gets written here.
 
 The output is a PLAN.md specific enough that an agent can pick it up cold and implement it without asking questions. Getting there means understanding the problem, grounding it in the codebase, writing the plan, and stress-testing it before handing off.
 
@@ -13,15 +13,13 @@ The output is a PLAN.md specific enough that an agent can pick it up cold and im
 
 Understand what the user wants and why before investigating anything.
 
-Don't ask about things the user already told you. Start from what they gave you and press on the parts that are foggy.
+Don't ask about things the user already told you. Start from what they gave you, target the biggest source of ambiguity, and press on it.
 
-Target the biggest source of ambiguity first. Whatever is foggiest is where to start.
+Ask what things are before asking how to build them. Defining what something means in this system forces the domain model into the open before implementation assumptions take hold.
 
-Ask what things are before asking how to build them. Defining what something means in the context of this system forces the domain model into the open. Jumping straight to implementation produces answers built on unstated assumptions.
+Question the problem statement itself. The stated problem isn't always the real problem. Ask what's actually going wrong. "What happens if we do nothing?" is a genuine question worth asking. Sometimes the answer reshapes the whole effort.
 
-Question the problem statement itself. The stated problem isn't always the real problem. Ask what's actually going wrong, what's actually slow, what's actually painful. "What happens if we do nothing?" is a genuine question worth asking, not a rhetorical challenge. Sometimes the answer reshapes the whole effort.
-
-Build on previous answers rather than cycling through categories. The user's response to one question should shape the next. If they reveal an unexpected constraint, follow that thread.
+Build on previous answers rather than cycling through categories. If the user reveals an unexpected constraint, follow that thread.
 
 ### What to establish
 
@@ -35,7 +33,7 @@ Be clear on all four of these before moving on:
 
 **What done looks like.** Specific, observable outcomes. Someone should be able to verify the work is complete without asking the author what they meant.
 
-If any of these are shaky, keep asking. If the user isn't sure, help them think it through rather than moving on with gaps.
+If any of these are shaky, keep asking and help the user think it through.
 
 ## Step 2: Investigate the codebase
 
@@ -52,7 +50,7 @@ Look for misalignment between what the user wants and what the codebase supports
 
 When the codebase surprises you, stop and reassess. The surprise might invalidate an assumption from Step 1. If so, go back and re-clarify before pressing forward.
 
-Don't move to planning until you can name specific files and functions. Vague understanding produces vague plans, and vague plans produce agents that guess.
+Don't move to planning until you can name specific files and functions. Vague understanding produces agents that guess.
 
 ## Step 3: Write the plan
 
@@ -89,17 +87,17 @@ Identify which steps are independent (can run in parallel) and which must follow
 
 ### What makes a good plan
 
-Write with these in mind throughout, not as a checklist at the end:
+Write with these in mind throughout:
 
 - Specific enough to execute cold. An agent starting in an isolated worktree with no prior context should be able to read this and implement without asking questions.
 - Grounded in real files. Every component in the implementation section should reference an actual file path.
 - Honest about sequencing. If one step depends on output from another, say so. The orchestrator uses this to build the task graph.
-- Concrete before abstract. If the plan introduces an abstraction, it should justify why a concrete implementation isn't enough. Abstractions that can't answer that question should be cut.
+- Concrete before abstract. If the plan introduces an abstraction, it should justify why a concrete implementation isn't enough.
 - No padding. Skip sections that don't apply. A short, precise plan beats a thorough one that buries the signal.
 
 ## Step 4: Challenge the plan
 
-Try to break it before handing it off. Problems are cheap to fix now and expensive after agents have been working for an hour.
+Try to break it before handing it off. Problems are cheap to fix now.
 
 Start by writing down every assumption the plan makes. You can't challenge assumptions you haven't named.
 
@@ -119,6 +117,6 @@ If the challenge revealed incomplete inputs, go back and fill them: unclear inte
 
 ## Step 5: Hand off
 
-Present the plan and walk the user through what it proposes and why. This is the moment to catch anything the written plan obscures — a choice that made sense during investigation but reads ambiguously on the page, a sequencing decision that needs explaining. Adjust until they're satisfied.
+Present the plan and walk the user through what it proposes and why. This is the moment to catch anything the written plan obscures (a choice that made sense during investigation but reads ambiguously on the page, a sequencing decision that needs explaining). Adjust until they're satisfied.
 
 Save the PLAN.md if not already saved (`.plans/<feature-slug>/PLAN.md` is a good default).
