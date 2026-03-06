@@ -2,6 +2,7 @@ import { createWriteStream, chmodSync, renameSync, unlinkSync, existsSync } from
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { platform, arch } from "node:os"
+import { installSkills } from "./skills.js"
 
 const REPO = "blaknite/faber"
 const GITHUB_API = `https://api.github.com/repos/${REPO}/releases/latest`
@@ -150,4 +151,7 @@ export async function checkAndUpdate(currentVersion: string): Promise<void> {
   }
 
   console.log(`Updated to ${latestVersion}.`)
+
+  // Offer to update skills now that the binary is at the new version.
+  await installSkills(latestVersion, import.meta.dir)
 }
