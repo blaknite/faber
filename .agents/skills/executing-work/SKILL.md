@@ -43,7 +43,6 @@ Route each task: merge if good, continue if incomplete, delete if unsalvageable.
 After each round of reviews, check what's left:
 - Are there dependent tasks waiting to be dispatched?
 - Did any merged task reveal something the plan missed?
-- Did a failed task expose a problem with the plan itself?
 
 If the plan needs adjustment (a missed edge case, a wrong assumption that surfaced during implementation), update the PLAN.md and adjust the remaining tasks accordingly. This is normal. Implementation always teaches you things the plan couldn't anticipate.
 
@@ -62,9 +61,3 @@ If something is missing or wrong, dispatch targeted follow-up tasks to close the
 ## Step 6: Done
 
 The code is on a branch and matches the plan.
-
-## When things go sideways
-
-**A task fails the same way twice.** The prompt is probably wrong. Rewrite it with more context, a different scope, or a simpler framing.
-
-**Two tasks conflict on the same file.** Merge one first, then continue the other with instructions to rebase and resolve.
