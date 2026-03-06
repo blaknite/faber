@@ -80,7 +80,10 @@ Fire off a task without opening the TUI:
 faber run "fix the login bug"
 faber run "fix the login bug" --dir /path/to/repo
 faber run "add tests for UserService" --model fast
+faber run "add rate limiting" --base my-feature-branch
 ```
+
+`--base` sets which branch the new worktree is created from and what the agent diffs against. Defaults to the current branch of the main checkout.
 
 ### List tasks
 
@@ -188,7 +191,7 @@ When an agent finishes with commits on its branch, the task is marked "ready to 
 
 ## Working with feature branches
 
-Faber works just as well when your repo is on a feature branch. Agents will branch off whatever `HEAD` points to, so all their worktrees and merges stay scoped to that branch.
+Faber works just as well when your repo is on a feature branch. Switch to it using `b` and agents will branch off that tip, so all their worktrees and merges stay scoped to it.
 
 The typical flow:
 
@@ -211,7 +214,7 @@ If you type a name that doesn't match anything, the list shows "no matches -- pr
 
 ### How tasks are scoped to a branch
 
-Each task records the branch that was checked out when it was dispatched. The task list is always filtered to only show tasks that belong to the current branch, so switching branches gives you a clean slate for that context.
+Each task records its base branch -- the branch that was checked out when it was dispatched, or the value passed to `--base` when using `faber run`. The task list is always filtered to only show tasks belonging to the current branch, so switching branches gives you a clean slate for that context.
 
 Tasks created before branch scoping was introduced show up on every branch.
 
@@ -247,6 +250,8 @@ The orchestrating agent takes it from there: it decomposes the spec, runs agents
 An orchestrator is just an agent with a well-scoped prompt that instructs it to use faber's CLI to coordinate other agents. It uses the same `faber run` / `faber watch` / `faber diff` / `faber merge` commands you'd use manually, but it handles the loop automatically.
 
 The key thing to include in an orchestrating prompt is the full goal or spec, with enough detail that sub-task agents can work independently.
+
+Orchestrators use `--base $(git branch --show-current)` when dispatching sub-tasks, so each child worktree branches from the orchestrator's own branch. This means all sub-task diffs are relative to a common point, and the sub-tasks show up together in the TUI when you switch to the orchestrator's branch.
 
 ### Agent skills
 
