@@ -80,12 +80,16 @@ esac
 
 check_prereqs
 
-# Fetch the latest release download URL for our asset
+# Fetch the latest release metadata
 log "Fetching latest release from https://github.com/$REPO ..."
 
-DOWNLOAD_URL="$(
+RELEASE_JSON="$(
   curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-    -H "Accept: application/vnd.github+json" \
+    -H "Accept: application/vnd.github+json"
+)"
+
+DOWNLOAD_URL="$(
+  echo "$RELEASE_JSON" \
     | grep -o "\"browser_download_url\": \"[^\"]*${ASSET}\"" \
     | head -1 \
     | cut -d'"' -f4
@@ -94,6 +98,14 @@ DOWNLOAD_URL="$(
 if [ -z "$DOWNLOAD_URL" ]; then
   error "Could not find a release asset matching '$ASSET'. Check https://github.com/$REPO/releases for available releases."
 fi
+
+VERSION="$(
+  echo "$RELEASE_JSON" \
+    | grep -o '"tag_name": "[^"]*"' \
+    | head -1 \
+    | cut -d'"' -f4 \
+    | sed 's/^v//'
+)"
 
 log "Downloading $ASSET ..."
 TMP_FILE="$(mktemp)"
@@ -250,6 +262,94 @@ setup_path() {
 }
 
 setup_path
+
+# Install faber's bundled skills to the global skills directory.
+# Skills are fetched from GitHub at the matching release tag.
+install_skills() {
+  local version="$1"
+
+  # Prefer ~/.config/agents/skills, fall back to ~/.claude/skills. If neither
+  # exists, create and use the primary location.
+  local skills_dir=""
+  if [[ -d "$HOME/.config/agents/skills" ]]; then
+    skills_dir="$HOME/.config/agents/skills"
+  elif [[ -d "$HOME/.claude/skills" ]]; then
+    skills_dir="$HOME/.claude/skills"
+  else
+    skills_dir="$HOME/.config/agents/skills"
+  fi
+
+  local skill_names=(
+    "executing-work"
+    "orchestrating-faber-tasks"
+    "planning-faber-orchestration"
+    "reading-faber-logs"
+    "reviewing-faber-tasks"
+    "running-faber-tasks"
+    "shaping-work"
+    "shipping-work"
+    "submitting-pull-requests"
+    "using-faber"
+    "working-in-faber"
+  )
+
+  local count="${#skill_names[@]}"
+  local tilde_skills_dir="${skills_dir/#$HOME/\~}"
+
+  if [[ -t 0 ]]; then
+    printf "\nInstall %d faber skills to %s? [y/N] " "$count" "$tilde_skills_dir"
+    read -r REPLY
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      log "Skipped skill installation."
+      return
+    fi
+  else
+    log "Skipping skill installation in non-interactive mode. Run 'faber update' to install skills."
+    return
+  fi
+
+  mkdir -p "$skills_dir"
+
+  local raw_base="https://raw.githubusercontent.com/$REPO"
+  local ref="refs/tags/v${version}"
+
+  for skill_name in "${skill_names[@]}"; do
+    local dest_dir="${skills_dir}/${skill_name}"
+    local dest_file="${dest_dir}/SKILL.md"
+    local url="${raw_base}/${ref}/.agents/skills/${skill_name}/SKILL.md"
+
+    local content
+    content="$(curl -fsSL "$url" 2>/dev/null)" || {
+      warn "Failed to fetch ${skill_name}. Skipping."
+      continue
+    }
+
+    if [[ -f "$dest_file" ]]; then
+      local existing
+      existing="$(cat "$dest_file")"
+      if [[ "$existing" == "$content" ]]; then
+        continue
+      fi
+
+      printf "\nConflict: %s already exists and differs from the v%s version.\n" \
+        "${dest_file/#$HOME/\~}" "$version"
+      printf "Overwrite? [y/N] "
+      read -r OVERWRITE_REPLY
+      if [[ ! $OVERWRITE_REPLY =~ ^[Yy]$ ]]; then
+        log "Skipped ${skill_name}/SKILL.md."
+        continue
+      fi
+    fi
+
+    mkdir -p "$dest_dir"
+    printf "%s" "$content" > "$dest_file"
+    log "Installed skill: ${skill_name}"
+  done
+}
+
+if [ -n "$VERSION" ]; then
+  install_skills "$VERSION"
+fi
 
 echo ""
 success "Run 'faber --help' to get started."
