@@ -67,8 +67,4 @@ The code is on a branch and matches the plan.
 
 **A task fails the same way twice.** The prompt is probably wrong. Rewrite it with more context, a different scope, or a simpler framing.
 
-**A task reveals the plan is wrong.** Stop dispatching. Update the plan, get the user's input if the change is significant, then resume.
-
 **Two tasks conflict on the same file.** Merge one first, then continue the other with instructions to rebase and resolve.
-
-**The whole approach isn't working.** Escalate to the user. Sometimes the right call is to go back to shaping, not to keep throwing agents at a broken plan.
