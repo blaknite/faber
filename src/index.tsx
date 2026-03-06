@@ -126,6 +126,7 @@ const VERSION = typeof FABER_VERSION !== "undefined" ? FABER_VERSION : "dev"
 export async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
+  const positional = stripFlags(args)
 
   // faber --help | faber help
   if (command === "--help" || command === "-h" || command === "help") {
@@ -359,7 +360,6 @@ Also offers to install or update faber's bundled skills.`)
   // Called via command chaining after opencode exits, passing the real exit code via $?.
   // This is the single place where task exit status is written to state.
   if (command === "finish") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     const exitCode = positional[2] !== undefined ? parseInt(positional[2], 10) : 0
     if (!taskId) {
@@ -434,7 +434,6 @@ Also offers to install or update faber's bundled skills.`)
 
   // faber continue <taskId> ["<prompt>"] [--dir <repo>]
   if (command === "continue") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error('Usage: faber continue <taskId> ["<prompt>"] [--dir <repo>]')
@@ -453,7 +452,6 @@ Also offers to install or update faber's bundled skills.`)
 
   // faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]
   if (command === "run") {
-    const positional = stripFlags(args)
     const prompt = positional[1]
     if (!prompt) {
       console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]')
@@ -472,7 +470,6 @@ Also offers to install or update faber's bundled skills.`)
   // tool calls summarised as one-liners. --full adds block content; --json
   // outputs the raw LogEntry array.
   if (command === "read") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber read <taskId> [--full] [--json] [--dir <repo>]")
@@ -495,7 +492,6 @@ Also offers to install or update faber's bundled skills.`)
   // faber watch <taskId> [--dir <repo>]
   // Watches a task's status and exits when it stops running.
   if (command === "watch") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber watch <taskId> [--dir <repo>]")
@@ -515,7 +511,6 @@ Also offers to install or update faber's bundled skills.`)
   // Prints the unified diff for a task's branch. Empty output is not an error
   // (it just means the task has no commits yet).
   if (command === "diff") {
-    const positional = stripFlags(args)
     const taskIdArg = positional[1]
     if (!taskIdArg) {
       console.error("Usage: faber diff <taskId> [--dir <repo>]")
@@ -554,7 +549,6 @@ Also offers to install or update faber's bundled skills.`)
   // remove the worktree. Exits 1 if the task is not found, not ready, has no
   // commits, or the rebase hits a conflict.
   if (command === "merge") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber merge <taskId> [--dir <repo>]")
@@ -594,7 +588,6 @@ Also offers to install or update faber's bundled skills.`)
   // faber done <taskId> [--dir <repo>]
   // Marks a ready task as done without touching the worktree or branch.
   if (command === "done") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber done <taskId> [--dir <repo>]")
@@ -624,7 +617,6 @@ Also offers to install or update faber's bundled skills.`)
   // Removes the task from state, removes its worktree, and deletes its branch.
   // Destructive and irreversible -- requires confirmation unless --yes is set.
   if (command === "delete") {
-    const positional = stripFlags(args)
     const taskId = positional[1]
     if (!taskId) {
       console.error("Usage: faber delete <taskId> [--yes] [--dir <repo>]")
