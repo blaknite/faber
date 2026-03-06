@@ -42,6 +42,8 @@ Work through these until you're confident in all of them:
 
 **Goal.** What are we trying to achieve? Push past the solution framing ("build X") to the underlying problem ("prevent Y from happening").
 
+**Scope.** What's the smallest version of this that actually solves the problem? Ideas arrive overloaded with nice-to-haves. Ask what can be deferred or dropped without undermining the core. Solve the specific case before the general one.
+
 **Constraints.** What are the boundaries? Existing systems we need to work within, backwards compatibility concerns, performance requirements, things we explicitly don't want to change.
 
 **What done looks like.** Specific, observable outcomes. Someone should be able to verify the work is complete without asking the author what they meant.
@@ -118,6 +120,7 @@ Identify which steps are independent (can run in parallel) and which must follow
 - **Specific enough to execute cold.** An agent starting in an isolated worktree with no prior context should be able to read this plan and implement without asking questions.
 - **Grounded in real files.** Every component in the implementation section should reference an actual file path.
 - **Honest about sequencing.** If one step depends on output from another, say so. The orchestrator uses this to build the task graph.
+- **Concrete before abstract.** If the plan introduces an abstraction, it should be clear why a concrete implementation isn't enough. Abstractions that can't answer that question should be cut.
 - **No padding.** Skip sections that don't apply. A short, precise plan beats a thorough one that buries the signal.
 
 ## Step 4: Challenge the plan
