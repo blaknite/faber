@@ -90,7 +90,7 @@ RELEASE_JSON="$(
 
 DOWNLOAD_URL="$(
   echo "$RELEASE_JSON" \
-    | grep -o "\"browser_download_url\": \"[^\"]*${ASSET}\"" \
+    | grep -o "\"browser_download_url\":[ ]*\"[^\"]*${ASSET}\"" \
     | head -1 \
     | cut -d'"' -f4
 )"
@@ -101,7 +101,7 @@ fi
 
 VERSION="$(
   echo "$RELEASE_JSON" \
-    | grep -o '"tag_name": "[^"]*"' \
+    | grep -o '"tag_name":[ ]*"[^"]*"' \
     | head -1 \
     | cut -d'"' -f4 \
     | sed 's/^v//'
