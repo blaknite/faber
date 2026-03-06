@@ -282,7 +282,6 @@ install_skills() {
   local skill_names=(
     "executing-work"
     "orchestrating-faber-tasks"
-    "planning-faber-orchestration"
     "reading-faber-logs"
     "reviewing-faber-tasks"
     "running-faber-tasks"

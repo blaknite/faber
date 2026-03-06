@@ -9,7 +9,6 @@ const RAW_BASE = "https://raw.githubusercontent.com"
 export const BUNDLED_SKILL_NAMES = [
   "executing-work",
   "orchestrating-faber-tasks",
-  "planning-faber-orchestration",
   "reading-faber-logs",
   "reviewing-faber-tasks",
   "running-faber-tasks",
