@@ -7,25 +7,25 @@ description: Takes a rough idea and shapes it into an agent-ready plan. Use when
 
 Turn a rough idea into a plan that agents can execute. This is the thinking phase. No code gets written here.
 
-The output is a PLAN.md: a document specific enough that an agent can pick it up cold and implement it without asking questions. Getting there means understanding the problem, grounding it in the codebase, writing the plan, and stress-testing it before handing off.
+The output is a PLAN.md specific enough that an agent can pick it up cold and implement it without asking questions. Getting there means understanding the problem, grounding it in the codebase, writing the plan, and stress-testing it before handing off.
 
 ## Step 1: Clarify intent
 
-Before investigating anything, make sure you understand what the user wants and why. The goal is to get to a point where you could explain the work to someone else in a few sentences.
+Understand what the user wants and why before investigating anything.
 
 Don't ask about things the user already told you. Start from what they gave you and press on the parts that are foggy.
 
-Target the biggest source of ambiguity first. Whatever is foggiest in the user's description is where to start, not the first item on a checklist.
+Target the biggest source of ambiguity first. Whatever is foggiest is where to start.
 
-Ask what things ARE before asking how to build them. Defining what something means in the context of this system forces the domain model into the open. Jumping straight to implementation produces answers built on unstated assumptions.
+Ask what things are before asking how to build them. Defining what something means in the context of this system forces the domain model into the open. Jumping straight to implementation produces answers built on unstated assumptions.
 
-Question the problem statement itself. The stated problem isn't always the real problem. Ask what's actually going wrong, what's actually slow, what's actually painful. Ask "what happens if we do nothing?" as a genuine question, not a challenge. Sometimes the answer reshapes the whole effort.
+Question the problem statement itself. The stated problem isn't always the real problem. Ask what's actually going wrong, what's actually slow, what's actually painful. "What happens if we do nothing?" is a genuine question worth asking, not a rhetorical challenge. Sometimes the answer reshapes the whole effort.
 
-Build on previous answers rather than working through a checklist. The user's response to one question should shape the next. If they reveal an unexpected constraint, follow that thread.
+Build on previous answers rather than cycling through categories. The user's response to one question should shape the next. If they reveal an unexpected constraint, follow that thread.
 
-### What you need to understand
+### What to establish
 
-Before moving on, be clear on all four of these:
+Be clear on all four of these before moving on:
 
 **Goal.** What are we trying to achieve? Push past the solution framing to the underlying problem.
 
@@ -48,13 +48,9 @@ Use sub-agents to explore:
 - Note data shapes, type signatures, naming conventions
 - Look for gotchas: circular dependencies, performance-sensitive paths, shared state
 
-### What to do with what you find
+Look for misalignment between what the user wants and what the codebase supports. When the change requires a concept the codebase doesn't have, that's the hardest part of the project and it should reshape the plan.
 
-The most important thing to surface is misalignment between what the user wants and what the codebase supports. When the change requires a concept the codebase doesn't have, that's not a footnote. That's the hardest part of the project and it should reshape the plan.
-
-Ask yourself: if we started with a blank slate, would we build what's already here? If not, figure out whether the plan should work within the existing structure or propose changing it. Both are valid, but the plan needs to be explicit about which path it's taking and why.
-
-When the codebase surprises you, stop and reassess. Sometimes the surprise invalidates an assumption from Step 1. If so, go back and re-clarify with the user rather than pressing forward on a shaky foundation.
+When the codebase surprises you, stop and reassess. The surprise might invalidate an assumption from Step 1. If so, go back and re-clarify before pressing forward.
 
 Don't move to planning until you can name specific files and functions. Vague understanding produces vague plans, and vague plans produce agents that guess.
 
@@ -93,51 +89,36 @@ Identify which steps are independent (can run in parallel) and which must follow
 
 ### What makes a good plan
 
-- **Specific enough to execute cold.** An agent starting in an isolated worktree with no prior context should be able to read this plan and implement without asking questions.
-- **Grounded in real files.** Every component in the implementation section should reference an actual file path.
-- **Honest about sequencing.** If one step depends on output from another, say so. The orchestrator uses this to build the task graph.
-- **Concrete before abstract.** If the plan introduces an abstraction, it should be clear why a concrete implementation isn't enough. Abstractions that can't answer that question should be cut.
-- **No padding.** Skip sections that don't apply. A short, precise plan beats a thorough one that buries the signal.
+Write with these in mind throughout, not as a checklist at the end:
+
+- Specific enough to execute cold. An agent starting in an isolated worktree with no prior context should be able to read this and implement without asking questions.
+- Grounded in real files. Every component in the implementation section should reference an actual file path.
+- Honest about sequencing. If one step depends on output from another, say so. The orchestrator uses this to build the task graph.
+- Concrete before abstract. If the plan introduces an abstraction, it should justify why a concrete implementation isn't enough. Abstractions that can't answer that question should be cut.
+- No padding. Skip sections that don't apply. A short, precise plan beats a thorough one that buries the signal.
 
 ## Step 4: Challenge the plan
 
-Before handing the plan off, try to break it. Problems are cheap to fix now and expensive to fix after agents have been working for an hour.
+Try to break it before handing it off. Problems are cheap to fix now and expensive after agents have been working for an hour.
 
-### Surface and test assumptions
+Start by writing down every assumption the plan makes. You can't challenge assumptions you haven't named.
 
-Write down every assumption the plan makes: data shapes it expects to exist, patterns it expects to follow, boundaries it expects to hold. You can't challenge assumptions you haven't named.
+For each one, ask: what if this is wrong? Go verify anything the plan assumes about the codebase. Confirm any constraints the user mentioned still hold.
 
-For each assumption, ask: what if this is wrong? If the plan assumes something about the codebase, go verify it. If it assumes a constraint the user mentioned, confirm it still holds.
+Then step back and challenge the plan as a whole:
 
-### Challenge the plan as a whole
+- What if we did nothing? The answer changes what you do with the plan. If inaction is fine for a while, revisit scope. If it isn't, that validates the urgency.
+- Are we solving the right problem? Revisit whether the investigation in Step 2 confirmed or undermined the problem as stated in Step 1.
+- Is there a simpler approach? Every abstraction is a layer agents have to get right. Look for opportunities to reuse what exists or reduce moving parts.
 
-**What if we did nothing?** If inaction is tolerable for a while, the plan might be over-engineered for the actual urgency. If inaction is catastrophic, that validates the approach and might raise the priority of certain steps.
+Also check the mechanics: edge cases and malformed input, sequencing dependencies between tasks, and sections vague enough that an agent would have to guess.
 
-**Are we solving the right problem?** A well-crafted solution to the wrong problem is still wrong. Revisit whether the investigation in Step 2 confirmed or undermined the problem as stated in Step 1.
+Fix what you can without asking. Update the plan directly for anything where the right answer is clear. Only surface findings that require intent the user hasn't expressed, or where getting it wrong could derail the whole effort.
 
-**Is there a simpler approach?** Every abstraction the plan introduces is a layer agents have to get right. Look for opportunities to reuse what exists or reduce the number of moving parts.
-
-### Check the mechanics
-
-**Missing cases.** What happens at the edges? Empty input, enormous input, malformed input, concurrent access, existing data that doesn't fit the new model.
-
-**Sequencing problems.** Does the implementation order actually work? Are dependencies between steps explicit? Could two parallel tasks conflict on the same file?
-
-**Drift risk.** Is the plan so large or vague in places that agents are likely to wander? Are there sections where an agent would have to make judgment calls that could go wrong?
-
-### What the challenge tells you
-
-Fix what you can without asking. Update the plan directly for anything where the right answer is clear. Only bring something to the user when it requires intent they haven't expressed, or when getting it wrong could derail the whole effort.
-
-If the challenge revealed that the inputs to the plan were incomplete, go back and fill them:
-
-- Unclear intent or scope: go back to Step 1.
-- Codebase unknowns: go back to Step 2.
-
-Keep cycling until the challenge finds nothing that sends you back.
+If the challenge revealed incomplete inputs, go back and fill them: unclear intent or scope means Step 1, codebase unknowns mean Step 2. Keep cycling until the challenge finds nothing that sends you back.
 
 ## Step 5: Hand off
 
-Present the plan to the user and ask if it captures what they had in mind. Adjust until they're happy.
+Present the plan and walk the user through what it proposes and why. This is the moment to catch anything the written plan obscures — a choice that made sense during investigation but reads ambiguously on the page, a sequencing decision that needs explaining. Adjust until they're satisfied.
 
 Save the PLAN.md if not already saved (`.plans/<feature-slug>/PLAN.md` is a good default).
