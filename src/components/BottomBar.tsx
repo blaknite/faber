@@ -84,7 +84,7 @@ export function BottomBar({
   }
 
   if (mode === "merge" && activeTask) {
-    return <ConfirmPrompt message={`Merge ${activeTask.id} into HEAD?`} />
+    return <ConfirmPrompt message={`Merge ${activeTask.id} into ${activeTask.baseBranch || currentBranch}?`} />
   }
 
   if (mode === "push") {
