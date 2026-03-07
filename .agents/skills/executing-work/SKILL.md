@@ -5,55 +5,43 @@ description: Takes a plan and iteratively drives it to working code using Faber 
 
 # Executing work
 
-Take a plan and turn it into working code. This skill orchestrates Faber tasks, reviews their output, and loops until everything in the plan is implemented and merged.
-
-The output is working code on a branch, ready to ship.
+Take a plan and turn it into working code. Break it into tasks, dispatch them through Faber, review the results, and loop until everything is implemented and merged. The output is working code on a branch, ready to ship.
 
 ## Step 1: Read the plan
 
-Read the PLAN.md and understand:
-- What components need to be built
-- Which are independent (can run in parallel) and which must sequence
-- What done looks like for each component
+Read the PLAN.md and understand what needs to be built, what depends on what, and what done looks like for each piece. If the plan doesn't have an implementation order section, work one out before dispatching anything.
 
-If the plan doesn't have an implementation order section, work one out before dispatching anything. Getting the task graph wrong wastes time: conflicting changes on the same file, missing dependencies, agents blocked on work that doesn't exist yet.
+## Step 2: Break it into tasks
 
-## Step 2: Dispatch tasks
+Identify which pieces of the plan are independent and which must sequence. Independent work can run in parallel. Dependent work has to wait until its prerequisites are merged.
 
-Load the `orchestrating-faber-tasks` skill and follow its process. In short:
-
-1. Break the goal into independent and dependent sub-tasks.
-2. Dispatch all independent tasks upfront with self-contained prompts.
-3. Watch the batch in parallel and act on each one as it completes.
-4. After merging a round, dispatch any dependent tasks that were waiting on it.
-5. Repeat until nothing is outstanding.
+A task is independent when it touches different files or systems and doesn't need to know what another task decided or produced. When in doubt, sequence. Two tasks that conflict on the same file are harder to recover from than a slightly longer wall clock time.
 
 For each task, write a prompt that includes the relevant section of the PLAN.md (not the whole thing, just what this task needs), enough codebase context that the agent can work without asking questions, and what done looks like for this specific task.
 
-## Step 3: Review results
+## Step 3: Run the loop
 
-As tasks complete, load `reviewing-faber-tasks` and follow its process. In short:
+Load `orchestrating-faber-tasks` and `reviewing-faber-tasks` for the mechanics of dispatching and reviewing tasks with faber.
 
-1. Read the diff to understand what the agent produced.
-2. Review it as a quality gate: does the code do what was asked, does it make sense, would you build on top of it?
-3. Route the task based on your judgment: merge, continue with feedback, done, or delete.
-4. If a merge conflicts, continue the task with rebase instructions and retry.
+### Dispatch
 
-Don't merge work you're not confident in. The final review in step 5 should be polishing a near-finished product, not cleaning up accumulated problems.
+Dispatch all independent tasks upfront. Hold dependent tasks until their prerequisites are merged. Each round should be as parallel as possible without risking conflicts.
 
-## Step 4: Iterate
+### Review
 
-After each round of reviews, check what's left:
-- Are there dependent tasks waiting to be dispatched?
-- Did any merged task reveal something the plan missed?
+As each task completes, read the diff. This is where the quality bar matters: read it like you'd review a colleague's work. Does it do what was asked? Does the code make sense? Is it something you'd be comfortable building on top of? Don't merge work you're not confident in. Everything that follows builds on what you merge here.
 
-If the plan needs adjustment (a missed edge case, a wrong assumption that surfaced during implementation), update the PLAN.md and adjust the remaining tasks accordingly. This is normal. Implementation always teaches you things the plan couldn't anticipate.
+If a task isn't right, continue it with specific feedback. If it's unsalvageable, delete it and dispatch a replacement with a better prompt. Only merge work you're genuinely satisfied with.
 
-Dispatch the next round and repeat from step 3.
+### Iterate
 
-## Step 5: Final review
+After each round of reviews, check what's left. Are there dependent tasks ready to dispatch? Did anything that was merged reveal a gap in the plan? If the plan needs adjustment, update the PLAN.md and adjust the remaining tasks. This is normal. Implementation always teaches you things the plan couldn't anticipate.
 
-When all tasks are merged and `faber list` shows nothing outstanding, do a proper review of the combined result before handing off to shipping.
+Dispatch the next round and repeat. Keep going until every piece of the plan has been implemented and merged.
+
+## Step 4: Final review
+
+Do a proper review of the combined result before handing off to shipping.
 
 Read through the full diff of all merged work. The per-task reviews in step 3 checked each slice individually. Now you're seeing it as one change for the first time. Does it hold together? Does the code read well as a whole, or does it feel like disconnected patches stitched together? Compare it against the plan's requirements and make sure nothing was missed or only partially addressed.
 

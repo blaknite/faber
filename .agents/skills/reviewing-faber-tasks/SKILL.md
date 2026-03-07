@@ -5,15 +5,11 @@ description: Assess what a ready Faber task produced and act on it. Use after fa
 
 # Reviewing Faber tasks
 
-Load the `using-faber` skill for the full CLI reference. This skill covers the judgment layer: what to look for, how to assess the work, and how to route the task based on what you find.
+Load the `using-faber` skill for the full CLI reference. This skill covers the mechanics of assessing a completed task and routing it based on what you find.
 
-## Step 1: Review the diff
+## Step 1: Read the diff
 
-Use `faber diff` to see what the task branch has on top of the base branch. Empty output means no changes were committed.
-
-If there are changes, read the diff carefully. This is a quality gate. Everything that follows builds on what you merge here, so don't let bad code through. Review it like you'd review a colleague's work: does it do what was asked, does the code make sense, is it something you'd be comfortable building on top of? If you're not confident in it, don't merge it. Continue the task with specific feedback about what needs to change.
-
-If the diff alone doesn't give you enough to judge, load the `reading-faber-logs` skill for guidance on reading logs.
+Use `faber diff` to see what the task branch has on top of the base branch. Empty output means no changes were committed. If the diff alone doesn't give you enough to judge, load the `reading-faber-logs` skill for guidance on reading logs.
 
 ## Step 2: Route the task
 
