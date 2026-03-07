@@ -287,7 +287,6 @@ install_skills() {
     "running-faber-tasks"
     "shaping-work"
     "shipping-work"
-    "submitting-pull-requests"
     "using-faber"
     "working-in-faber"
   )

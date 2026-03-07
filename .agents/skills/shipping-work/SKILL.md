@@ -20,11 +20,75 @@ Push the branch to the remote.
 
 ## Step 2: Open the pull request
 
-Load the `submitting-pull-requests` skill and follow its process, with one adjustment: this is autonomous, so make reasonable decisions rather than asking the user at each step.
+### Gather context
 
-- Draft the PR description from the available context (PLAN.md, commit messages, conversation history)
-- If a PR template exists in the repo, follow its structure
-- Open the PR (as draft if the project convention is to use drafts, otherwise as ready for review)
+```bash
+# Current branch
+git branch --show-current
+
+# Commit summary for the PR title
+git log main..HEAD --oneline
+
+# Full commit messages for the PR body
+git log main..HEAD --format="%B---"
+
+# Changed files overview
+git diff main...HEAD --stat
+```
+
+Check for a PR template at `.github/pull_request_template.md`. If one exists, structure the PR body to match its sections.
+
+### Draft the PR description
+
+Use all available context: PLAN.md, commit messages, code changes, conversation history, linked issues.
+
+If there's no PR template, use this layout as a guide (skip sections that aren't relevant):
+
+```markdown
+## Description
+
+What problem is being solved and how. Mention alternatives considered if the approach wasn't obvious.
+
+## Context
+
+Links to issues, docs, or other references.
+
+## Changes
+
+- Bulleted list of what changed
+- Include screenshots for UI changes
+
+## Verification
+
+Acceptance testing steps a human can follow. Describe the expected behaviour, not just "it works."
+
+## Deployment
+
+Risk level, migration notes, deployment considerations.
+
+## Rollback
+
+Never leave blank. Be specific: can this be reverted cleanly? Are there feature flags? Migration concerns?
+```
+
+### Submit the PR
+
+Verify `gh` is authenticated before spending time on the description:
+
+```bash
+gh auth status
+```
+
+Use a heredoc for the body to handle newlines and special characters:
+
+```bash
+gh pr create --title "<title>" --body "$(cat <<'EOF'
+<body>
+EOF
+)"
+```
+
+Open as draft if the project convention is to use drafts, otherwise as ready for review. Do not request reviewers unless the conversation specifies who should review.
 
 ## Step 3: Pass CI
 
