@@ -20,23 +20,26 @@ If the plan doesn't have an implementation order section, work one out before di
 
 ## Step 2: Dispatch tasks
 
-Load the `orchestrating-faber-tasks` skill and follow its process.
+Load the `orchestrating-faber-tasks` skill and follow its process. In short:
 
-For each task, write a prompt that includes:
-- The relevant section of the PLAN.md (not the whole thing, just what this task needs)
-- Enough codebase context that the agent can work without asking questions
-- What done looks like for this specific task
+1. Break the goal into independent and dependent sub-tasks.
+2. Dispatch all independent tasks upfront with self-contained prompts.
+3. Watch the batch in parallel and act on each one as it completes.
+4. After merging a round, dispatch any dependent tasks that were waiting on it.
+5. Repeat until nothing is outstanding.
 
-Dispatch all independent tasks upfront. Hold dependent tasks until their prerequisites are merged.
+For each task, write a prompt that includes the relevant section of the PLAN.md (not the whole thing, just what this task needs), enough codebase context that the agent can work without asking questions, and what done looks like for this specific task.
 
 ## Step 3: Review results
 
-As tasks complete, load `reviewing-faber-tasks` and assess each one:
-- Does the output match what the plan asked for?
-- Are there changes that weren't asked for?
-- Does anything look wrong or incomplete?
+As tasks complete, load `reviewing-faber-tasks` and follow its process. In short:
 
-Route each task: merge if good, continue if incomplete, delete if unsalvageable.
+1. Read the diff to understand what the agent produced.
+2. Review it as a quality gate: does the code do what was asked, does it make sense, would you build on top of it?
+3. Route the task based on your judgment: merge, continue with feedback, done, or delete.
+4. If a merge conflicts, continue the task with rebase instructions and retry.
+
+Don't merge work you're not confident in. The final review in step 5 should be polishing a near-finished product, not cleaning up accumulated problems.
 
 ## Step 4: Iterate
 
@@ -48,16 +51,12 @@ If the plan needs adjustment (a missed edge case, a wrong assumption that surfac
 
 Dispatch the next round and repeat from step 3.
 
-## Step 5: Verify intent
+## Step 5: Final review
 
-When all tasks are merged and `faber list` shows nothing outstanding, do a final check. Read through the combined diff of all merged work and compare it against the plan's requirements:
+When all tasks are merged and `faber list` shows nothing outstanding, do a proper review of the combined result before handing off to shipping.
 
-- Does the implementation cover every requirement in the plan?
-- Are there requirements that were partially addressed or missed entirely?
-- Did the implementation introduce anything that contradicts the plan's constraints?
+Read through the full diff of all merged work. The per-task reviews in step 3 checked each slice individually. Now you're seeing it as one change for the first time. Does it hold together? Does the code read well as a whole, or does it feel like disconnected patches stitched together? Compare it against the plan's requirements and make sure nothing was missed or only partially addressed.
 
-If something is missing or wrong, dispatch targeted follow-up tasks to close the gaps. Don't ship incomplete work just because the task list is empty.
+Run the tests that are relevant to what changed. For small projects that might mean the full suite. For large codebases, focus on the tests that cover the areas that were touched. The full integration test happens in CI later, but you should be confident the code works before you get there.
 
-## Step 6: Done
-
-The code is on a branch and matches the plan.
+If something isn't right, dispatch targeted follow-up tasks to fix it and review the results before moving on. The goal is to hand off code that a human reviewer could approve without sending it back for rework. Don't stop until the code on the branch matches the plan.
