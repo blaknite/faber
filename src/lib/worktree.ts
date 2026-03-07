@@ -1,6 +1,6 @@
 import { execa } from "execa"
 import { join } from "node:path"
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync, symlinkSync } from "node:fs"
 
 export function worktreePath(repoRoot: string, slug: string): string {
   return join(repoRoot, ".worktrees", slug)
@@ -11,6 +11,11 @@ export async function createWorktree(repoRoot: string, slug: string, baseBranch?
   const args = ["worktree", "add", path, "-b", slug]
   if (baseBranch) args.push(baseBranch)
   await execa("git", args, { cwd: repoRoot })
+  const plansSource = join(repoRoot, ".plans")
+  const plansTarget = join(path, ".plans")
+  if (existsSync(plansSource)) {
+    symlinkSync(plansSource, plansTarget)
+  }
   return path
 }
 
