@@ -85,7 +85,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
 
     const timer = setTimeout(() => setShowLoading(true), 300)
 
-    getDiff(repoRoot, task.id)
+    getDiff(repoRoot, task.id, task.baseBranch || undefined)
       .then((output) => setDiff(output))
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => clearTimeout(timer))
@@ -111,7 +111,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
                 <span fg="#555555">{formatElapsed(task.startedAt, null, Date.now())}</span>
               </>}
           {"  "}
-          <span fg="#444444">diff vs HEAD</span>
+          <span fg="#444444">diff vs {task.baseBranch || "HEAD"}</span>
         </text>
         <box style={{ flexDirection: "row", gap: 2 }}>
           <text fg="#666666">
@@ -138,7 +138,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
       ) : diff == null ? (
         showLoading ? <DiffLoadingSpinner /> : null
       ) : (
-        <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} disabled={disabled} />
+        <DiffViewer diff={diff} viewMode={viewMode} hideHeader headerContent={<LastMessage repoRoot={repoRoot} task={task} />} disabled={disabled} baseBranch={task.baseBranch || undefined} />
       )}
     </box>
   )

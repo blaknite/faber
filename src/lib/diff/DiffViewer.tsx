@@ -16,6 +16,7 @@ export interface DiffViewerProps {
   hideHeader?: boolean
   headerContent?: React.ReactNode
   disabled?: boolean
+  baseBranch?: string
 }
 
 // Pair up removed/added lines within a hunk for character-level highlighting.
@@ -375,7 +376,7 @@ function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () =
   )
 }
 
-export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent, disabled }: DiffViewerProps) {
+export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent, disabled, baseBranch }: DiffViewerProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [internalViewMode, setInternalViewMode] = useState<ViewMode>(controlledViewMode ?? "side-by-side")
 
@@ -444,7 +445,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
           <box style={styles.scrollContent}>
             {headerContent}
             {isEmpty ? (
-              <text fg={colors.context}>No diff -- branch is identical to HEAD.</text>
+              <text fg={colors.context}>No diff -- branch is identical to {baseBranch || "HEAD"}.</text>
             ) : (
               parsed.files.map((file, fi) => (
                 <FileSection key={fi} file={file} viewMode={viewMode} fileIndex={fi} />

@@ -83,8 +83,9 @@ export async function hasUnpushedCommits(repoRoot: string): Promise<boolean> {
   }
 }
 
-export async function getDiff(repoRoot: string, slug: string): Promise<string> {
-  const { stdout } = await execa("git", ["diff", `HEAD...${slug}`], { cwd: repoRoot })
+export async function getDiff(repoRoot: string, slug: string, baseBranch?: string): Promise<string> {
+  const base = baseBranch || "HEAD"
+  const { stdout } = await execa("git", ["diff", `${base}...${slug}`], { cwd: repoRoot })
   return stdout
 }
 
