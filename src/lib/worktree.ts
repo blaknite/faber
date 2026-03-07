@@ -1,6 +1,8 @@
 import { execa } from "execa"
 import { join } from "node:path"
-import { readFileSync, existsSync, symlinkSync } from "node:fs"
+import { readFileSync, existsSync, symlinkSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { randomBytes } from "node:crypto"
 
 export function worktreePath(repoRoot: string, slug: string): string {
   return join(repoRoot, ".worktrees", slug)
@@ -119,13 +121,32 @@ export async function getProjectDirectories(repoRoot: string): Promise<string[]>
   return Array.from(seen).sort()
 }
 
-export async function mergeBranch(repoRoot: string, slug: string): Promise<void> {
-  // Rebase the task branch onto the main repo's current HEAD. Because the
-  // branch may be checked out in a worktree we can't reference it by name from
-  // outside that worktree -- we run the rebase from inside the worktree itself
-  // instead, using the main repo's HEAD SHA as the upstream.
+// Returns the path of the worktree where `branch` is currently checked out,
+// by querying `git worktree list`. Returns null if the branch isn't checked
+// out in any worktree.
+async function findWorktreeForBranch(repoRoot: string, branch: string): Promise<string | null> {
+  const { stdout } = await execa("git", ["worktree", "list", "--porcelain"], { cwd: repoRoot })
+  // Each entry is separated by a blank line. Fields: worktree, HEAD, branch.
+  const entries = stdout.trim().split(/\n\n/)
+  for (const entry of entries) {
+    const branchLine = entry.split("\n").find(l => l.startsWith("branch "))
+    const worktreeLine = entry.split("\n").find(l => l.startsWith("worktree "))
+    if (!branchLine || !worktreeLine) continue
+    // branch lines look like: "branch refs/heads/<name>"
+    const checkedOutBranch = branchLine.replace("branch refs/heads/", "")
+    if (checkedOutBranch === branch) {
+      return worktreeLine.replace("worktree ", "")
+    }
+  }
+  return null
+}
+
+export async function mergeBranch(repoRoot: string, slug: string, baseBranch: string): Promise<void> {
+  // Rebase the task branch onto baseBranch's current tip. Because the task
+  // branch is checked out in its own worktree we can't reference it by name
+  // from outside -- we run the rebase from inside that worktree instead.
   const wtPath = worktreePath(repoRoot, slug)
-  const { stdout: headSha } = await execa("git", ["rev-parse", "HEAD"], { cwd: repoRoot })
+  const { stdout: headSha } = await execa("git", ["rev-parse", baseBranch], { cwd: repoRoot })
   try {
     await execa("git", ["rebase", headSha.trim()], { cwd: wtPath })
   } catch (err) {
@@ -138,8 +159,27 @@ export async function mergeBranch(repoRoot: string, slug: string): Promise<void>
     throw err
   }
 
-  // The branch is now a linear extension of HEAD, so this must succeed.
-  await execa("git", ["merge", "--ff-only", slug], { cwd: repoRoot })
+  // git merge always advances the currently checked out branch, so we need to
+  // run it from a directory where baseBranch is HEAD. If it's already checked
+  // out in an existing worktree we use that. Otherwise we spin up a temporary
+  // worktree, merge, and immediately tear it down.
+  const existingPath = await findWorktreeForBranch(repoRoot, baseBranch)
+  if (existingPath) {
+    await execa("git", ["merge", "--ff-only", slug], { cwd: existingPath })
+    return
+  }
+
+  const tmpPath = join(tmpdir(), `faber-merge-${randomBytes(4).toString("hex")}`)
+  try {
+    await execa("git", ["worktree", "add", tmpPath, baseBranch], { cwd: repoRoot })
+    await execa("git", ["merge", "--ff-only", slug], { cwd: tmpPath })
+  } finally {
+    try {
+      await execa("git", ["worktree", "remove", "--force", tmpPath], { cwd: repoRoot })
+    } catch {
+      rmSync(tmpPath, { recursive: true, force: true })
+    }
+  }
 }
 
 export async function pushBranch(repoRoot: string): Promise<void> {

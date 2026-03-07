@@ -189,7 +189,7 @@ describe("mergeBranch", () => {
     git("add .", wtPath)
     git('commit -m "add merged.ts"', wtPath)
 
-    await mergeBranch(tmpRoot, "merge-me")
+    await mergeBranch(tmpRoot, "merge-me", "main")
 
     const log = execSync("git log --oneline", { cwd: tmpRoot, encoding: "utf8" })
     expect(log).toContain("add merged.ts")
@@ -210,13 +210,39 @@ describe("mergeBranch", () => {
     git("add .", tmpRoot)
     git('commit -m "unrelated change on main"', tmpRoot)
 
-    await mergeBranch(tmpRoot, "diverged-branch")
+    await mergeBranch(tmpRoot, "diverged-branch", "main")
 
     const log = execSync("git log --oneline", { cwd: tmpRoot, encoding: "utf8" })
     expect(log).toContain("add feature")
     expect(log).toContain("unrelated change on main")
     // Linear history: no merge commit
     expect(log).not.toContain("Merge branch")
+  })
+
+  it("merges into an orchestrator worktree branch when baseBranch is a worktree slug", async () => {
+    // Set up an "orchestrator" worktree branch that has a commit ahead of main.
+    const orchPath = await createWorktree(tmpRoot, "orchestrator-branch")
+    writeFileSync(join(orchPath, "orchestrator.ts"), "export const orch = true\n")
+    git("add .", orchPath)
+    git('commit -m "orchestrator commit"', orchPath)
+
+    // Create a sub-task worktree branching from the orchestrator branch.
+    const subPath = await createWorktree(tmpRoot, "sub-task", "orchestrator-branch")
+    writeFileSync(join(subPath, "sub-task.ts"), "export const sub = true\n")
+    git("add .", subPath)
+    git('commit -m "sub-task commit"', subPath)
+
+    // Merge sub-task into the orchestrator branch (not main).
+    await mergeBranch(tmpRoot, "sub-task", "orchestrator-branch")
+
+    // The orchestrator worktree should now contain both commits.
+    const log = execSync("git log --oneline", { cwd: orchPath, encoding: "utf8" })
+    expect(log).toContain("orchestrator commit")
+    expect(log).toContain("sub-task commit")
+
+    // main should NOT have the sub-task commit -- it only went into the orchestrator branch.
+    const mainLog = execSync("git log --oneline", { cwd: tmpRoot, encoding: "utf8" })
+    expect(mainLog).not.toContain("sub-task commit")
   })
 
   it("conflict during rebase: aborts cleanly and throws", async () => {
@@ -231,7 +257,7 @@ describe("mergeBranch", () => {
     git("add .", tmpRoot)
     git('commit -m "main edit"', tmpRoot)
 
-    await expect(mergeBranch(tmpRoot, "conflict-branch")).rejects.toThrow()
+    await expect(mergeBranch(tmpRoot, "conflict-branch", "main")).rejects.toThrow()
 
     // The repo must not be left in a rebase or merge state
     const status = execSync("git status", { cwd: tmpRoot, encoding: "utf8" })

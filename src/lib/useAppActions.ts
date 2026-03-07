@@ -186,7 +186,7 @@ export function useAppActions({
     if (!task) { setMode("normal"); return }
     setMode("normal")
     try {
-      await mergeBranch(repoRoot, task.id)
+      await mergeBranch(repoRoot, task.id, task.baseBranch)
       updateTaskInState(task.id, { status: "done" })
       setPaneTaskId(null)
       showMergeMessage(`Merged ${task.id} into HEAD.`)

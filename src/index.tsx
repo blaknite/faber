@@ -575,7 +575,7 @@ Also offers to install or update faber's bundled skills.`)
       exit(1)
     }
     try {
-      await mergeBranch(repoRoot, taskId)
+      await mergeBranch(repoRoot, taskId, task.baseBranch)
     } catch (err: any) {
       console.error(`Merge failed: ${err.message}`)
       exit(1)
