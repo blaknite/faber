@@ -175,7 +175,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
     { key: "↑↓", label: "scroll" },
     { key: "</>", label: "prev/next", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
     { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running" },
-    { key: "m", label: "merge into HEAD", disabled: !paneTask },
+    { key: "m", label: "merge", disabled: !paneTask },
     { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready" },
     { key: "d", label: "delete", disabled: !paneTask },
   ] : paneTaskId && paneView === "log" ? [
