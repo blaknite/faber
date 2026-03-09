@@ -1,6 +1,6 @@
 import { execa } from "execa"
 import { join } from "node:path"
-import { readFileSync, existsSync, symlinkSync, rmSync } from "node:fs"
+import { readFileSync, existsSync, symlinkSync, rmSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { randomBytes } from "node:crypto"
 
@@ -92,12 +92,26 @@ export async function getDiff(repoRoot: string, slug: string, baseBranch?: strin
 // Returns all files visible to git (tracked + untracked, but not gitignored),
 // relative to the repo root. Combines `git ls-files` for tracked files and
 // `git ls-files --others --exclude-standard` for untracked ones.
+//
+// Also includes files from .plans/ directly, since that directory is gitignored
+// but users need to reference plan files when writing task prompts.
 async function getAllProjectFiles(repoRoot: string): Promise<string[]> {
   const [{ stdout: tracked }, { stdout: untracked }] = await Promise.all([
     execa("git", ["ls-files"], { cwd: repoRoot }),
     execa("git", ["ls-files", "--others", "--exclude-standard"], { cwd: repoRoot }),
   ])
   const files = [...tracked.split("\n"), ...untracked.split("\n")].filter(Boolean)
+
+  // .plans/ is gitignored, so git never returns those files. Read the directory
+  // directly and merge the paths in so they show up in the @ file selector.
+  const plansDir = join(repoRoot, ".plans")
+  if (existsSync(plansDir)) {
+    const planFiles = readdirSync(plansDir, { recursive: true, withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => join(".plans", entry.parentPath.slice(plansDir.length), entry.name).replace(/\\/g, "/").replace(/\/+/g, "/"))
+    files.push(...planFiles)
+  }
+
   return [...new Set(files)].sort()
 }
 
