@@ -301,7 +301,7 @@ function ToolRow({ entry }: { entry: LogEntry }) {
           style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
         >
           {header}
-          {body}
+          {heavy ? body : null}
         </box>
       </box>
     </box>
