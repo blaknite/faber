@@ -56,18 +56,26 @@ function isHeavyTool(tool: string): boolean {
 const BLOCK_MAX_LINES = 5
 
 function BlockContent({ content, unlimited = false }: { content: string; unlimited?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const [hovered, setHovered] = useState(false)
   const lines = content.split("\n")
-  const visible = unlimited ? lines : lines.slice(0, BLOCK_MAX_LINES)
-  const overflow = unlimited ? 0 : lines.length - BLOCK_MAX_LINES
+  const hasOverflow = !unlimited && lines.length > BLOCK_MAX_LINES
+  const visible = unlimited || expanded ? lines : lines.slice(0, BLOCK_MAX_LINES)
+  const overflow = hasOverflow ? lines.length - BLOCK_MAX_LINES : 0
 
   return (
     <box style={{ paddingLeft: 1, marginTop: 0 }}>
       {visible.map((line, i) => (
         <text key={i} fg="#888888">{line}</text>
       ))}
-      {overflow > 0 ? (
-        <text fg="#666666">
-          {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
+      {hasOverflow ? (
+        <text
+          fg={hovered ? "#888888" : "#666666"}
+          onMouseDown={() => setExpanded((e) => !e)}
+          onMouseOver={() => setHovered(true)}
+          onMouseOut={() => setHovered(false)}
+        >
+          {expanded ? "▾ collapse" : `▸ ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
         </text>
       ) : null}
     </box>
@@ -78,10 +86,14 @@ const DIFF_MAX_LINES = 10
 
 
 function DiffContent({ diff }: { diff: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const maxLines = expanded ? Infinity : DIFF_MAX_LINES
+
   const parsed = parseDiff(diff)
 
   // Flatten all diff lines across all files and hunks into a simple list for
-  // the inline preview, then cap at DIFF_MAX_LINES.
+  // the inline preview, then cap at maxLines.
   type PreviewLine =
     | { kind: "hunk"; header: string }
     | { kind: "context"; line: DiffLine }
@@ -97,7 +109,7 @@ function DiffContent({ diff }: { diff: string }) {
       let i = 0
       const lines = hunk.lines
 
-      while (i < lines.length && previewLines.length < DIFF_MAX_LINES) {
+      while (i < lines.length && previewLines.length < maxLines) {
         const line = lines[i]!
 
         if (line.type === "context") {
@@ -120,7 +132,7 @@ function DiffContent({ diff }: { diff: string }) {
         }
 
         const count = Math.max(removeBlock.length, addBlock.length)
-        for (let j = 0; j < count && previewLines.length < DIFF_MAX_LINES; j++) {
+        for (let j = 0; j < count && previewLines.length < maxLines; j++) {
           const rem = removeBlock[j]
           const add = addBlock[j]
 
@@ -136,7 +148,7 @@ function DiffContent({ diff }: { diff: string }) {
         }
       }
 
-      if (previewLines.length >= DIFF_MAX_LINES) break
+      if (previewLines.length >= maxLines) break
     }
   }
 
@@ -146,6 +158,13 @@ function DiffContent({ diff }: { diff: string }) {
     0
   )
   const overflow = totalLines - previewLines.filter((l) => l.kind !== "hunk").length
+
+  const toggleProps = {
+    fg: hovered ? "#888888" : "#555555",
+    onMouseDown: () => setExpanded((e) => !e),
+    onMouseOver: () => setHovered(true),
+    onMouseOut: () => setHovered(false),
+  }
 
   return (
     <box style={{ paddingLeft: 1, marginTop: 0 }}>
@@ -181,8 +200,12 @@ function DiffContent({ diff }: { diff: string }) {
         )
       })}
       {overflow > 0 ? (
-        <text fg="#555555">
-          {`... ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
+        <text {...toggleProps}>
+          {`▸ ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
+        </text>
+      ) : expanded ? (
+        <text {...toggleProps}>
+          {"▾ collapse"}
         </text>
       ) : null}
     </box>
