@@ -316,11 +316,34 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   )
 }
 
-function StepFinishRow({ entry }: { entry: LogEntry }) {
+export function sumRoundElapsed(entries: LogEntry[], boundaryIndex: number): number {
+  let total = 0
+  for (let i = boundaryIndex; i >= 0; i--) {
+    if (entries[i].kind === "prompt") break
+    if (entries[i].kind === "step_finish" && entries[i].elapsedMs != null) {
+      total += entries[i].elapsedMs!
+    }
+  }
+  return total
+}
+
+export function shouldShowStepFinish(
+  entries: LogEntry[],
+  index: number,
+  taskRunning: boolean,
+): boolean {
+  for (let i = index + 1; i < entries.length; i++) {
+    if (entries[i].kind === "prompt") return true   // round is complete, and we're the last step before it
+    if (entries[i].kind === "step_finish") return false // a later step_finish exists in this round
+  }
+  // End of entries — only show if the task is no longer running
+  return !taskRunning
+}
+
+function StepFinishRow({ entry, elapsed }: { entry: LogEntry; elapsed: number }) {
   const modelLabel = entry.modelId
     ? entry.modelId.replace(/^[^/]+\//, "") // strip provider prefix, e.g. "anthropic/claude-sonnet-4-6" -> "claude-sonnet-4-6"
     : null
-  const elapsed = entry.elapsedMs != null ? formatElapsedMs(entry.elapsedMs) : null
 
   return (
     <box style={{ flexDirection: "row", paddingBottom: 1, paddingLeft: 3 }}>
@@ -328,7 +351,7 @@ function StepFinishRow({ entry }: { entry: LogEntry }) {
         {"▣  "}
         {modelLabel ? `${modelLabel} · ` : ""}
         {"done"}
-        {elapsed ? ` · ${elapsed}` : ""}
+        {elapsed > 0 ? ` · ${formatElapsedMs(elapsed)}` : ""}
       </text>
     </box>
   )
@@ -351,10 +374,16 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
   )
 }
 
-function LogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
+function LogRow({ entry, index, entries, model, taskStatus }: { entry: LogEntry; index: number; entries: LogEntry[]; model: Task["model"]; taskStatus: Task["status"] }) {
   if (entry.kind === "prompt") return <PromptLogRow entry={entry} model={model} />
   if (entry.kind === "tool_use") return <ToolRow entry={entry} />
-  if (entry.kind === "step_finish") return <StepFinishRow entry={entry} />
+  if (entry.kind === "step_finish") {
+    if (shouldShowStepFinish(entries, index, taskStatus === "running")) {
+      const elapsed = sumRoundElapsed(entries, index)
+      return <StepFinishRow entry={entry} elapsed={elapsed} />
+    }
+    return null
+  }
   if (entry.kind === "reasoning") return <ReasoningRow entry={entry} />
   return <TextRow entry={entry} />
 }
@@ -462,7 +491,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
               <text fg="#555555">No output yet.</text>
             ) : (
               entries.map((entry, i) => (
-                <LogRow key={i} entry={entry} model={task.model} />
+                <LogRow key={i} entry={entry} index={i} entries={entries} model={task.model} taskStatus={task.status} />
               ))
             )}
           </box>
