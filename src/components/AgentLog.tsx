@@ -255,7 +255,7 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   const titleAttr = createTextAttributes({ bold: !isDone })
 
   const header = (
-    <box style={{ flexDirection: "row", paddingBottom: 1 }}>
+    <box style={{ flexDirection: "row" }}>
       <text fg={color} style={{ flexShrink: 0 }}>
         {icon}{" "}
       </text>
@@ -302,7 +302,9 @@ function ToolRow({ entry }: { entry: LogEntry }) {
             style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
           >
             {header}
-            {body}
+            <box style={{ marginTop: 1 }}>
+              {body}
+            </box>
           </box>
         </box>
       </box>
