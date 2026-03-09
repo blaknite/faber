@@ -292,27 +292,18 @@ function ToolRow({ entry }: { entry: LogEntry }) {
     </>
   )
 
-  if (heavy) {
-    return (
-      <box style={{ paddingBottom: 1 }}>
-        <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
-          <box
-            border={["left"]}
-            borderColor="#444444"
-            style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
-          >
-            {header}
-            {body}
-          </box>
+  return (
+    <box style={{ paddingBottom: 1 }}>
+      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: heavy ? "#111111" : undefined }}>
+        <box
+          border={["left"]}
+          borderColor={heavy ? "#444444" : "#222222"}
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+        >
+          {header}
+          {body}
         </box>
       </box>
-    )
-  }
-
-  return (
-    <box style={{ flexDirection: "column" }}>
-      {header}
-      {body}
     </box>
   )
 }
