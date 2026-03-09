@@ -734,7 +734,13 @@ Safe to run multiple times.`)
   const state = readState(repoRoot)
   const repoName = repoRoot.replace(homedir(), "~")
 
-  const renderer = await createCliRenderer({ exitOnCtrlC: false, useMouse: false })
+  const renderer = await createCliRenderer({ exitOnCtrlC: false, autoFocus: false })
+  renderer.on('selection', (selection) => {
+    const text = selection.getSelectedText()
+    if (text) {
+      renderer.copyToClipboardOSC52(text)
+    }
+  })
   const root = createRoot(renderer)
 
   root.render(
