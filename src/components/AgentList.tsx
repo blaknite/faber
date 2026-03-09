@@ -85,12 +85,12 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
         ) : (
           <text>{""}</text>
         )}
-        <text>
-          <span fg={filterMode === "active" ? "#ff6600" : "#555555"}>active</span>
-          <span fg="#333333">{" / "}</span>
-          <span fg={filterMode === "all" ? "#ff6600" : "#555555"}>all</span>
-          <span fg="#888888">{" [tab]"}</span>
-        </text>
+        <box style={{ flexDirection: "row" }}>
+          <text fg={filterMode === "active" ? "#ff6600" : "#555555"} onMouseDown={(e) => { if (e.button === 0) onFilterChange("active") }}>active</text>
+          <text fg="#333333">{" / "}</text>
+          <text fg={filterMode === "all" ? "#ff6600" : "#555555"} onMouseDown={(e) => { if (e.button === 0) onFilterChange("all") }}>all</text>
+          <text fg="#888888">{" [tab]"}</text>
+        </box>
       </box>
       <TaskInput repoRoot={repoRoot} active={inputActive} onActivate={onActivate} onSubmit={onSubmit} onCancel={onCancel} />
 
