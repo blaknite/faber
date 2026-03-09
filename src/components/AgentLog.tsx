@@ -43,6 +43,16 @@ function toolColor(tool: string): string {
   return "#888888"
 }
 
+const HEAVY_TOOLS = new Set(["bash", "edit", "write", "todowrite"])
+
+function isHeavyTool(tool: string): boolean {
+  const lower = tool.toLowerCase()
+  for (const key of HEAVY_TOOLS) {
+    if (lower.includes(key)) return true
+  }
+  return false
+}
+
 const BLOCK_MAX_LINES = 5
 
 function BlockContent({ content, unlimited = false }: { content: string; unlimited?: boolean }) {
@@ -51,11 +61,7 @@ function BlockContent({ content, unlimited = false }: { content: string; unlimit
   const overflow = unlimited ? 0 : lines.length - BLOCK_MAX_LINES
 
   return (
-    <box
-      border={["left"]}
-      borderColor="#444444"
-      style={{ paddingLeft: 1, marginTop: 0 }}
-    >
+    <box style={{ paddingLeft: 1, marginTop: 0 }}>
       {visible.map((line, i) => (
         <text key={i} fg="#888888">{line}</text>
       ))}
@@ -142,11 +148,7 @@ function DiffContent({ diff }: { diff: string }) {
   const overflow = totalLines - previewLines.filter((l) => l.kind !== "hunk").length
 
   return (
-    <box
-      border={["left"]}
-      borderColor="#444444"
-      style={{ paddingLeft: 1, marginTop: 0 }}
-    >
+    <box style={{ paddingLeft: 1, marginTop: 0 }}>
       {previewLines.map((item, i) => {
         if (item.kind === "hunk") {
           return <text key={i} fg={diffColors.header}>{item.header}</text>
@@ -248,33 +250,33 @@ function ToolRow({ entry }: { entry: LogEntry }) {
   const title = entry.title ?? entry.tool ?? ""
   const isDone = entry.status === "completed"
   const isError = entry.status === "error"
+  const heavy = isHeavyTool(entry.tool ?? "")
 
   const titleAttr = createTextAttributes({ bold: !isDone })
 
-  return (
-    <box style={{ flexDirection: "column" }}>
-      <box style={{ flexDirection: "row", paddingBottom: 0 }}>
-        <text fg={color} style={{ flexShrink: 0 }}>
-          {icon}{" "}
-        </text>
-        <text fg={color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>
-          {title}
-        </text>
-        {entry.description ? (
-          <>
-            <text fg="#555555">{" "}</text>
-            <text fg="#777777" truncate>
-              {entry.description}
-            </text>
-          </>
-        ) : null}
-      </box>
+  const header = (
+    <box style={{ flexDirection: "row", paddingBottom: 0 }}>
+      <text fg={color} style={{ flexShrink: 0 }}>
+        {icon}{" "}
+      </text>
+      <text fg={color} attributes={titleAttr} style={{ flexShrink: 0 }} truncate>
+        {title}
+      </text>
+      {entry.description ? (
+        <>
+          <text fg="#555555">{" "}</text>
+          <text fg="#777777" truncate>
+            {entry.description}
+          </text>
+        </>
+      ) : null}
+    </box>
+  )
+
+  const body = (
+    <>
       {entry.command ? (
-        <box
-          border={["left"]}
-          borderColor="#444444"
-          style={{ paddingLeft: 1, marginTop: 0 }}
-        >
+        <box style={{ paddingLeft: 1, marginTop: 0 }}>
           {entry.command.split("\n").map((line, i) => (
             <text key={i} fg="#888888">{i === 0 ? `$ ${line}` : line}</text>
           ))}
@@ -287,6 +289,30 @@ function ToolRow({ entry }: { entry: LogEntry }) {
       ) : entry.blockContent ? (
         <BlockContent content={entry.blockContent} unlimited={entry.tool === "todowrite"} />
       ) : null}
+    </>
+  )
+
+  if (heavy) {
+    return (
+      <box style={{ paddingBottom: 1 }}>
+        <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
+          <box
+            border={["left"]}
+            borderColor="#444444"
+            style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+          >
+            {header}
+            {body}
+          </box>
+        </box>
+      </box>
+    )
+  }
+
+  return (
+    <box style={{ flexDirection: "column" }}>
+      {header}
+      {body}
     </box>
   )
 }
