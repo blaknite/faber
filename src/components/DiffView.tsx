@@ -122,12 +122,18 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
             ].filter(Boolean).join(" • ")}
           </text>
           <text fg="#333333">|</text>
-          <text>
-            <span fg={viewMode === "inline" ? "#ff6600" : "#555555"}>inline</span>
-            <span fg="#333333">{" / "}</span>
-            <span fg={viewMode === "side-by-side" ? "#ff6600" : "#555555"}>side-by-side</span>
-            <span fg="#888888">{" [tab]"}</span>
-          </text>
+          <box style={{ flexDirection: "row" }}>
+            <text
+              fg={viewMode === "inline" ? "#ff6600" : "#555555"}
+              onMouseDown={(e) => { if (e.button === 0 && !disabled) setViewMode("inline") }}
+            >inline</text>
+            <text fg="#333333">{" / "}</text>
+            <text
+              fg={viewMode === "side-by-side" ? "#ff6600" : "#555555"}
+              onMouseDown={(e) => { if (e.button === 0 && !disabled) setViewMode("side-by-side") }}
+            >side-by-side</text>
+            <text fg="#888888">{" [tab]"}</text>
+          </box>
         </box>
       </box>
 

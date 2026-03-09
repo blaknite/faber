@@ -361,15 +361,17 @@ function FileSection({ file, viewMode, fileIndex }: {
 }
 
 // Mode toggle button in the header
-function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () => void }) {
+function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: (mode: ViewMode) => void }) {
   return (
     <box style={{ flexDirection: "row" }}>
       <text
         fg={viewMode === "inline" ? colors.modeActive : colors.modeInactive}
+        onMouseDown={(e) => { if (e.button === 0) onToggle("inline") }}
       >inline</text>
       <text fg={colors.separator}>{" / "}</text>
       <text
         fg={viewMode === "side-by-side" ? colors.modeActive : colors.modeInactive}
+        onMouseDown={(e) => { if (e.button === 0) onToggle("side-by-side") }}
       >side-by-side</text>
       <text fg={colors.meta}>{" [tab]"}</text>
     </box>
@@ -426,7 +428,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
           {!controlledViewMode && (
             <ModeToggle
               viewMode={viewMode}
-              onToggle={() => setInternalViewMode((m) => m === "inline" ? "side-by-side" : "inline")}
+              onToggle={(mode) => setInternalViewMode(mode)}
             />
           )}
         </box>
