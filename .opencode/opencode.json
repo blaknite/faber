@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "smart",
+  "agent": {
+    "build": { "disable": true },
+    "plan": { "disable": true },
+    "fast": {
+      "description": "Quick tasks and small changes",
+      "model": "anthropic/claude-haiku-4-5",
+      "color": "#00cc66",
+      "mode": "primary",
+      "permission": {
+        "question": "allow"
+      }
+    },
+    "smart": {
+      "description": "Standard development work",
+      "model": "anthropic/claude-sonnet-4-6",
+      "color": "#0088ff",
+      "mode": "primary",
+      "permission": {
+        "question": "allow"
+      }
+    },
+    "deep": {
+      "description": "Complex problems and architecture decisions",
+      "model": "anthropic/claude-opus-4-6",
+      "color": "#9966ff",
+      "mode": "primary",
+      "permission": {
+        "question": "allow"
+      }
+    }
+  }
+}
