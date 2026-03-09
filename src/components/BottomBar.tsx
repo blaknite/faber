@@ -8,6 +8,8 @@ interface Binding {
   key: string
   label: string
   disabled?: boolean
+  hidden?: boolean
+  onAction?: () => void
 }
 
 interface ConfirmPromptProps {

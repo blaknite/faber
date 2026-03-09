@@ -3,6 +3,7 @@ interface Binding {
   label: string
   disabled?: boolean
   hidden?: boolean
+  onAction?: () => void
 }
 
 interface Props {
@@ -16,7 +17,11 @@ export function StatusBar({ bindings }: Props) {
         b.disabled ? (
           <text key={b.key} fg="#2a2a2a" style={{ marginRight: i < visible.length - 1 ? 3 : 0 }}>{`[${b.key}] ${b.label}`}</text>
         ) : (
-          <text key={b.key} style={{ marginRight: i < visible.length - 1 ? 3 : 0 }}>
+          <text
+            key={b.key}
+            style={{ marginRight: i < visible.length - 1 ? 3 : 0 }}
+            onMouseDown={(e: { button: number }) => { if (e.button === 0 && b.onAction) b.onAction() }}
+          >
             <strong>[{b.key}]</strong>{" "}{b.label}
           </text>
         )
