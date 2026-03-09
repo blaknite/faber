@@ -296,8 +296,8 @@ function ToolRow({ entry }: { entry: LogEntry }) {
     <box style={{ paddingBottom: 1 }}>
       <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: heavy ? "#111111" : undefined }}>
         <box
-          border={["left"]}
-          borderColor={heavy ? "#444444" : "#222222"}
+          border={heavy ? ["left"] : []}
+          borderColor={heavy ? "#444444" : undefined}
           style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
         >
           {header}
