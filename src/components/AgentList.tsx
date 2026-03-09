@@ -22,9 +22,10 @@ interface Props {
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
   onSelectTask: (id: string) => void
+  onOpenTask: (id: string) => void
 }
 
-export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onSubmit, onCancel, onSelectTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onSubmit, onCancel, onSelectTask, onOpenTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -101,7 +102,7 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column" }}>
               {tasks.map((task, i) => (
-                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} repoRoot={repoRoot} />
+                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} repoRoot={repoRoot} onOpen={() => onOpenTask(task.id)} />
               ))}
             </box>
           </scrollbox>

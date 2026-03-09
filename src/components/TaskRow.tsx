@@ -42,6 +42,7 @@ interface Props {
   selected: boolean
   cardRef: (el: BoxRenderable | null) => void
   repoRoot: string
+  onOpen: () => void
 }
 
 function StaticStatus({ task, selected }: { task: Task; selected: boolean }) {
@@ -56,7 +57,7 @@ function StaticStatus({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function TaskRow({ task, index, selected, cardRef, repoRoot }: Props) {
+export function TaskRow({ task, index, selected, cardRef, repoRoot, onOpen }: Props) {
   const { width: termWidth } = useTerminalDimensions()
   const [stats, setStats] = useState(() => readLogStats(repoRoot, task.id))
 
@@ -86,6 +87,7 @@ export function TaskRow({ task, index, selected, cardRef, repoRoot }: Props) {
         }}
         border={["left"]}
         borderColor={selected ? "#ff6600" : "#ffffff"}
+        onMouseDown={(e) => { if (e.button === 0) onOpen() }}
       >
         <box style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <text fg={selected ? "#ffffff" : "#666666"}>

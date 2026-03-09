@@ -247,6 +247,10 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
               const idx = visibleTasks.findIndex((t) => t.id === id)
               if (idx !== -1) setSelectedIdx(idx)
             }}
+            onOpenTask={(id) => {
+              const task = visibleTasks.find((t) => t.id === id)
+              if (task) openTaskView(task)
+            }}
           />
         )}
       </box>
