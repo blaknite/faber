@@ -2,7 +2,7 @@ import { createWriteStream, chmodSync, renameSync, unlinkSync, existsSync } from
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { platform, arch } from "node:os"
-import { installSkills } from "./skills.js"
+import { readExtrasVersion } from "./extras.js"
 
 const REPO = "blaknite/faber"
 const GITHUB_API = `https://api.github.com/repos/${REPO}/releases/latest`
@@ -154,6 +154,13 @@ export async function checkAndUpdate(currentVersion: string): Promise<void> {
 
   console.log(`Updated to ${latestVersion}.`)
 
-  // Offer to update skills now that the binary is at the new version.
-  await installSkills(latestVersion, import.meta.dir)
+  // Nudge the user to update extras if they're stale.
+  const extrasVersion = readExtrasVersion()
+  if (extrasVersion !== latestVersion) {
+    if (extrasVersion) {
+      console.log(`\nExtras were installed for v${extrasVersion}. Run 'faber extras' to update them.`)
+    } else {
+      console.log(`\nRun 'faber extras' to install agent skills and opencode commands.`)
+    }
+  }
 }

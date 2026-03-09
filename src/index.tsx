@@ -147,6 +147,7 @@ Commands:
   delete <taskId>   Delete a task and remove its worktree and branch
   setup             Initialise .faber/, .worktrees/, and .plans/ in the repo
   update            Check for a new release and install it
+  extras            Install or update agent skills, opencode commands, and config
   version           Print the version and exit
   help              Show this help message
 
@@ -327,8 +328,20 @@ Examples:
       case "update":
         console.log(`Usage: faber update
 
-Check for a new release on GitHub and install it if one is available.
-Also offers to install or update faber's bundled skills.`)
+Check for a new release on GitHub and install it if one is available.`)
+        exit(0)
+      case "extras":
+        console.log(`Usage: faber extras
+
+Install or update faber's optional agent tooling:
+
+  - Skills          SKILL.md files to ~/.config/agents/skills/ (or ~/.claude/skills/)
+  - Opencode setup  Slash commands and agent config to ~/.opencode/
+
+Each group is prompted individually. Existing files that differ from the
+release version are flagged as conflicts and you're asked before overwriting.
+
+Safe to run multiple times.`)
         exit(0)
       default:
         // Unknown command with --help: fall through to the main dispatcher,
@@ -541,6 +554,13 @@ Also offers to install or update faber's bundled skills.`)
       console.error(`Update failed: ${err.message}`)
       exit(1)
     }
+    return
+  }
+
+  // faber extras
+  if (command === "extras") {
+    const { installExtras } = await import("./lib/extras.js")
+    await installExtras(VERSION)
     return
   }
 
