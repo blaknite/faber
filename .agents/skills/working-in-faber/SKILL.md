@@ -38,6 +38,16 @@ git merge-tree $(git merge-base HEAD <baseBranch>) HEAD <baseBranch>
 
 Conflict markers in that output mean there are overlapping edits. You can use this to decide whether to reorganize your commits, but don't perform the merge yourself. Faber handles merging. Your job is to commit your work cleanly on your own branch and stop there.
 
+## Dispatching sub-tasks
+
+If your task involves orchestrating further work through Faber, always pass `--base $(git branch --show-current)` when dispatching sub-tasks. That resolves to your worktree branch — the branch your sub-tasks should branch from.
+
+Do not pass your base branch. Your base branch is where you came from; your current branch is where sub-tasks need to start.
+
+```bash
+faber run "..." --base $(git branch --show-current)
+```
+
 ## Reading other tasks
 
 When your prompt contains a reference like `@123456-some-slug`, that's a faber task reference. The pattern is a bare `@` followed by a task slug: a short hex prefix, a hyphen, then a descriptive name. It points to another faber task by its ID. Load the `reading-faber-logs` skill to learn how to read and query it.
