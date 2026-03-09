@@ -71,6 +71,7 @@ function BlockContent({ content, unlimited = false }: { content: string; unlimit
       {hasOverflow ? (
         <text
           fg={hovered ? "#888888" : "#666666"}
+          selectable={false}
           onMouseDown={() => setExpanded((e) => !e)}
           onMouseOver={() => setHovered(true)}
           onMouseOut={() => setHovered(false)}
@@ -161,6 +162,7 @@ function DiffContent({ diff }: { diff: string }) {
 
   const toggleProps = {
     fg: hovered ? "#888888" : "#555555",
+    selectable: false,
     onMouseDown: () => setExpanded((e) => !e),
     onMouseOver: () => setHovered(true),
     onMouseOut: () => setHovered(false),
