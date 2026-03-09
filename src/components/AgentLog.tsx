@@ -227,7 +227,7 @@ function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] 
 
 function TextRow({ entry }: { entry: LogEntry }) {
   return (
-    <box style={{ flexDirection: "row", paddingBottom: 1 }}>
+    <box style={{ flexDirection: "row", paddingBottom: 1, paddingLeft: 3 }}>
       <markdown
         content={entry.text ?? ""}
         syntaxStyle={syntaxStyle}
@@ -323,7 +323,7 @@ function StepFinishRow({ entry }: { entry: LogEntry }) {
   const elapsed = entry.elapsedMs != null ? formatElapsedMs(entry.elapsedMs) : null
 
   return (
-    <box style={{ flexDirection: "row", paddingBottom: 1 }}>
+    <box style={{ flexDirection: "row", paddingBottom: 1, paddingLeft: 3 }}>
       <text fg="#00cc66">
         {"▣  "}
         {modelLabel ? `${modelLabel} · ` : ""}
