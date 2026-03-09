@@ -8,11 +8,12 @@ import { useFileSelector } from "../lib/useFileSelector.js"
 interface Props {
   repoRoot: string
   active: boolean
+  onActivate: () => void
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
 }
 
-export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
+export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: Props) {
   const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
@@ -47,6 +48,7 @@ export function TaskInput({ repoRoot, active, onSubmit, onCancel }: Props) {
             border={["left"]}
             borderColor={model.dimColor}
             style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
+            onMouseDown={(e) => { if (e.button === 0) onActivate() }}
           >
             <text fg="#444444">Press [n] to create a new task</text>
             <box style={{ height: 1 }} />

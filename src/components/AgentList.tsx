@@ -19,13 +19,14 @@ interface Props {
   width?: number | "auto" | `${number}%`
   inputActive: boolean
   currentBranch?: string
+  onActivate: () => void
   onSubmit: (prompt: string, model: Model) => void
   onCancel: () => void
   onSelectTask: (id: string) => void
   onOpenTask: (id: string) => void
 }
 
-export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onSubmit, onCancel, onSelectTask, onOpenTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onActivate, onSubmit, onCancel, onSelectTask, onOpenTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -91,7 +92,7 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
           <span fg="#888888">{" [tab]"}</span>
         </text>
       </box>
-      <TaskInput repoRoot={repoRoot} active={inputActive} onSubmit={onSubmit} onCancel={onCancel} />
+      <TaskInput repoRoot={repoRoot} active={inputActive} onActivate={onActivate} onSubmit={onSubmit} onCancel={onCancel} />
 
       {tasks.length === 0 ? (
         <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>

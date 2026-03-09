@@ -241,6 +241,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
             updateAvailable={updateAvailable}
             inputActive={mode === "input"}
             currentBranch={currentBranch}
+            onActivate={() => { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1) }}
             onSubmit={(prompt, model) => handleDispatch(prompt, model)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
             onSelectTask={(id) => {
