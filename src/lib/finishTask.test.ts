@@ -36,8 +36,8 @@ function writeLogLine(repoRoot: string, taskId: string, obj: object) {
 }
 
 // Stub for worktreeHasCommits that avoids real git calls.
-const noCommits = async (_root: string, _slug: string) => false
-const hasCommitsFn = async (_root: string, _slug: string) => true
+const noCommits = async (_root: string, _slug: string, _baseBranch?: string) => false
+const hasCommitsFn = async (_root: string, _slug: string, _baseBranch?: string) => true
 
 // ---------------------------------------------------------------------------
 // Setup
