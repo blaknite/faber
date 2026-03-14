@@ -735,7 +735,7 @@ Safe to run multiple times.`)
   renderer.start()
 }
 
-async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string) {
+export async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
