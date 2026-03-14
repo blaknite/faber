@@ -397,7 +397,7 @@ function FileSection({ file, viewMode, fileIndex, embedded }: {
       )}
       {file.hunks.map((hunk, hi) => (
         <box key={hi} style={{ flexDirection: "column" }}>
-          <box style={styles.hunkHeader}>
+          <box style={embedded ? { ...styles.hunkHeader, paddingTop: 0 } : styles.hunkHeader}>
             <text fg={colors.header}>{hunk.header}</text>
           </box>
           {viewMode === "inline"
