@@ -9,8 +9,7 @@ import { BottomBar } from "./components/BottomBar.js"
 import { BranchSelector } from "./components/BranchSelector.js"
 import { HeaderBar } from "./components/HeaderBar.js"
 import { InterstitialView } from "./components/InterstitialView.js"
-import { killAgent } from "./lib/agent.js"
-import { removeWorktree, hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
 import { useKeyboardRouter } from "./lib/useKeyboardRouter.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
@@ -139,7 +138,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
     showMergeMessage,
   })
 
-  useKeyboardRouter({
+  const bindings = useKeyboardRouter({
     mode,
     setMode,
     paneTaskId,
@@ -168,38 +167,6 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
     removeTaskFromState,
     onExit,
   })
-
-  const activeTaskCount = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
-  const normalBindings = paneTaskId && paneView === "diff" ? [
-    { key: "q", label: "back to list", onAction: () => setPaneTaskId(null) },
-    { key: "l", label: "back to log", disabled: !paneTask, onAction: () => setPaneView("log") },
-    { key: "↑↓", label: "scroll" },
-    { key: "</>", label: "prev/next", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
-    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running", onAction: () => setMode("continue") },
-    { key: "m", label: "merge", disabled: !paneTask, onAction: () => setMode("merge") },
-    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready", onAction: () => setMode("done") },
-    { key: "d", label: "delete", disabled: !paneTask, onAction: () => setMode("delete") },
-  ] : paneTaskId && paneView === "log" ? [
-    { key: "q", label: "back to list", onAction: () => setPaneTaskId(null) },
-    { key: "↑↓", label: "scroll" },
-    { key: "</>", label: "prev/next", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
-    { key: "s", label: "stop", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid, onAction: () => setMode("kill") },
-    { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits, onAction: () => setPaneView("diff") },
-    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running", onAction: () => setMode("continue") },
-    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready", onAction: () => setMode("done") },
-    { key: "d", label: "delete", disabled: !paneTask, onAction: () => setMode("delete") },
-  ] : [
-    { key: "q", label: "quit", onAction: () => onExit() },
-    { key: "n", label: "new task", onAction: () => { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1) } },
-    { key: "↑↓", label: "select", disabled: tasks.length === 0 },
-    { key: "enter", label: "open", disabled: !selectedTask, onAction: () => { if (selectedTask) openTaskView(selectedTask) } },
-    { key: "s", label: "stop", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid, onAction: () => setMode("kill") },
-    { key: "c", label: "continue", disabled: !selectedTask?.sessionId || selectedTask?.status === "running", onAction: () => setMode("continue") },
-    { key: "x", label: "done", disabled: !selectedTask || selectedTask.status !== "ready", onAction: () => setMode("done") },
-    { key: "d", label: "delete", disabled: !selectedTask, onAction: () => setMode("delete") },
-    { key: "b", label: "switch branch", onAction: () => setMode("switch_branch") },
-    { key: "p", label: "push", disabled: !isDirty, onAction: () => setMode("push") },
-  ]
 
   return (
     <box style={{ flexDirection: "column", height: "100%", backgroundColor: "#000000" }}>
@@ -266,7 +233,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
           paneTask={paneTask}
           selectedTask={selectedTask}
           currentBranch={currentBranch}
-          bindings={normalBindings}
+          bindings={bindings}
           onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
           onContinueCancel={() => setMode("normal")}
         />

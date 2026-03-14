@@ -3,14 +3,7 @@ import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
 import type { Task, Mode, Model } from "../types.js"
 import type { FlashType } from "../lib/useAppState.js"
-
-interface Binding {
-  key: string
-  label: string
-  disabled?: boolean
-  hidden?: boolean
-  onAction?: () => void
-}
+import type { KeyBinding } from "../lib/useKeyboardRouter.js"
 
 interface ConfirmPromptProps {
   message: string
@@ -41,7 +34,7 @@ interface Props {
   paneTask: Task | null
   selectedTask: Task | null
   currentBranch: string
-  bindings: Binding[]
+  bindings: KeyBinding[]
   onContinueSubmit: (prompt?: string, model?: Model) => void
   onContinueCancel: () => void
 }

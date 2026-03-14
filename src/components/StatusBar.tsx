@@ -1,13 +1,7 @@
-interface Binding {
-  key: string
-  label: string
-  disabled?: boolean
-  hidden?: boolean
-  onAction?: () => void
-}
+import type { KeyBinding } from "../lib/useKeyboardRouter.js"
 
 interface Props {
-  bindings: Binding[]
+  bindings: KeyBinding[]
 }
 
 export function StatusBar({ bindings }: Props) {
@@ -20,7 +14,7 @@ export function StatusBar({ bindings }: Props) {
           <text
             key={b.key}
             style={{ marginRight: i < visible.length - 1 ? 3 : 0 }}
-            onMouseDown={(e: { button: number }) => { if (e.button === 0 && b.onAction) b.onAction() }}
+            onMouseDown={(e: { button: number }) => { if (e.button === 0 && b.action) b.action() }}
           >
             <strong>[{b.key}]</strong>{" "}{b.label}
           </text>

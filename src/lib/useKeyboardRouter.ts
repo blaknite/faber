@@ -5,6 +5,14 @@ import { removeWorktree } from "./worktree.js"
 import { ACTIVE_STATUSES, type Task, type Mode } from "../types.js"
 import type { PaneView } from "./useAppState.js"
 
+export interface KeyBinding {
+  key: string
+  label: string
+  disabled?: boolean
+  hidden?: boolean
+  action?: () => void
+}
+
 interface UseKeyboardRouterParams {
   mode: Mode
   setMode: (mode: Mode) => void
@@ -63,7 +71,45 @@ export function useKeyboardRouter({
   openTaskView,
   removeTaskFromState,
   onExit,
-}: UseKeyboardRouterParams): void {
+}: UseKeyboardRouterParams): KeyBinding[] {
+  const activeTaskCount = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
+
+  // When in a pane, actions operate on the viewed task, not selectedTask.
+  const activeTask = paneTask ?? selectedTask
+
+  // The single source of truth for all keyboard bindings. Each entry controls
+  // both what the StatusBar renders and what happens when the key is pressed.
+  const bindings: KeyBinding[] = paneTaskId && paneView === "diff" ? [
+    { key: "q", label: "back to list", action: () => setPaneTaskId(null) },
+    { key: "l", label: "back to log", disabled: !paneTask, action: () => setPaneView("log") },
+    { key: "↑↓", label: "scroll" },
+    { key: "</>", label: "prev/next", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
+    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running", action: () => setMode("continue") },
+    { key: "m", label: "merge", disabled: !paneTask, action: () => setMode("merge") },
+    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready", action: () => setMode("done") },
+    { key: "d", label: "delete", disabled: !paneTask, action: () => setMode("delete") },
+  ] : paneTaskId && paneView === "log" ? [
+    { key: "q", label: "back to list", action: () => setPaneTaskId(null) },
+    { key: "↑↓", label: "scroll" },
+    { key: "</>", label: "prev/next", hidden: activeTaskCount < 2 || !paneTask || !ACTIVE_STATUSES.includes(paneTask.status) },
+    { key: "s", label: "stop", disabled: !paneTask || paneTask.status !== "running" || !paneTask.pid, action: () => setMode("kill") },
+    { key: "f", label: "diff", disabled: !paneTask || paneTask.status !== "ready" || !paneTask.hasCommits, action: () => setPaneView("diff") },
+    { key: "c", label: "continue", disabled: !paneTask?.sessionId || paneTask?.status === "running", action: () => setMode("continue") },
+    { key: "x", label: "done", disabled: !paneTask || paneTask.status !== "ready", action: () => setMode("done") },
+    { key: "d", label: "delete", disabled: !paneTask, action: () => setMode("delete") },
+  ] : [
+    { key: "q", label: "quit", action: () => onExit() },
+    { key: "n", label: "new task", action: () => { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1) } },
+    { key: "↑↓", label: "select", disabled: tasks.length === 0 },
+    { key: "enter", label: "open", disabled: !selectedTask, action: () => { if (selectedTask) openTaskView(selectedTask) } },
+    { key: "s", label: "stop", disabled: !selectedTask || selectedTask.status !== "running" || !selectedTask.pid, action: () => setMode("kill") },
+    { key: "c", label: "continue", disabled: !selectedTask?.sessionId || selectedTask?.status === "running", action: () => setMode("continue") },
+    { key: "x", label: "done", disabled: !selectedTask || selectedTask.status !== "ready", action: () => setMode("done") },
+    { key: "d", label: "delete", disabled: !selectedTask, action: () => setMode("delete") },
+    { key: "b", label: "switch branch", action: () => setMode("switch_branch") },
+    { key: "p", label: "push", disabled: !isDirty, action: () => setMode("push") },
+  ]
+
   useKeyboard((key) => {
     if (mode === "input" || mode === "continue" || mode === "switch_branch") return
 
@@ -81,9 +127,6 @@ export function useKeyboardRouter({
     }
 
     if (key.ctrl && key.name === "c") { onExit(); return }
-
-    // When in a pane, actions operate on the viewed task, not selectedTask.
-    const activeTask = paneTask ?? selectedTask
 
     if (mode === "kill") {
       if (key.name === "y") { handleKill(activeTask); return }
@@ -123,100 +166,37 @@ export function useKeyboardRouter({
       return
     }
 
-    if (key.name === "q") {
-      if (paneTaskId !== null) { setPaneTaskId(null); return }
-      onExit()
-      return
-    }
-
-    if (paneTaskId !== null) {
-      // Prev/next: switch to the new task using openTaskView so the correct
-      // view is always shown (diff for ready tasks with commits, log otherwise).
-      if (key.name === "," || key.name === ".") {
-        const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
-        const currentIdx = activeTasks.findIndex(t => t.id === paneTaskId)
-        if (currentIdx !== -1 && activeTasks.length > 1) {
-          const nextIdx = key.name === ","
-            ? (currentIdx + 1) % activeTasks.length
-            : (currentIdx - 1 + activeTasks.length) % activeTasks.length
-          const nextTask = activeTasks[nextIdx]
-          openTaskView(nextTask)
-        }
-        return
+    // Prev/next task navigation — not in the bindings list but handled here
+    // because it's a special case that operates on the active task index.
+    if (paneTaskId !== null && (key.name === "," || key.name === ".")) {
+      const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status))
+      const currentIdx = activeTasks.findIndex(t => t.id === paneTaskId)
+      if (currentIdx !== -1 && activeTasks.length > 1) {
+        const nextIdx = key.name === ","
+          ? (currentIdx + 1) % activeTasks.length
+          : (currentIdx - 1 + activeTasks.length) % activeTasks.length
+        const nextTask = activeTasks[nextIdx]
+        openTaskView(nextTask)
       }
-
-      if (paneView === "diff") {
-        if (key.name === "c") {
-          if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
-          return
-        }
-        if (key.name === "l") { setPaneView("log"); return }
-        if (key.name === "m") {
-          if (paneTask) setMode("merge")
-          return
-        }
-        if (key.name === "x") {
-          if (paneTask && paneTask.status === "ready") setMode("done")
-          return
-        }
-        if (key.name === "d") {
-          if (paneTask) setMode("delete")
-          return
-        }
-        return
-      }
-
-      if (paneView === "log") {
-        if (key.name === "s") {
-          if (paneTask && paneTask.status === "running" && paneTask.pid) setMode("kill")
-          return
-        }
-        if (key.name === "f") {
-          if (paneTask && paneTask.status === "ready" && paneTask.hasCommits) setPaneView("diff")
-          return
-        }
-        if (key.name === "c") {
-          if (paneTask && paneTask.sessionId && paneTask.status !== "running") setMode("continue")
-          return
-        }
-        if (key.name === "x") {
-          if (paneTask && paneTask.status === "ready") setMode("done")
-          return
-        }
-        if (key.name === "d") {
-          if (paneTask) setMode("delete")
-          return
-        }
-        return
-      }
-
       return
     }
 
-    if (key.name === "n") { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1); return }
-    if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
-    if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
-    if (key.name === "s") {
-      if (selectedTask && selectedTask.status === "running" && selectedTask.pid) setMode("kill")
-      return
+    // Up/down navigation in the list — also not in bindings since the key
+    // display is "↑↓" (a combined label for two keys).
+    if (!paneTaskId) {
+      if (key.name === "up" || key.name === "k") { setSelectedIdx((i) => Math.max(0, i - 1)); return }
+      if (key.name === "down" || key.name === "j") { setSelectedIdx((i) => Math.min(visibleTasks.length - 1, i + 1)); return }
+      if (key.name === "o") { if (selectedTask) openTaskView(selectedTask); return }
     }
-    if (key.name === "o" || key.name === "return") { if (selectedTask) openTaskView(selectedTask); return }
-    if (key.name === "c") {
-      if (selectedTask && selectedTask.sessionId && selectedTask.status !== "running") setMode("continue")
-      return
-    }
-    if (key.name === "b") { setMode("switch_branch"); return }
-    if (key.name === "x") {
-      if (selectedTask && selectedTask.status === "ready") setMode("done")
-      return
-    }
-    if (key.name === "d") {
-      if (selectedTask) setMode("delete")
-      return
-    }
-    if (key.name === "p") {
-      if (isDirty) setMode("push")
-      return
+
+    // Dispatch to the binding whose key matches. Disabled bindings have no
+    // action so they naturally fall through without doing anything.
+    const keyName = key.name === "return" ? "enter" : key.name
+    const binding = bindings.find(b => !b.disabled && b.key === keyName)
+    if (binding?.action) {
+      binding.action()
     }
   })
+
+  return bindings
 }
