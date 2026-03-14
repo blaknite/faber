@@ -380,18 +380,21 @@ function SideBySideHunk({ hunk }: { hunk: Hunk }) {
   )
 }
 
-function FileSection({ file, viewMode, fileIndex }: {
+function FileSection({ file, viewMode, fileIndex, embedded }: {
   file: DiffFile
   viewMode: ViewMode
   fileIndex: number
+  embedded?: boolean
 }) {
   return (
     <box key={fileIndex} style={{ flexDirection: "column" }}>
-      <box style={styles.fileHeader} border={["bottom"]} borderColor={colors.separator}>
-        <text fg={colors.meta}>{file.oldPath !== file.newPath
-          ? `${file.oldPath} -> ${file.newPath}`
-          : file.newPath || file.oldPath}</text>
-      </box>
+      {!embedded && (
+        <box style={styles.fileHeader} border={["bottom"]} borderColor={colors.separator}>
+          <text fg={colors.meta}>{file.oldPath !== file.newPath
+            ? `${file.oldPath} -> ${file.newPath}`
+            : file.newPath || file.oldPath}</text>
+        </box>
+      )}
       {file.hunks.map((hunk, hi) => (
         <box key={hi} style={{ flexDirection: "column" }}>
           <box style={styles.hunkHeader}>
@@ -480,7 +483,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
         <text fg={colors.context}>No diff -- branch is identical to {baseBranch || "HEAD"}.</text>
       ) : (
         visibleFiles.map((file, fi) => (
-          <FileSection key={fi} file={file} viewMode={viewMode} fileIndex={fi} />
+          <FileSection key={fi} file={file} viewMode={viewMode} fileIndex={fi} embedded={embedded} />
         ))
       )}
     </>
