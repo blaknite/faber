@@ -4,7 +4,7 @@ import { resolve, join } from "node:path"
 import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
+import { acquireLock, ensureFaberDir, findTask, readState, reconcileRunningTasks, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
@@ -372,8 +372,8 @@ Safe to run multiple times.`)
 
   // faber continue <taskId> ["<prompt>"] [--dir <repo>]
   if (command === "continue") {
-    const taskId = positional[1]
-    if (!taskId) {
+    const taskIdArg = positional[1]
+    if (!taskIdArg) {
       console.error('Usage: faber continue <taskId> ["<prompt>"] [--dir <repo>]')
       exit(1)
     }
@@ -384,7 +384,19 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(1)
     }
-    continueTask(repoRoot, taskId, prompt)
+    const continueState = readState(repoRoot)
+    let continueTask_: Task | null
+    try {
+      continueTask_ = findTask(continueState.tasks, taskIdArg)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
+    if (!continueTask_) {
+      console.error(`No task matching "${taskIdArg}"`)
+      exit(1)
+    }
+    continueTask(repoRoot, continueTask_.id, prompt)
     return
   }
 
@@ -408,8 +420,8 @@ Safe to run multiple times.`)
   // tool calls summarised as one-liners. --full adds block content; --json
   // outputs the raw LogEntry array.
   if (command === "read") {
-    const taskId = positional[1]
-    if (!taskId) {
+    const taskIdArg = positional[1]
+    if (!taskIdArg) {
       console.error("Usage: faber read <taskId> [--full] [--json] [--dir <repo>]")
       exit(1)
     }
@@ -419,9 +431,21 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(1)
     }
+    const readState_ = readState(repoRoot)
+    let readTask: Task | null
+    try {
+      readTask = findTask(readState_.tasks, taskIdArg)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
+    if (!readTask) {
+      console.error(`No task matching "${taskIdArg}"`)
+      exit(1)
+    }
     const full = args.includes("--full")
     const json = args.includes("--json")
-    const entries = readLogEntries(repoRoot, taskId)
+    const entries = readLogEntries(repoRoot, readTask.id)
     const output = formatLog(entries, { full, json })
     console.log(output)
     return
@@ -430,8 +454,8 @@ Safe to run multiple times.`)
   // faber watch <taskId> [--dir <repo>]
   // Watches a task's status and exits when it stops running.
   if (command === "watch") {
-    const taskId = positional[1]
-    if (!taskId) {
+    const taskIdArg = positional[1]
+    if (!taskIdArg) {
       console.error("Usage: faber watch <taskId> [--dir <repo>]")
       exit(1)
     }
@@ -441,7 +465,19 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(1)
     }
-    await watchTask(repoRoot, taskId)
+    const watchState = readState(repoRoot)
+    let watchTask_: Task | null
+    try {
+      watchTask_ = findTask(watchState.tasks, taskIdArg)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
+    if (!watchTask_) {
+      console.error(`No task matching "${taskIdArg}"`)
+      exit(1)
+    }
+    await watchTask(repoRoot, watchTask_.id)
     return
   }
 
@@ -461,9 +497,15 @@ Safe to run multiple times.`)
       exit(1)
     }
     const state = readState(repoRoot)
-    const task = state.tasks.find((t) => t.id.startsWith(taskIdArg))
+    let task: Task | null
+    try {
+      task = findTask(state.tasks, taskIdArg)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
     if (!task) {
-      console.error(`Task "${taskIdArg}" not found`)
+      console.error(`No task matching "${taskIdArg}"`)
       exit(1)
     }
     const diff = await getDiff(repoRoot, task.id)
@@ -506,27 +548,33 @@ Safe to run multiple times.`)
       exit(1)
     }
     const state = readState(repoRoot)
-    const task = state.tasks.find((t) => t.id === taskId)
+    let task: Task | null
+    try {
+      task = findTask(state.tasks, taskId)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
     if (!task) {
-      console.error(`Task "${taskId}" not found`)
+      console.error(`No task matching "${taskId}"`)
       exit(1)
     }
     if (task.status !== "ready") {
-      console.error(`Task "${taskId}" has status "${task.status}" -- only "ready" tasks can be merged`)
+      console.error(`Task "${task.id}" has status "${task.status}" -- only "ready" tasks can be merged`)
       exit(1)
     }
     if (!task.hasCommits) {
-      console.error(`Task "${taskId}" has no commits. Use "faber done" to dismiss it instead.`)
+      console.error(`Task "${task.id}" has no commits. Use "faber done" to dismiss it instead.`)
       exit(1)
     }
     try {
-      await mergeBranch(repoRoot, taskId, task.baseBranch)
+      await mergeBranch(repoRoot, task.id, task.baseBranch)
     } catch (err: any) {
       console.error(`Merge failed: ${err.message}`)
       exit(1)
     }
-    await removeWorktree(repoRoot, taskId)
-    updateTask(repoRoot, taskId, { status: "done" })
+    await removeWorktree(repoRoot, task.id)
+    updateTask(repoRoot, task.id, { status: "done" })
     return
   }
 
@@ -545,16 +593,22 @@ Safe to run multiple times.`)
       exit(1)
     }
     const state = readState(repoRoot)
-    const task = state.tasks.find((t) => t.id === taskId)
+    let task: Task | null
+    try {
+      task = findTask(state.tasks, taskId)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
     if (!task) {
-      console.error(`Task "${taskId}" not found`)
+      console.error(`No task matching "${taskId}"`)
       exit(1)
     }
     if (task.status !== "ready") {
-      console.error(`Task "${taskId}" has status "${task.status}" -- only "ready" tasks can be marked done`)
+      console.error(`Task "${task.id}" has status "${task.status}" -- only "ready" tasks can be marked done`)
       exit(1)
     }
-    updateTask(repoRoot, taskId, { status: "done" })
+    updateTask(repoRoot, task.id, { status: "done" })
     return
   }
 
@@ -574,18 +628,24 @@ Safe to run multiple times.`)
       exit(1)
     }
     const state = readState(repoRoot)
-    const task = state.tasks.find((t) => t.id === taskId)
+    let task: Task | null
+    try {
+      task = findTask(state.tasks, taskId)
+    } catch (err: any) {
+      console.error(err.message)
+      exit(1)
+    }
     if (!task) {
-      console.error(`Task "${taskId}" not found`)
+      console.error(`No task matching "${taskId}"`)
       exit(1)
     }
     if (task.status === "running") {
-      console.error(`Task "${taskId}" is currently running. Stop it before deleting.`)
+      console.error(`Task "${task.id}" is currently running. Stop it before deleting.`)
       exit(1)
     }
     const skipConfirm = args.includes("--yes")
     if (!skipConfirm) {
-      process.stdout.write(`Delete task "${taskId}" and remove its worktree and branch? This cannot be undone. [y/N] `)
+      process.stdout.write(`Delete task "${task.id}" and remove its worktree and branch? This cannot be undone. [y/N] `)
       const confirmed = await new Promise<boolean>((resolve) => {
         let input = ""
         process.stdin.setEncoding("utf8")
@@ -615,9 +675,9 @@ Safe to run multiple times.`)
         exit(0)
       }
     }
-    await removeWorktree(repoRoot, taskId)
-    removeTask(repoRoot, taskId)
-    console.log(`Deleted task "${taskId}"`)
+    await removeWorktree(repoRoot, task.id)
+    removeTask(repoRoot, task.id)
+    console.log(`Deleted task "${task.id}"`)
     return
   }
 

@@ -193,6 +193,23 @@ export function reconcileRunningTasks(repoRoot: string): void {
   })
 }
 
+// Look up a task by ID with prefix matching.
+//
+// Tries exact match first. If nothing matches exactly, falls back to prefix
+// matching using startsWith. Returns null if nothing matches. Throws if
+// multiple tasks share the same prefix (ambiguous).
+export function findTask(tasks: Task[], idPrefix: string): Task | null {
+  const exact = tasks.find((t) => t.id === idPrefix)
+  if (exact) return exact
+
+  const matches = tasks.filter((t) => t.id.startsWith(idPrefix))
+  if (matches.length === 0) return null
+  if (matches.length === 1) return matches[0]!
+
+  const ids = matches.map((t) => t.id).join(", ")
+  throw new Error(`Multiple tasks match "${idPrefix}": ${ids}`)
+}
+
 // Walk up from `startDir` until we find a directory containing `.faber/state.json`.
 // Returns the repo root, or null if not found.
 export function findRepoRoot(startDir: string): string | null {

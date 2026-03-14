@@ -7,6 +7,7 @@ import {
   addTask,
   ensureFaberDir,
   findRepoRoot,
+  findTask,
   readState,
   reconcileRunningTasks,
   removeTask,
@@ -272,6 +273,45 @@ describe("stateFilePath", () => {
 
   it("handles trailing slashes via join", () => {
     expect(stateFilePath("/repo/")).toBe("/repo/.faber/state.json")
+  })
+})
+
+describe("findTask", () => {
+  it("returns the task on exact match", () => {
+    const task = makeTask({ id: "a3f2-fix-login" })
+    const result = findTask([task], "a3f2-fix-login")
+    expect(result).toBe(task)
+  })
+
+  it("prefers exact match over prefix match", () => {
+    const exact = makeTask({ id: "a3" })
+    const prefix = makeTask({ id: "a3f2-fix-login" })
+    const result = findTask([exact, prefix], "a3")
+    expect(result).toBe(exact)
+  })
+
+  it("returns the task on prefix match", () => {
+    const task = makeTask({ id: "a3f2-fix-login" })
+    const result = findTask([task], "a3f2")
+    expect(result).toBe(task)
+  })
+
+  it("returns null when no task matches", () => {
+    const task = makeTask({ id: "a3f2-fix-login" })
+    const result = findTask([task], "xyz")
+    expect(result).toBeNull()
+  })
+
+  it("returns null on empty task list", () => {
+    expect(findTask([], "a3f2")).toBeNull()
+  })
+
+  it("throws when multiple tasks match the prefix", () => {
+    const tasks = [
+      makeTask({ id: "a3f2-fix-login" }),
+      makeTask({ id: "a3b1-add-tests" }),
+    ]
+    expect(() => findTask(tasks, "a3")).toThrow('Multiple tasks match "a3": a3f2-fix-login, a3b1-add-tests')
   })
 })
 
