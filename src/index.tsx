@@ -804,7 +804,7 @@ async function setup(repoRoot: string) {
 // Uses fs.watch for low-latency change detection, with a 1-second fallback
 // interval to handle cases where file-system events are dropped (common on
 // macOS with FSEvents under high I/O).
-async function watchTask(repoRoot: string, taskId: string): Promise<void> {
+export async function watchTask(repoRoot: string, taskId: string): Promise<void> {
   const statePath = stateFilePath(repoRoot)
 
   function getStatus(): string | null {
