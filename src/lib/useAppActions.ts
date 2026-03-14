@@ -165,6 +165,19 @@ export function useAppActions({
     showFlash(`${task.id} marked as done`, "success")
   }, [selectedTask, paneTaskId, updateTaskInState, setPaneTaskId, showFlash])
 
+  const handleDelete = useCallback(async (task: Task | null = selectedTask) => {
+    if (!task) { setMode("normal"); return }
+    if (task.pid) killAgent(task.pid)
+    try {
+      await removeWorktree(repoRoot, task.id)
+    } catch (err) {
+      showFlash(`Worktree removal failed: ${err instanceof Error ? err.message : String(err)}`, "error")
+    }
+    if (paneTaskId === task.id) setPaneTaskId(null)
+    removeTaskFromState(task.id)
+    setMode("normal")
+  }, [selectedTask, repoRoot, paneTaskId, removeTaskFromState, setPaneTaskId, showFlash, setMode])
+
   return {
     handleDispatch,
     handleKill,
@@ -176,6 +189,7 @@ export function useAppActions({
     handlePush,
     handleMerge,
     handleMarkDone,
+    handleDelete,
     updateTaskInState,
     removeTaskFromState,
   }

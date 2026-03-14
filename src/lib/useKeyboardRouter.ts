@@ -1,7 +1,5 @@
 import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
-import { killAgent } from "./agent.js"
-import { removeWorktree } from "./worktree.js"
 import { ACTIVE_STATUSES, type Task, type Mode } from "../types.js"
 import type { PaneView } from "./useAppState.js"
 
@@ -27,19 +25,18 @@ interface UseKeyboardRouterParams {
   tasks: Task[]
   visibleTasks: Task[]
   isDirty: boolean
-  repoRoot: string
   mergeMessage: string | null
   clearMergeMessage: () => void
   prevSelectedIdx: MutableRefObject<number>
   handleKill: (task?: Task | null) => void
   handleMerge: (task?: Task | null) => void
   handleMarkDone: (task?: Task | null) => void
+  handleDelete: (task?: Task | null) => void
   handlePush: () => void
   handleContinue: (prompt?: string) => void
   handleOpenLog: () => void
   handleOpenDiff: () => void
   openTaskView: (task: Task) => void
-  removeTaskFromState: (id: string) => void
   onExit: () => void
 }
 
@@ -57,19 +54,18 @@ export function useKeyboardRouter({
   tasks,
   visibleTasks,
   isDirty,
-  repoRoot,
   mergeMessage,
   clearMergeMessage,
   prevSelectedIdx,
   handleKill,
   handleMerge,
   handleMarkDone,
+  handleDelete,
   handlePush,
   handleContinue,
   handleOpenLog,
   handleOpenDiff,
   openTaskView,
-  removeTaskFromState,
   onExit,
 }: UseKeyboardRouterParams): KeyBinding[] {
   const activeTaskCount = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
@@ -135,15 +131,7 @@ export function useKeyboardRouter({
     }
 
     if (mode === "delete") {
-      if (key.name === "y") {
-        if (!activeTask) { setMode("normal"); return }
-        if (activeTask.pid) killAgent(activeTask.pid)
-        removeWorktree(repoRoot, activeTask.id).catch(() => {})
-        if (paneTaskId === activeTask.id) setPaneTaskId(null)
-        removeTaskFromState(activeTask.id)
-        setMode("normal")
-        return
-      }
+      if (key.name === "y") { handleDelete(activeTask); return }
       if (key.name === "n" || key.name === "q") { setMode("normal"); return }
       return
     }
