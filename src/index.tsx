@@ -8,6 +8,7 @@ import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, updateTa
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
+import { finishTask } from "./lib/finishTask.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
@@ -95,25 +96,6 @@ function parseModelFlag(args: string[]): Task["model"] {
     exit(1)
   }
   return resolved
-}
-
-// Read the task log and return the sessionID from the last log entry that has
-// one. Returns null if the log doesn't exist or contains no sessionID.
-function sessionIdFromLog(repoRoot: string, taskId: string): string | null {
-  const logPath = taskOutputPath(repoRoot, taskId)
-  if (!existsSync(logPath)) return null
-  const lines = readFileSync(logPath, "utf8").split("\n")
-  let sessionId: string | null = null
-  for (const line of lines) {
-    if (!line.trim()) continue
-    try {
-      const event = JSON.parse(line) as { sessionID?: string }
-      if (event.sessionID) sessionId = event.sessionID
-    } catch {
-      // not valid JSON -- skip
-    }
-  }
-  return sessionId
 }
 
 // FABER_VERSION is injected at compile time via --define. When running from
@@ -384,63 +366,7 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(exitCode)
     }
-    // Always mark the task as done (or ready) so intermittent non-zero
-    // exit codes from the agent process don't permanently flip a completed task to
-    // "failed". The exit code is still recorded for diagnostics.
-    if (exitCode !== 0) {
-      logTaskFailure(repoRoot, {
-        taskId,
-        callSite: "index.tsx:finish",
-        reason: "Process exited with non-zero exit code",
-        exitCode,
-      })
-    }
-
-    // If the task was already marked failed or stopped (e.g. the user killed it),
-    // don't overwrite that status. Just record the exit code and clear the pid.
-    const currentState = readState(repoRoot)
-    const currentTask = currentState.tasks.find((t) => t.id === taskId)
-
-    // If the session ID wasn't captured while the agent was running (e.g. faber
-    // exited before the first line of opencode's stdout was processed), recover
-    // it from the log now.
-    if (currentTask && !currentTask.sessionId) {
-      const sessionId = sessionIdFromLog(repoRoot, taskId)
-      if (sessionId) {
-        try {
-          updateTask(repoRoot, taskId, { sessionId })
-        } catch (err) {
-          console.error("Failed to recover session ID from log:", (err as Error).message)
-        }
-      }
-    }
-
-    if (currentTask?.status === "failed" || currentTask?.status === "stopped") {
-      try {
-        updateTask(repoRoot, taskId, { exitCode, pid: null })
-      } catch (err) {
-        console.error("Failed to write task status:", (err as Error).message)
-      }
-      exit(exitCode)
-    }
-
-    // All finished tasks move to "ready" so the user can review their output.
-    // We record whether the branch has commits so the UI knows whether to offer
-    // the merge flow or just let the user dismiss the task.
-    const hasCommits = await worktreeHasCommits(repoRoot, taskId, currentTask?.baseBranch)
-
-    try {
-      updateTask(repoRoot, taskId, {
-        status: "ready",
-        hasCommits,
-        exitCode,
-        completedAt: new Date().toISOString(),
-        pid: null,
-      })
-    } catch (err) {
-      // If we can't write the state, log it but still exit with the correct code.
-      console.error("Failed to write task status:", (err as Error).message)
-    }
+    await finishTask(repoRoot, taskId, exitCode)
     exit(exitCode)
   }
 
