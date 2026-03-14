@@ -9,6 +9,7 @@ import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBr
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { finishTask } from "./lib/finishTask.js"
+import { doneTask } from "./lib/doneTask.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
@@ -592,23 +593,7 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(1)
     }
-    const state = readState(repoRoot)
-    let task: Task | null
-    try {
-      task = findTask(state.tasks, taskId)
-    } catch (err: any) {
-      console.error(err.message)
-      exit(1)
-    }
-    if (!task) {
-      console.error(`No task matching "${taskId}"`)
-      exit(1)
-    }
-    if (task.status !== "ready") {
-      console.error(`Task "${task.id}" has status "${task.status}" -- only "ready" tasks can be marked done`)
-      exit(1)
-    }
-    updateTask(repoRoot, task.id, { status: "done" })
+    doneTask(repoRoot, taskId)
     return
   }
 
