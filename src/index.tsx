@@ -4,12 +4,13 @@ import { resolve, join } from "node:path"
 import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, findTask, readState, reconcileRunningTasks, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
+import { acquireLock, ensureFaberDir, findTask, readState, reconcileRunningTasks, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { finishTask } from "./lib/finishTask.js"
 import { doneTask } from "./lib/doneTask.js"
+import { deleteTask } from "./lib/deleteTask.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
@@ -612,6 +613,9 @@ Safe to run multiple times.`)
       console.error("Could not find faber state file from current directory")
       exit(1)
     }
+    // Resolve the full task ID upfront so we can show it in the confirm prompt.
+    // deleteTask will validate existence and running status, but we need the
+    // full ID before asking the user to confirm.
     const state = readState(repoRoot)
     let task: Task | null
     try {
@@ -660,9 +664,8 @@ Safe to run multiple times.`)
         exit(0)
       }
     }
-    await removeWorktree(repoRoot, task.id)
-    removeTask(repoRoot, task.id)
-    console.log(`Deleted task "${task.id}"`)
+    const deletedId = await deleteTask(repoRoot, task.id)
+    console.log(`Deleted task "${deletedId}"`)
     return
   }
 
