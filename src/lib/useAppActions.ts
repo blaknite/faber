@@ -4,7 +4,7 @@ import { spawnAgent, killAgent } from "./agent.js"
 import { removeWorktree, mergeBranch, switchBranch, pushBranch } from "./worktree.js"
 import { removeTask, updateTask } from "./state.js"
 import { createAndDispatchTask } from "./dispatch.js"
-import type { Task, Mode, Model } from "../types.js"
+import type { Task, Mode, Model, TaskPatch } from "../types.js"
 import { DEFAULT_MODEL, taskUsesDiffView } from "../types.js"
 import type { FlashType, PaneView } from "./useAppState.js"
 
@@ -41,7 +41,7 @@ export function useAppActions({
   showFlash,
   showMergeMessage,
 }: UseAppActionsParams) {
-  const updateTaskInState = useCallback((id: string, patch: Partial<Task>) => {
+  const updateTaskInState = useCallback((id: string, patch: TaskPatch) => {
     updateTask(repoRoot, id, patch)
   }, [repoRoot])
 
@@ -107,7 +107,7 @@ export function useAppActions({
     if (task.status === "running") return
     setMode("normal")
     if (task.pid) killAgent(task.pid)
-    const patch: Partial<Task> = {
+    const patch: TaskPatch = {
       status: "running",
       completedAt: null,
       exitCode: null,

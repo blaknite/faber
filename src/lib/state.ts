@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, rmdirSync, statSync } from "node:fs"
 import { join, dirname } from "node:path"
 import lockfile from "proper-lockfile"
-import type { State, Task } from "../types.js"
+import type { State, Task, TaskPatch } from "../types.js"
 
 const FABER_DIR = ".faber"
 const STATE_FILE = "state.json"
@@ -135,7 +135,7 @@ export function addTask(repoRoot: string, task: Task): void {
   })
 }
 
-export function updateTask(repoRoot: string, id: string, patch: Partial<Task>): void {
+export function updateTask(repoRoot: string, id: string, patch: TaskPatch): void {
   withOpLock(repoRoot, () => {
     const state = readState(repoRoot)
     const idx = state.tasks.findIndex((t) => t.id === id)

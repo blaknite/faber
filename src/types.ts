@@ -56,6 +56,10 @@ export function taskUsesDiffView(task: Task): boolean {
   return task.status === "ready" && task.hasCommits
 }
 
+// TaskPatch represents the subset of Task fields that can be legitimately updated
+// after task creation. Immutable fields (id, prompt, worktree, startedAt) are excluded.
+export type TaskPatch = Partial<Pick<Task, 'status' | 'pid' | 'sessionId' | 'completedAt' | 'exitCode' | 'hasCommits' | 'summaryText' | 'model' | 'baseBranch'>>
+
 export interface State {
   tasks: Task[]
 }
