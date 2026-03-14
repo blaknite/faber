@@ -2,11 +2,8 @@ import { useCallback } from "react"
 import type React from "react"
 import { spawnAgent, killAgent } from "./agent.js"
 import { removeWorktree, mergeBranch, switchBranch, pushBranch } from "./worktree.js"
-import { addTask, removeTask, updateTask } from "./state.js"
-import { createWorktree } from "./worktree.js"
-import { generateSlug } from "./slug.js"
-import { logTaskFailure } from "./failureLog.js"
-import { generateFilterText } from "./filterText.js"
+import { removeTask, updateTask } from "./state.js"
+import { createAndDispatchTask } from "./dispatch.js"
 import type { Task, Mode, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
 import type { FlashType, PaneView } from "./useAppState.js"
@@ -63,48 +60,20 @@ export function useAppActions({
     setMode("normal")
     setSelectedIdx(0)
     prevSelectedIdx.current = 0
-    const slug = generateSlug(prompt)
-    const worktree = `.worktrees/${slug}`
-    const task: Task = {
-      id: slug,
-      prompt,
-      model,
-      status: "running",
-      pid: null,
-      worktree,
-      sessionId: null,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      exitCode: null,
-      hasCommits: false,
-      baseBranch: currentBranch,
-    }
-
-    addTask(repoRoot, task)
 
     try {
-      await createWorktree(repoRoot, slug)
-    } catch (err) {
-      logTaskFailure(repoRoot, {
-        taskId: slug,
+      await createAndDispatchTask({
+        repoRoot,
+        prompt,
+        model,
+        baseBranch: currentBranch,
         callSite: "App.tsx:handleDispatch",
-        reason: "Failed to create git worktree",
-        exitCode: -1,
-        error: err instanceof Error ? err.message : String(err),
       })
-      updateTaskInState(slug, {
-        status: "failed",
-        completedAt: new Date().toISOString(),
-        exitCode: -1,
-      })
-      return
+    } catch {
+      // createAndDispatchTask already updated the task status to failed and
+      // wrote to the failure log. Nothing more to do here.
     }
-
-    spawnAgent(task, repoRoot)
-    generateFilterText(prompt, repoRoot).then(filterText => {
-      if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
-    })
-  }, [repoRoot, currentBranch, updateTaskInState, setMode, setSelectedIdx, prevSelectedIdx])
+  }, [repoRoot, currentBranch, setMode, setSelectedIdx, prevSelectedIdx])
 
   const handleKill = useCallback((task: Task | null = selectedTask) => {
     if (!task || task.status !== "running" || !task.pid) return

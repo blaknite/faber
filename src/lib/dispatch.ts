@@ -1,0 +1,75 @@
+import { addTask, updateTask } from "./state.js"
+import { createWorktree } from "./worktree.js"
+import { spawnAgent } from "./agent.js"
+import { generateSlug } from "./slug.js"
+import { generateFilterText } from "./filterText.js"
+import { logTaskFailure } from "./failureLog.js"
+import type { Task, Model } from "../types.js"
+import { DEFAULT_MODEL } from "../types.js"
+
+export interface DispatchOptions {
+  repoRoot: string
+  prompt: string
+  model?: Model
+  baseBranch: string
+  callSite?: string
+}
+
+// Creates a task, registers it in state, sets up its git worktree, and starts
+// the agent process. The filter text is generated asynchronously in the
+// background after the function returns.
+//
+// Throws if the worktree creation fails. Callers are responsible for any
+// caller-specific cleanup or logging around that error.
+export async function createAndDispatchTask({
+  repoRoot,
+  prompt,
+  model = DEFAULT_MODEL,
+  baseBranch,
+  callSite = "dispatch",
+}: DispatchOptions): Promise<Task> {
+  const slug = generateSlug(prompt)
+  const worktree = `.worktrees/${slug}`
+
+  const task: Task = {
+    id: slug,
+    prompt,
+    model,
+    status: "running",
+    pid: null,
+    worktree,
+    sessionId: null,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    exitCode: null,
+    hasCommits: false,
+    baseBranch,
+  }
+
+  addTask(repoRoot, task)
+
+  try {
+    await createWorktree(repoRoot, slug, baseBranch)
+  } catch (err) {
+    logTaskFailure(repoRoot, {
+      taskId: slug,
+      callSite,
+      reason: "Failed to create git worktree",
+      exitCode: -1,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    updateTask(repoRoot, slug, {
+      status: "failed",
+      completedAt: new Date().toISOString(),
+      exitCode: -1,
+    })
+    throw err
+  }
+
+  spawnAgent(task, repoRoot)
+  generateFilterText(prompt, repoRoot).then(filterText => {
+    if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
+  })
+
+  return task
+}

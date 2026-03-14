@@ -4,12 +4,11 @@ import { resolve, join } from "node:path"
 import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, addTask, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
-import { generateSlug } from "./lib/slug.js"
+import { acquireLock, ensureFaberDir, readState, reconcileRunningTasks, updateTask, removeTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
-import { generateFilterText } from "./lib/filterText.js"
 import { logTaskFailure } from "./lib/failureLog.js"
+import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
 import { formatLog } from "./lib/formatLog.js"
@@ -770,47 +769,23 @@ async function runHeadless(repoRoot: string, prompt: string, model: Task["model"
 
   ensureFaberDir(repoRoot)
 
-  const slug = generateSlug(prompt)
-  const worktree = `.worktrees/${slug}`
   const resolvedBaseBranch = baseBranch ?? readCurrentBranch(repoRoot)
-  const task: Task = {
-    id: slug,
-    prompt,
-    model,
-    status: "running",
-    pid: null,
-    worktree,
-    sessionId: null,
-    startedAt: new Date().toISOString(),
-    completedAt: null,
-    exitCode: null,
-    hasCommits: false,
-    baseBranch: resolvedBaseBranch,
-  }
 
-  addTask(repoRoot, task)
-  console.log(`Dispatching task: ${slug}`)
-
+  let task: Task
   try {
-    await createWorktree(repoRoot, slug, baseBranch)
+    task = await createAndDispatchTask({
+      repoRoot,
+      prompt,
+      model,
+      baseBranch: resolvedBaseBranch,
+      callSite: "index.tsx:runHeadless",
+    })
   } catch (err: any) {
     console.error(`Failed to create worktree: ${err.message}`)
-    logTaskFailure(repoRoot, {
-      taskId: slug,
-      callSite: "index.tsx:runHeadless",
-      reason: "Failed to create git worktree",
-      exitCode: -1,
-      error: err.message,
-    })
-    updateTask(repoRoot, slug, { status: "failed", completedAt: new Date().toISOString(), exitCode: -1 })
     throw err
   }
 
-  spawnAgent(task, repoRoot)
-  generateFilterText(prompt, repoRoot).then(filterText => {
-    if (filterText) updateTask(repoRoot, slug, { summaryText: filterText })
-  })
-  console.log(`Task ${slug} running`)
+  console.log(`Task ${task.id} running`)
 }
 
 async function setup(repoRoot: string) {
