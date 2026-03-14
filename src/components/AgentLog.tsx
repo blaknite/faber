@@ -15,9 +15,7 @@ import {
 import type { LogEntry } from "../lib/logParser.js"
 import { MODELS, getModelContextWindow } from "../types.js"
 import type { Task } from "../types.js"
-import { parseDiff, highlightLinePair, highlightSingleLine, SegmentedLine } from "../lib/diff/index.js"
-import type { DiffLine, Segment } from "../lib/diff/index.js"
-import { colors as diffColors } from "../lib/diff/DiffViewer.style.js"
+import { DiffViewer, countDiffLines } from "../lib/diff/index.js"
 
 const syntaxStyle = SyntaxStyle.create()
 
@@ -85,80 +83,13 @@ function BlockContent({ content, unlimited = false }: { content: string; unlimit
 
 const DIFF_MAX_LINES = 10
 
-
 function DiffContent({ diff }: { diff: string }) {
   const [expanded, setExpanded] = useState(false)
   const [hovered, setHovered] = useState(false)
-  const maxLines = expanded ? Infinity : DIFF_MAX_LINES
 
-  const parsed = parseDiff(diff)
-
-  // Flatten all diff lines across all files and hunks into a simple list for
-  // the inline preview, then cap at maxLines.
-  type PreviewLine =
-    | { kind: "hunk"; header: string }
-    | { kind: "context"; line: DiffLine }
-    | { kind: "remove"; line: DiffLine; segments: Segment[] }
-    | { kind: "add"; line: DiffLine; segments: Segment[] }
-
-  const previewLines: PreviewLine[] = []
-
-  for (const file of parsed.files) {
-    for (const hunk of file.hunks) {
-      previewLines.push({ kind: "hunk", header: hunk.header })
-
-      let i = 0
-      const lines = hunk.lines
-
-      while (i < lines.length && previewLines.length < maxLines) {
-        const line = lines[i]!
-
-        if (line.type === "context") {
-          previewLines.push({ kind: "context", line })
-          i++
-          continue
-        }
-
-        // Collect a block of removes followed by adds for character highlighting
-        const removeBlock: DiffLine[] = []
-        const addBlock: DiffLine[] = []
-
-        while (i < lines.length && lines[i]!.type === "remove") {
-          removeBlock.push(lines[i]!)
-          i++
-        }
-        while (i < lines.length && lines[i]!.type === "add") {
-          addBlock.push(lines[i]!)
-          i++
-        }
-
-        const count = Math.max(removeBlock.length, addBlock.length)
-        for (let j = 0; j < count && previewLines.length < maxLines; j++) {
-          const rem = removeBlock[j]
-          const add = addBlock[j]
-
-          if (rem && add) {
-            const { old: oldSegs, new: newSegs } = highlightLinePair(rem.content, add.content)
-            previewLines.push({ kind: "remove", line: rem, segments: oldSegs })
-            previewLines.push({ kind: "add", line: add, segments: newSegs })
-          } else if (rem) {
-            previewLines.push({ kind: "remove", line: rem, segments: highlightSingleLine(rem.content) })
-          } else if (add) {
-            previewLines.push({ kind: "add", line: add, segments: highlightSingleLine(add.content) })
-          }
-        }
-      }
-
-      if (previewLines.length >= maxLines) break
-    }
-  }
-
-  // Count total lines for overflow message
-  const totalLines = parsed.files.reduce(
-    (sum, f) => sum + f.hunks.reduce((hs, h) => hs + h.lines.length, 0),
-    0
-  )
-  const overflow = totalLines - previewLines.filter((l) => l.kind !== "hunk").length
+  const totalLines = countDiffLines(diff)
+  const maxLines = expanded ? totalLines : DIFF_MAX_LINES
+  const overflow = totalLines - Math.min(totalLines, DIFF_MAX_LINES)
 
   const toggleProps = {
     fg: hovered ? "#888888" : "#555555",
@@ -170,38 +101,13 @@ function DiffContent({ diff }: { diff: string }) {
 
   return (
     <box style={{ paddingLeft: 1, marginTop: 0 }}>
-      {previewLines.map((item, i) => {
-        if (item.kind === "hunk") {
-          return <text key={i} fg={diffColors.header}>{item.header}</text>
-        }
-        if (item.kind === "context") {
-          return <text key={i} fg={diffColors.context}>{item.line.content}</text>
-        }
-        if (item.kind === "remove") {
-          return (
-            <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.removeRow }}>
-              <text fg={diffColors.remove}>{"-"}</text>
-              <SegmentedLine
-                segments={item.segments}
-                baseColor={diffColors.remove}
-                highlightBg={diffColors.removeHighlight}
-              />
-            </box>
-          )
-        }
-        // add
-        return (
-          <box key={i} style={{ flexDirection: "row", backgroundColor: diffColors.addRow }}>
-            <text fg={diffColors.add}>{"+"}</text>
-            <SegmentedLine
-              segments={item.segments}
-              baseColor={diffColors.add}
-              highlightBg={diffColors.addHighlight}
-            />
-          </box>
-        )
-      })}
-      {overflow > 0 ? (
+      <DiffViewer
+        diff={diff}
+        viewMode="side-by-side"
+        embedded
+        maxLines={maxLines}
+      />
+      {overflow > 0 && !expanded ? (
         <text {...toggleProps}>
           {`▸ ${overflow} more ${overflow === 1 ? "line" : "lines"}`}
         </text>

@@ -1,4 +1,4 @@
-export { DiffViewer, SegmentedLine } from "./DiffViewer.js"
+export { DiffViewer, countDiffLines } from "./DiffViewer.js"
 export type { DiffViewerProps, ViewMode } from "./DiffViewer.js"
 export { parseDiff } from "./parser.js"
 export type { ParsedDiff, DiffFile, Hunk, DiffLine, DiffLineType, DiffMetadata } from "./parser.js"

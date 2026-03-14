@@ -17,6 +17,52 @@ export interface DiffViewerProps {
   headerContent?: React.ReactNode
   disabled?: boolean
   baseBranch?: string
+  /** Render without the outer scrollbox, header bar, and keyboard handler.
+   *  Intended for embedding inside another scroll container (e.g. the log viewer). */
+  embedded?: boolean
+  /** Cap rendering at this many diff lines (add/remove/context). Lines beyond
+   *  this limit are omitted. Hunk headers do not count toward the limit. */
+  maxLines?: number
+}
+
+// Count the total number of diff lines (add/remove/context) across all files
+// and hunks in a parsed diff. Hunk headers are not counted.
+export function countDiffLines(diff: string): number {
+  const parsed = parseDiff(diff)
+  return parsed.files.reduce(
+    (sum, f) => sum + f.hunks.reduce((hs, h) => hs + h.lines.length, 0),
+    0,
+  )
+}
+
+// Produce a version of parsed files where the total number of diff lines
+// (add/remove/context) across all hunks does not exceed `max`. Hunks that
+// would exceed the limit are truncated; empty hunks are dropped.
+function truncateParsedFiles(files: DiffFile[], max: number): DiffFile[] {
+  let remaining = max
+  const result: DiffFile[] = []
+
+  for (const file of files) {
+    if (remaining <= 0) break
+    const truncatedHunks: typeof file.hunks = []
+
+    for (const hunk of file.hunks) {
+      if (remaining <= 0) break
+      if (hunk.lines.length <= remaining) {
+        truncatedHunks.push(hunk)
+        remaining -= hunk.lines.length
+      } else {
+        truncatedHunks.push({ ...hunk, lines: hunk.lines.slice(0, remaining) })
+        remaining = 0
+      }
+    }
+
+    if (truncatedHunks.length > 0) {
+      result.push({ ...file, hunks: truncatedHunks })
+    }
+  }
+
+  return result
 }
 
 // Pair up removed/added lines within a hunk for character-level highlighting.
@@ -57,7 +103,7 @@ function pairHunkLines(hunk: Hunk): PairedLines {
 
 // Render a single highlighted segment inline.
 // Each segment is a <span> so we can use bg for character-level highlighting.
-export function SegmentedLine({ segments, baseColor, highlightBg }: {
+function SegmentedLine({ segments, baseColor, highlightBg }: {
   segments: Segment[]
   baseColor: string
   highlightBg: string
@@ -378,7 +424,7 @@ function ModeToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: (mod
   )
 }
 
-export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent, disabled, baseBranch }: DiffViewerProps) {
+export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = false, headerContent, disabled, baseBranch, embedded = false, maxLines }: DiffViewerProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [internalViewMode, setInternalViewMode] = useState<ViewMode>(controlledViewMode ?? "side-by-side")
 
@@ -388,7 +434,9 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
   const parsed = useMemo(() => parseDiff(diff), [diff])
 
   useKeyboard((key) => {
-    if (disabled) return
+    // In embedded mode there is no scrollbox to control, and keyboard nav is
+    // handled by the parent container.
+    if (disabled || embedded) return
     const scroll = scrollRef.current
     if (key.name === "k" || key.name === "up") {
       if (!scroll) return
@@ -418,7 +466,35 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
     }
   })
 
-  const isEmpty = parsed.files.length === 0 || parsed.files.every((f) => f.hunks.length === 0)
+  const visibleFiles = useMemo(
+    () => maxLines !== undefined ? truncateParsedFiles(parsed.files, maxLines) : parsed.files,
+    [parsed.files, maxLines],
+  )
+
+  const isEmpty = visibleFiles.length === 0 || visibleFiles.every((f) => f.hunks.length === 0)
+
+  const content = (
+    <>
+      {headerContent}
+      {isEmpty ? (
+        <text fg={colors.context}>No diff -- branch is identical to {baseBranch || "HEAD"}.</text>
+      ) : (
+        visibleFiles.map((file, fi) => (
+          <FileSection key={fi} file={file} viewMode={viewMode} fileIndex={fi} />
+        ))
+      )}
+    </>
+  )
+
+  // Embedded mode: render the diff lines directly without a scrollbox, header
+  // bar, or keyboard handler. The parent component owns the scroll container.
+  if (embedded) {
+    return (
+      <box style={styles.scrollContent}>
+        {content}
+      </box>
+    )
+  }
 
   return (
     <box style={styles.root}>
@@ -445,14 +521,7 @@ export function DiffViewer({ diff, viewMode: controlledViewMode, hideHeader = fa
           viewportOptions={{ maxHeight: "100%" }}
         >
           <box style={styles.scrollContent}>
-            {headerContent}
-            {isEmpty ? (
-              <text fg={colors.context}>No diff -- branch is identical to {baseBranch || "HEAD"}.</text>
-            ) : (
-              parsed.files.map((file, fi) => (
-                <FileSection key={fi} file={file} viewMode={viewMode} fileIndex={fi} />
-              ))
-            )}
+            {content}
           </box>
         </scrollbox>
       </box>
