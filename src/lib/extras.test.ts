@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { homedir } from "node:os"
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
-import { tmpdir } from "node:os"
 import {
   BUNDLED_COMMAND_NAMES,
   BUNDLED_SKILL_NAMES,
@@ -181,83 +180,45 @@ afterEach(() => {
   rmSync(tmpRoot, { recursive: true, force: true })
 })
 
-// Helpers that redirect the faber dir to a temp location by writing the
-// marker file directly -- we test read/write in isolation.
-function markerPath(root: string) {
-  return join(root, ".faber", "extras-version")
-}
-
 describe("readExtrasVersion", () => {
-  it("returns null when ~/.faber/extras-version does not exist", () => {
-    // The real function reads from homedir(), so we test via the write/read round-trip
-    // instead of touching the real home directory.
-    //
-    // This test verifies the null-return code path by checking that a freshly
-    // created temp dir (with no .faber directory) would return null if hooked up.
-    // Since we can't redirect homedir() without patching, we verify the file does
-    // NOT exist and then exercise writeExtrasVersion + readExtrasVersion together
-    // in the round-trip test below.
-    const faberDir = join(tmpRoot, ".faber")
-    expect(existsSync(faberDir)).toBe(false)
-    // No assertion about the real readExtrasVersion() -- it reads from the real homedir.
+  it("returns null when the marker file does not exist", () => {
+    expect(readExtrasVersion(tmpRoot)).toBeNull()
   })
-})
 
-describe("writeExtrasVersion / readExtrasVersion round-trip", () => {
-  // These functions always target the real ~/.faber directory. We write a known
-  // version, read it back, then restore the original value so the test is
-  // side-effect free for the developer's machine.
+  it("returns null when .faber/ exists but extras-version does not", () => {
+    mkdirSync(join(tmpRoot, ".faber"), { recursive: true })
+    expect(readExtrasVersion(tmpRoot)).toBeNull()
+  })
 
-  it("round-trips a version string through ~/.faber/extras-version", () => {
-    const original = readExtrasVersion()
-
-    const testVersion = `test-${Date.now()}`
-    writeExtrasVersion(testVersion)
-
-    try {
-      const read = readExtrasVersion()
-      expect(read).toBe(testVersion)
-    } finally {
-      // Restore: if there was no file before, remove ours; otherwise put the
-      // original content back.
-      const marker = join(homedir(), ".faber", "extras-version")
-      if (original === null) {
-        rmSync(marker, { force: true })
-      } else {
-        writeFileSync(marker, original, "utf8")
-      }
-    }
+  it("returns the version string from the marker file", () => {
+    mkdirSync(join(tmpRoot, ".faber"), { recursive: true })
+    writeFileSync(join(tmpRoot, ".faber", "extras-version"), "1.2.3", "utf8")
+    expect(readExtrasVersion(tmpRoot)).toBe("1.2.3")
   })
 
   it("trims whitespace from the stored value", () => {
-    const original = readExtrasVersion()
+    mkdirSync(join(tmpRoot, ".faber"), { recursive: true })
+    writeFileSync(join(tmpRoot, ".faber", "extras-version"), "  1.2.3  \n", "utf8")
+    expect(readExtrasVersion(tmpRoot)).toBe("1.2.3")
+  })
+})
 
-    writeExtrasVersion("1.2.3")
-    // Manually append whitespace to simulate an editor-modified file
-    const marker = join(homedir(), ".faber", "extras-version")
-    writeFileSync(marker, "  1.2.3  \n", "utf8")
-
-    try {
-      expect(readExtrasVersion()).toBe("1.2.3")
-    } finally {
-      if (original === null) {
-        rmSync(marker, { force: true })
-      } else {
-        writeFileSync(marker, original, "utf8")
-      }
-    }
+describe("writeExtrasVersion", () => {
+  it("writes the version to .faber/extras-version", () => {
+    writeExtrasVersion("1.2.3", tmpRoot)
+    expect(readExtrasVersion(tmpRoot)).toBe("1.2.3")
   })
 
-  it("creates ~/.faber/ if it does not exist", () => {
-    // We can't remove the real ~/.faber, so we just confirm the directory exists
-    // after calling writeExtrasVersion -- it either existed already or was created.
-    writeExtrasVersion("0.0.0")
-    expect(existsSync(join(homedir(), ".faber"))).toBe(true)
+  it("creates .faber/ if it does not exist", () => {
+    expect(existsSync(join(tmpRoot, ".faber"))).toBe(false)
+    writeExtrasVersion("1.0.0", tmpRoot)
+    expect(existsSync(join(tmpRoot, ".faber"))).toBe(true)
+  })
 
-    // Clean up
-    const marker = join(homedir(), ".faber", "extras-version")
-    const original = readExtrasVersion()
-    if (original === "0.0.0") rmSync(marker, { force: true })
+  it("overwrites a previous version", () => {
+    writeExtrasVersion("1.0.0", tmpRoot)
+    writeExtrasVersion("2.0.0", tmpRoot)
+    expect(readExtrasVersion(tmpRoot)).toBe("2.0.0")
   })
 })
 

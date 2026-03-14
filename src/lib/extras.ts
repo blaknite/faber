@@ -247,10 +247,10 @@ async function installOpencode(version: string): Promise<void> {
   writeFileSync(configFile, JSON.stringify(config, null, 2) + "\n", "utf8")
 }
 
-// Read the extras version marker from ~/.faber/extras-version.
-// Returns null if the file doesn't exist.
-export function readExtrasVersion(): string | null {
-  const markerFile = join(homedir(), ".faber", "extras-version")
+// Read the extras version marker from <baseDir>/.faber/extras-version.
+// Returns null if the file doesn't exist. Defaults to ~/.faber.
+export function readExtrasVersion(baseDir: string = homedir()): string | null {
+  const markerFile = join(baseDir, ".faber", "extras-version")
   if (!existsSync(markerFile)) return null
   try {
     return readFileSync(markerFile, "utf8").trim()
@@ -259,10 +259,10 @@ export function readExtrasVersion(): string | null {
   }
 }
 
-// Write the extras version marker to ~/.faber/extras-version.
-// Creates ~/.faber/ if needed.
-export function writeExtrasVersion(version: string): void {
-  const faberDir = join(homedir(), ".faber")
+// Write the extras version marker to <baseDir>/.faber/extras-version.
+// Creates <baseDir>/.faber/ if needed. Defaults to ~/.faber.
+export function writeExtrasVersion(version: string, baseDir: string = homedir()): void {
+  const faberDir = join(baseDir, ".faber")
   mkdirSync(faberDir, { recursive: true })
   writeFileSync(join(faberDir, "extras-version"), version, "utf8")
 }
