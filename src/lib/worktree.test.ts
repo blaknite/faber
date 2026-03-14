@@ -160,6 +160,44 @@ describe("worktreeHasCommits", () => {
     const result = await worktreeHasCommits(tmpRoot, "does-not-exist")
     expect(result).toBe(false)
   })
+
+  it("compares against baseBranch when provided", async () => {
+    // Create a second branch off main and add a commit that main doesn't have
+    git("checkout -b second-branch")
+    writeFileSync(join(tmpRoot, "second-branch-file.ts"), "export const x = 1\n")
+    git("add .")
+    git('commit -m "commit on second-branch"')
+
+    // Switch back to main
+    git("checkout main")
+
+    // Create a worktree branching from second-branch
+    const wtPath = await createWorktree(tmpRoot, "from-second-branch", "second-branch")
+    writeFileSync(join(wtPath, "new-file.ts"), "export const y = 2\n")
+    git("add .", wtPath)
+    git('commit -m "new commit in worktree"', wtPath)
+
+    // Comparing against main (default): should have commits (the one from second-branch
+    // plus the new one from the worktree)
+    const resultVsMain = await worktreeHasCommits(tmpRoot, "from-second-branch")
+    expect(resultVsMain).toBe(true)
+
+    // Comparing against second-branch (baseBranch): should have commits (only the new
+    // one from the worktree, but that counts as "ahead")
+    const resultVsSecond = await worktreeHasCommits(tmpRoot, "from-second-branch", "second-branch")
+    expect(resultVsSecond).toBe(true)
+  })
+
+  it("falls back to HEAD when baseBranch is not provided", async () => {
+    const wtPath = await createWorktree(tmpRoot, "test-fallback")
+    writeFileSync(join(wtPath, "file.ts"), "export const x = 1\n")
+    git("add .", wtPath)
+    git('commit -m "add file"', wtPath)
+
+    // Should work without baseBranch (fallback to HEAD)
+    const result = await worktreeHasCommits(tmpRoot, "test-fallback")
+    expect(result).toBe(true)
+  })
 })
 
 describe("getDiff", () => {

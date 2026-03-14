@@ -32,9 +32,10 @@ export async function removeWorktree(repoRoot: string, slug: string): Promise<vo
   }
 }
 
-export async function worktreeHasCommits(repoRoot: string, slug: string): Promise<boolean> {
+export async function worktreeHasCommits(repoRoot: string, slug: string, baseBranch?: string): Promise<boolean> {
   try {
-    const { stdout } = await execa("git", ["log", "--oneline", `HEAD..${slug}`], { cwd: repoRoot })
+    const base = baseBranch ?? 'HEAD'
+    const { stdout } = await execa("git", ["log", "--oneline", `${base}..${slug}`], { cwd: repoRoot })
     return stdout.trim().length > 0
   } catch {
     return false

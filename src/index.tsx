@@ -427,7 +427,7 @@ Safe to run multiple times.`)
     // All finished tasks move to "ready" so the user can review their output.
     // We record whether the branch has commits so the UI knows whether to offer
     // the merge flow or just let the user dismiss the task.
-    const hasCommits = await worktreeHasCommits(repoRoot, taskId)
+    const hasCommits = await worktreeHasCommits(repoRoot, taskId, currentTask?.baseBranch)
 
     try {
       updateTask(repoRoot, taskId, {
