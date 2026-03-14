@@ -1,6 +1,5 @@
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ACTIVE_STATUSES, type FilterMode } from "../components/AgentList.js"
-import type { Task } from "../types.js"
+import { ACTIVE_STATUSES, type FilterMode, type Task } from "../types.js"
 import { taskUsesDiffView } from "./useAppActions.js"
 
 export function sortDescending(tasks: Task[]): Task[] {

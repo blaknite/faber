@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
-import type { Task, TaskStatus, Model } from "../types.js"
+import type { Task, TaskStatus, Model, FilterMode } from "../types.js"
 import { TaskInput } from "./TaskInput.js"
 import { TaskRow } from "./TaskRow.js"
-
-export type FilterMode = "active" | "all"
-
-export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready", "failed", "stopped"]
 
 interface Props {
   repoRoot: string

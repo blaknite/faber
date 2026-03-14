@@ -1,5 +1,9 @@
 export type TaskStatus = "running" | "done" | "ready" | "failed" | "stopped" | "unknown"
 
+export type FilterMode = "active" | "all"
+
+export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready", "failed", "stopped"]
+
 export type Mode = "normal" | "input" | "delete" | "kill" | "done" | "merge" | "push" | "pushing" | "continue" | "switch_branch"
 
 export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"

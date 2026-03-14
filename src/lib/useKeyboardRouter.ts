@@ -2,9 +2,8 @@ import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
 import { killAgent } from "./agent.js"
 import { removeWorktree } from "./worktree.js"
-import type { Task, Mode } from "../types.js"
+import { ACTIVE_STATUSES, type Task, type Mode } from "../types.js"
 import type { PaneView } from "./useAppState.js"
-import { ACTIVE_STATUSES } from "../components/AgentList.js"
 
 interface UseKeyboardRouterParams {
   mode: Mode
