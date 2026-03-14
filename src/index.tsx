@@ -762,7 +762,7 @@ export async function runHeadless(repoRoot: string, prompt: string, model: Task[
   console.log(`Task ${task.id} running`)
 }
 
-async function setup(repoRoot: string) {
+export async function setup(repoRoot: string) {
   if (!existsSync(join(repoRoot, ".git"))) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
