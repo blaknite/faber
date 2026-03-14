@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { taskUsesDiffView } from "./useAppActions.js"
-import type { Task } from "../types.js"
+import { taskUsesDiffView, type Task } from "../types.js"
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -15,6 +14,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     completedAt: null,
     exitCode: null,
     hasCommits: false,
+    baseBranch: "",
     ...overrides,
   }
 }

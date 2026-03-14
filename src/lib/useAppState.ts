@@ -1,6 +1,5 @@
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react"
-import { ACTIVE_STATUSES, type FilterMode, type Task } from "../types.js"
-import { taskUsesDiffView } from "./useAppActions.js"
+import { ACTIVE_STATUSES, type FilterMode, type Task, taskUsesDiffView } from "../types.js"
 
 export function sortDescending(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => b.startedAt.localeCompare(a.startedAt))

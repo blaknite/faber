@@ -5,15 +5,8 @@ import { removeWorktree, mergeBranch, switchBranch, pushBranch } from "./worktre
 import { removeTask, updateTask } from "./state.js"
 import { createAndDispatchTask } from "./dispatch.js"
 import type { Task, Mode, Model } from "../types.js"
-import { DEFAULT_MODEL } from "../types.js"
+import { DEFAULT_MODEL, taskUsesDiffView } from "../types.js"
 import type { FlashType, PaneView } from "./useAppState.js"
-
-// Returns true when a task should open in the diff view. Both the keyboard
-// router and the auto-transition effect in useAppState rely on this same rule,
-// so keep it here as the single source of truth.
-export function taskUsesDiffView(task: Task): boolean {
-  return task.status === "ready" && task.hasCommits
-}
 
 interface UseAppActionsParams {
   repoRoot: string

@@ -49,6 +49,13 @@ export interface Task {
   baseBranch: string      // the branch that was checked out when the task was created
 }
 
+// Returns true when a task should open in the diff view. Both the keyboard
+// router and the auto-transition effect in useAppState rely on this same rule,
+// so keep it here as the single source of truth.
+export function taskUsesDiffView(task: Task): boolean {
+  return task.status === "ready" && task.hasCommits
+}
+
 export interface State {
   tasks: Task[]
 }
