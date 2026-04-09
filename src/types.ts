@@ -16,6 +16,12 @@ export const MODELS: { label: string; value: Model; color: string; dimColor: str
 
 export const DEFAULT_MODEL: Model = "anthropic/claude-sonnet-4-6"
 
+export const DEFAULT_MODELS: Record<'fast' | 'smart' | 'deep', string> = {
+  fast: 'anthropic/claude-haiku-4-5',
+  smart: 'anthropic/claude-sonnet-4-6',
+  deep: 'anthropic/claude-opus-4-6',
+}
+
 // Resolves a --model flag value to a Model. Accepts case-insensitive labels
 // (smart, fast, deep) or a literal model ID string. Returns null if the value
 // doesn't match anything known.
