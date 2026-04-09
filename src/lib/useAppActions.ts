@@ -7,6 +7,7 @@ import { createAndDispatchTask } from "./dispatch.js"
 import type { Task, Mode, Model, TaskPatch } from "../types.js"
 import { DEFAULT_MODEL, taskUsesDiffView } from "../types.js"
 import type { FlashType, PaneView } from "./useAppState.js"
+import type { AgentConfig } from "./config.js"
 
 interface UseAppActionsParams {
   repoRoot: string
@@ -23,6 +24,7 @@ interface UseAppActionsParams {
   refreshDirtyState: () => void
   showFlash: (msg: string, type: FlashType) => void
   showMergeMessage: (msg: string) => void
+  loadedConfig: AgentConfig
 }
 
 export function useAppActions({
@@ -40,6 +42,7 @@ export function useAppActions({
   refreshDirtyState,
   showFlash,
   showMergeMessage,
+  loadedConfig,
 }: UseAppActionsParams) {
   const updateTaskInState = useCallback((id: string, patch: TaskPatch) => {
     updateTask(repoRoot, id, patch)
@@ -61,12 +64,13 @@ export function useAppActions({
         model,
         baseBranch: currentBranch,
         callSite: "App.tsx:handleDispatch",
+        loadedConfig,
       })
     } catch {
       // createAndDispatchTask already updated the task status to failed and
       // wrote to the failure log. Nothing more to do here.
     }
-  }, [repoRoot, currentBranch, setMode, setSelectedIdx, prevSelectedIdx])
+  }, [repoRoot, currentBranch, setMode, setSelectedIdx, prevSelectedIdx, loadedConfig])
 
   const handleKill = useCallback((task: Task | null = selectedTask) => {
     if (!task || task.status !== "running" || !task.pid) return
@@ -116,10 +120,10 @@ export function useAppActions({
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }
     const resolvedPrompt = prompt?.trim() || undefined
-    spawnAgent(updated, repoRoot, task.sessionId, resolvedPrompt)
+    spawnAgent(updated, repoRoot, loadedConfig, task.sessionId, resolvedPrompt)
     setPaneTaskId(task.id)
     setPaneView("log")
-  }, [paneTask, selectedTask, repoRoot, updateTaskInState, setMode, setPaneTaskId, setPaneView])
+  }, [paneTask, selectedTask, repoRoot, updateTaskInState, setMode, setPaneTaskId, setPaneView, loadedConfig])
 
   const handleSwitchBranch = useCallback(async (branch: string) => {
     setMode("normal")

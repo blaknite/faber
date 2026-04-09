@@ -119,7 +119,7 @@ describe("continueTask", () => {
       continueTask(tmpRoot, "a3f2-fix-login-bug")
       expect(agentMock).toHaveBeenCalledTimes(1)
       const callArgs = agentMock.mock.calls[0] as unknown[]
-      expect(callArgs[2]).toBe(sessionId)
+      expect(callArgs[3]).toBe(sessionId)
     })
 
     it("uses the default resume prompt when none is provided", () => {
@@ -127,7 +127,7 @@ describe("continueTask", () => {
       continueTask(tmpRoot, "a3f2-fix-login-bug")
       expect(agentMock).toHaveBeenCalledTimes(1)
       const callArgs = agentMock.mock.calls[0] as unknown[]
-      expect(callArgs[3]).toBe("The task was interrupted. Please continue where you left off.")
+      expect(callArgs[4]).toBe("The task was interrupted. Please continue where you left off.")
     })
 
     it("uses a custom prompt when provided", () => {
@@ -135,7 +135,7 @@ describe("continueTask", () => {
       continueTask(tmpRoot, "a3f2-fix-login-bug", "do X instead")
       expect(agentMock).toHaveBeenCalledTimes(1)
       const callArgs = agentMock.mock.calls[0] as unknown[]
-      expect(callArgs[3]).toBe("do X instead")
+      expect(callArgs[4]).toBe("do X instead")
     })
 
     it("prints the task ID to stdout", () => {

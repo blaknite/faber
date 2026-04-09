@@ -4,14 +4,24 @@ import { execaSync } from "execa"
 import type { Task } from "../types.js"
 import { updateTask, taskOutputPath } from "./state.js"
 import { logTaskFailure } from "./failureLog.js"
+import type { AgentConfig } from "./config.js"
+import { getEffectiveModel } from "./config.js"
 
 export const DEFAULT_RESUME_PROMPT = "The task was interrupted. Please continue where you left off."
+
+const MODEL_TO_AGENT: Record<string, string> = {
+  'anthropic/claude-haiku-4-5': 'fast',
+  'anthropic/claude-sonnet-4-6': 'smart',
+  'anthropic/claude-opus-4-6': 'deep',
+}
 
 export function spawnAgent(
   task: Task,
   repoRoot: string,
+  loadedConfig: AgentConfig,
   resumeSessionId?: string,
-  resumePrompt?: string
+  resumePrompt?: string,
+  explicitModel?: string
 ): void {
   const opencodebin = (() => {
     try { return execaSync("which", ["opencode"]).stdout.trim() }
@@ -58,14 +68,17 @@ export function spawnAgent(
     writeFileSync(outputFile, promptEvent + "\n")
   }
 
+  const agentType = MODEL_TO_AGENT[task.model] ?? 'smart'
+  const runtimeModel = explicitModel ?? getEffectiveModel(agentType, loadedConfig)
+
   const opencodeCmd = resumeSessionId
     ? (() => {
         const prompt = agentPrompt.replace(/'/g, `'\\''`)
-        return `${opencodebin} run --format json --model ${task.model} -s ${resumeSessionId} --fork '${prompt}'`
+        return `${opencodebin} run --format json --model ${runtimeModel} -s ${resumeSessionId} --fork '${prompt}'`
       })()
     : (() => {
         const prompt = agentPrompt.replace(/'/g, `'\\''`)
-        return `${opencodebin} run --format json --model ${task.model} '${prompt}'`
+        return `${opencodebin} run --format json --model ${runtimeModel} '${prompt}'`
       })()
   const finishCmd = `; ${faberCmd} finish ${task.id} $?`
   // pipefail ensures $? reflects opencode's exit code, not tee's.

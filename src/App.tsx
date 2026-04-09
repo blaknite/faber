@@ -17,6 +17,7 @@ import { useAppActions } from "./lib/useAppActions.js"
 import { fetchLatestVersion } from "./lib/update.js"
 import type { Task, Mode } from "./types.js"
 import { TickProvider } from "./lib/tick.js"
+import type { AgentConfig } from "./lib/config.js"
 
 
 interface Props {
@@ -26,9 +27,10 @@ interface Props {
   initialTasks: Task[]
   renderer: CliRenderer
   onExit: () => void
+  loadedConfig: AgentConfig
 }
 
-function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) {
+function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedConfig }: Props) {
   const {
     tasks,
     setTasks,
@@ -136,6 +138,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit }: Props) 
     refreshDirtyState,
     showFlash,
     showMergeMessage,
+    loadedConfig,
   })
 
   const bindings = useKeyboardRouter({

@@ -6,6 +6,7 @@ import { generateFilterText } from "./filterText.js"
 import { logTaskFailure } from "./failureLog.js"
 import type { Task, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
+import type { AgentConfig } from "./config.js"
 
 export interface DispatchOptions {
   repoRoot: string
@@ -13,6 +14,8 @@ export interface DispatchOptions {
   model?: Model
   baseBranch: string
   callSite?: string
+  loadedConfig?: AgentConfig
+  explicitModel?: string
 }
 
 // Creates a task, registers it in state, sets up its git worktree, and starts
@@ -27,6 +30,8 @@ export async function createAndDispatchTask({
   model = DEFAULT_MODEL,
   baseBranch,
   callSite = "dispatch",
+  loadedConfig = {},
+  explicitModel,
 }: DispatchOptions): Promise<Task> {
   const slug = generateSlug(prompt)
   const worktree = `.worktrees/${slug}`
@@ -66,7 +71,7 @@ export async function createAndDispatchTask({
     throw err
   }
 
-  spawnAgent(task, repoRoot)
+  spawnAgent(task, repoRoot, loadedConfig, undefined, undefined, explicitModel)
   generateFilterText(prompt, repoRoot).then(filterText => {
     if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
   })

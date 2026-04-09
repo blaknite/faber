@@ -17,6 +17,8 @@ import { formatElapsed, readLogEntries } from "./lib/logParser.js"
 import { formatLog } from "./lib/formatLog.js"
 import type { Task, TaskStatus } from "./types.js"
 import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
+import { loadConfig } from "./lib/config.js"
+import type { AgentConfig } from "./lib/config.js"
 
 // Single exit point for the process. Everything routes through here so it's
 // easy to find all the places we terminate and to add any future cleanup.
@@ -83,21 +85,13 @@ export function stripFlags(args: string[]): string[] {
   return result
 }
 
-// Parse --model <value> from an args array, resolving it to a model ID.
-// Accepts case-insensitive labels (smart, fast, deep) or literal model ID strings.
-// Exits with an error if the value doesn't match any known model.
-// Returns the default model if --model is not present.
-function parseModelFlag(args: string[]): Task["model"] {
+function parseModelFlag(args: string[]): { model: Task["model"]; explicitModel: string | undefined } {
   const i = args.indexOf("--model")
-  if (i === -1 || !args[i + 1]) return DEFAULT_MODEL
+  if (i === -1 || !args[i + 1]) return { model: DEFAULT_MODEL, explicitModel: undefined }
   const input = args[i + 1]!
   const resolved = resolveModel(input)
-  if (!resolved) {
-    const valid = MODELS.map((m) => m.label).join(", ")
-    console.error(`Unknown model "${input}". Valid options: ${valid}`)
-    exit(1)
-  }
-  return resolved
+  if (resolved) return { model: resolved, explicitModel: resolved }
+  return { model: DEFAULT_MODEL, explicitModel: input }
 }
 
 // FABER_VERSION is injected at compile time via --define. When running from
@@ -411,9 +405,12 @@ Safe to run multiple times.`)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
-    const model = parseModelFlag(args)
+    const { model, explicitModel } = parseModelFlag(args)
     const baseBranch = parseBaseFlag(args) ?? undefined
-    await runHeadless(repoRoot, prompt, model, baseBranch)
+    const globalConfigPath = join(homedir(), '.faber', 'faber.json')
+    const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
+    const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
+    await runHeadless(repoRoot, prompt, model, baseBranch, loadedConfig, explicitModel)
     return
   }
 
@@ -704,6 +701,10 @@ Safe to run multiple times.`)
     exit(1)
   }
 
+  const globalConfigPath = join(homedir(), '.faber', 'faber.json')
+  const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
+  const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
+
   const state = readState(repoRoot)
   const repoName = repoRoot.replace(homedir(), "~")
 
@@ -723,6 +724,7 @@ Safe to run multiple times.`)
       version={VERSION}
       initialTasks={state.tasks}
       renderer={renderer}
+      loadedConfig={loadedConfig}
       onExit={async () => {
         root.unmount()
         await releaseLock?.()
@@ -735,7 +737,7 @@ Safe to run multiple times.`)
   renderer.start()
 }
 
-export async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string) {
+export async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
@@ -753,6 +755,8 @@ export async function runHeadless(repoRoot: string, prompt: string, model: Task[
       model,
       baseBranch: resolvedBaseBranch,
       callSite: "index.tsx:runHeadless",
+      loadedConfig,
+      explicitModel,
     })
   } catch (err: any) {
     console.error(`Failed to create worktree: ${err.message}`)
@@ -889,8 +893,12 @@ export function continueTask(repoRoot: string, taskId: string, prompt?: string):
     exitCode: null,
   })
 
+  const globalConfigPath = join(homedir(), '.faber', 'faber.json')
+  const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
+  const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
+
   const resumePrompt = prompt ?? DEFAULT_RESUME_PROMPT
-  spawnAgent(task, repoRoot, task.sessionId, resumePrompt)
+  spawnAgent(task, repoRoot, loadedConfig, task.sessionId, resumePrompt)
 
   console.log(taskId)
 }
