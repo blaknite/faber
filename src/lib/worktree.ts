@@ -15,7 +15,7 @@ export async function createWorktree(repoRoot: string, slug: string, baseBranch?
   await execa("git", args, { cwd: repoRoot })
   const plansSource = join(repoRoot, ".plans")
   const plansTarget = join(path, ".plans")
-  if (existsSync(plansSource)) {
+  if (existsSync(plansSource) && !existsSync(plansTarget)) {
     symlinkSync(plansSource, plansTarget)
   }
   return path

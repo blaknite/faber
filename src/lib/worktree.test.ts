@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { lstatSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
@@ -109,6 +109,25 @@ describe("createWorktree", () => {
   it("returns the worktree path", async () => {
     const path = await createWorktree(tmpRoot, "another-wt")
     expect(path).toBe(join(tmpRoot, ".worktrees", "another-wt"))
+  })
+
+  it("does not throw when .plans already exists in the worktree", async () => {
+    // Commit a .plans directory to the repo so git worktree add checks it out
+    mkdirSync(join(tmpRoot, ".plans"), { recursive: true })
+    writeFileSync(join(tmpRoot, ".plans", "example.md"), "# plan\n")
+    git("add .")
+    git('commit -m "add .plans to repo"')
+
+    // Also create a .plans directory at the repo root so the source-exists guard passes
+    // (simulates faber's own setup where the root .plans dir exists)
+    // It already exists from the commit above, so nothing extra needed here.
+
+    // createWorktree should not throw even though .plans will already exist in the worktree
+    await expect(createWorktree(tmpRoot, "plans-already-exists")).resolves.toBeDefined()
+
+    // .plans inside the worktree should be a regular directory, not a symlink
+    const wtPlans = join(worktreePath(tmpRoot, "plans-already-exists"), ".plans")
+    expect(lstatSync(wtPlans).isSymbolicLink()).toBe(false)
   })
 
   it("branches from baseBranch when provided", async () => {
