@@ -34,7 +34,7 @@ export function resolveModel(input: string): Model | null {
   return null
 }
 
-export function getModelContextWindow(model: Model): number {
+export function getModelContextWindow(model: string): number {
   const found = MODELS.find((m) => m.value === model)
   return found?.contextWindow ?? 200000
 }
@@ -43,7 +43,7 @@ export interface Task {
   id: string              // e.g. "a3f2-resolve-issue-uic-002"
   prompt: string          // the raw prompt sent to opencode
   summaryText?: string    // LLM-generated summary of the prompt, used for fuzzy matching in the selector
-  model: Model            // the opencode model to use
+  model: string           // the opencode model to use (may be a custom model from faber.json)
   status: TaskStatus
   pid: number | null      // null after process exits
   worktree: string        // relative path, e.g. ".worktrees/a3f2-resolve-issue-uic-002"

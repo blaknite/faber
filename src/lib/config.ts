@@ -48,6 +48,12 @@ export function loadConfig(globalPath: string, projectPath: string): AgentConfig
   return {}
 }
 
+export const MODEL_TO_AGENT: Record<string, string> = {
+  'anthropic/claude-haiku-4-5': 'fast',
+  'anthropic/claude-sonnet-4-6': 'smart',
+  'anthropic/claude-opus-4-6': 'deep',
+}
+
 export function getEffectiveModel(agentType: string, loadedConfig: AgentConfig): string {
   const configured = loadedConfig[agentType as keyof AgentConfig]
   if (typeof configured === 'string') return configured

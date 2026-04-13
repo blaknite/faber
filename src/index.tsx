@@ -15,7 +15,7 @@ import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
 import { formatLog } from "./lib/formatLog.js"
-import type { Task, TaskStatus } from "./types.js"
+import type { Task, TaskStatus, Model } from "./types.js"
 import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
 import { loadConfig } from "./lib/config.js"
 import type { AgentConfig } from "./lib/config.js"
@@ -85,7 +85,7 @@ export function stripFlags(args: string[]): string[] {
   return result
 }
 
-function parseModelFlag(args: string[]): { model: Task["model"]; explicitModel: string | undefined } {
+function parseModelFlag(args: string[]): { model: Model; explicitModel: string | undefined } {
   const i = args.indexOf("--model")
   if (i === -1 || !args[i + 1]) return { model: DEFAULT_MODEL, explicitModel: undefined }
   const input = args[i + 1]!
@@ -737,7 +737,7 @@ Safe to run multiple times.`)
   renderer.start()
 }
 
-export async function runHeadless(repoRoot: string, prompt: string, model: Task["model"] = DEFAULT_MODEL, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
+export async function runHeadless(repoRoot: string, prompt: string, model: Model = DEFAULT_MODEL, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)

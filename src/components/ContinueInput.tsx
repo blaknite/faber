@@ -10,11 +10,14 @@ interface Props {
   repoRoot: string
   onSubmit: (prompt?: string, model?: Model) => void
   onCancel: () => void
-  defaultModel?: Model
+  defaultModel?: string
 }
 
 export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Props) {
-  const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === (defaultModel ?? DEFAULT_MODEL)))
+  const [modelIdx, setModelIdx] = useState(() => {
+    const idx = MODELS.findIndex((m) => m.value === (defaultModel ?? DEFAULT_MODEL))
+    return idx >= 0 ? idx : 0
+  })
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
 

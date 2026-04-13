@@ -6,6 +6,7 @@ import { removeTask, updateTask } from "./state.js"
 import { createAndDispatchTask } from "./dispatch.js"
 import type { Task, Mode, Model, TaskPatch } from "../types.js"
 import { DEFAULT_MODEL, taskUsesDiffView } from "../types.js"
+import { getEffectiveModel, MODEL_TO_AGENT } from "./config.js"
 import type { FlashType, PaneView } from "./useAppState.js"
 import type { AgentConfig } from "./config.js"
 
@@ -111,11 +112,14 @@ export function useAppActions({
     if (task.status === "running") return
     setMode("normal")
     if (task.pid) killAgent(task.pid)
+    const resolvedModel = model
+      ? getEffectiveModel(MODEL_TO_AGENT[model] ?? 'smart', loadedConfig)
+      : undefined
     const patch: TaskPatch = {
       status: "running",
       completedAt: null,
       exitCode: null,
-      ...(model ? { model } : {}),
+      ...(resolvedModel ? { model: resolvedModel } : {}),
     }
     updateTaskInState(task.id, patch)
     const updated = { ...task, ...patch }

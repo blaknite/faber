@@ -7,6 +7,7 @@ import { logTaskFailure } from "./failureLog.js"
 import type { Task, Model } from "../types.js"
 import { DEFAULT_MODEL } from "../types.js"
 import type { AgentConfig } from "./config.js"
+import { getEffectiveModel, MODEL_TO_AGENT } from "./config.js"
 
 export interface DispatchOptions {
   repoRoot: string
@@ -36,10 +37,13 @@ export async function createAndDispatchTask({
   const slug = generateSlug(prompt)
   const worktree = `.worktrees/${slug}`
 
+  const agentType = MODEL_TO_AGENT[model] ?? 'smart'
+  const resolvedModel = explicitModel ?? getEffectiveModel(agentType, loadedConfig)
+
   const task: Task = {
     id: slug,
     prompt,
-    model,
+    model: resolvedModel,
     status: "running",
     pid: null,
     worktree,
@@ -71,7 +75,7 @@ export async function createAndDispatchTask({
     throw err
   }
 
-  spawnAgent(task, repoRoot, loadedConfig, undefined, undefined, explicitModel)
+  spawnAgent(task, repoRoot, loadedConfig)
   generateFilterText(prompt, repoRoot).then(filterText => {
     if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
   })
