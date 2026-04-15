@@ -115,6 +115,7 @@ Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
   continue <taskId> Resume a stopped or failed task
+  stop <taskId>     Stop a running task
   list              Print all tasks as a table
   read <taskId>     Print the log for a task
   watch <taskId>    Watch a task and exit when it stops running
@@ -143,6 +144,7 @@ Examples:
   faber run "Refactor the auth module" --model deep
   faber continue a3f2-fix-the-login-bug
   faber continue a3f2-fix-the-login-bug "do X instead"
+  faber stop a3f2-fix-the-login-bug
   faber list
   faber list --status ready
   faber read a3f2-fix-the-login-bug
@@ -159,6 +161,21 @@ Run "faber <command> --help" for help on a specific command.`)
   // Per-command help. Check for --help in the args before dispatching any command.
   if (args.includes("--help") || args.includes("-h")) {
     switch (command) {
+      case "stop":
+        console.log(`Usage: faber stop <taskId>
+
+Stop a running task. The task is marked as stopped and can be resumed later
+with "faber continue".
+
+Arguments:
+  <taskId>          The task ID to stop
+
+Options:
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber stop a3f2-fix-the-login-bug`)
+        exit(0)
       case "continue":
         console.log(`Usage: faber continue <taskId> ["<prompt>"] [options]
 
@@ -393,6 +410,23 @@ Safe to run multiple times.`)
       exit(1)
     }
     continueTask(repoRoot, continueTask_.id, prompt)
+    return
+  }
+
+  // faber stop <taskId> [--dir <repo>]
+  if (command === "stop") {
+    const taskIdArg = positional[1]
+    if (!taskIdArg) {
+      console.error('Usage: faber stop <taskId>')
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      console.error("Could not find faber state file from current directory")
+      exit(1)
+    }
+    stopTask(repoRoot, taskIdArg)
     return
   }
 
@@ -901,6 +935,33 @@ export function continueTask(repoRoot: string, taskId: string, prompt?: string):
   spawnAgent(task, repoRoot, loadedConfig, task.sessionId, resumePrompt)
 
   console.log(taskId)
+}
+
+// Mark a running task as stopped. The task remains in state and can be
+// resumed later with `faber continue`. Exits with 130 (SIGINT convention).
+export function stopTask(repoRoot: string, taskId: string): void {
+  const state = readState(repoRoot)
+  const task = state.tasks.find((t) => t.id === taskId)
+
+  if (!task) {
+    console.error(`Task "${taskId}" not found`)
+    exit(1)
+  }
+
+  if (task.status !== "running") {
+    console.error(`Task "${taskId}" is not running (status: ${task.status})`)
+    exit(1)
+  }
+
+  updateTask(repoRoot, taskId, {
+    status: "stopped",
+    completedAt: new Date().toISOString(),
+    exitCode: null,
+    pid: null,
+  })
+
+  console.log(taskId)
+  process.exit(130)
 }
 
 // Print tasks as a table: ID, status, elapsed time, and truncated prompt.

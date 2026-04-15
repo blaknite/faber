@@ -108,6 +108,14 @@ describe("main", () => {
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
     })
 
+    it("does not error on known commands (stop)", async () => {
+      // stop with no taskId exits 1 with a usage message, not an "Unknown command" error
+      process.argv = ["bun", "faber", "stop"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+
     it("does not error on flag-only args (treats bare faber as TUI launch)", async () => {
       // "--dir" starts with "-" so should not be treated as an unknown command
       process.argv = ["bun", "faber", "--dir", "/nonexistent"]
