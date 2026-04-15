@@ -85,12 +85,12 @@ export function stripFlags(args: string[]): string[] {
   return result
 }
 
-function parseModelFlag(args: string[]): { model: Model; explicitModel: string | undefined } {
+export function parseModelFlag(args: string[]): { model: Model; explicitModel: string | undefined } {
   const i = args.indexOf("--model")
   if (i === -1 || !args[i + 1]) return { model: DEFAULT_MODEL, explicitModel: undefined }
   const input = args[i + 1]!
   const resolved = resolveModel(input)
-  if (resolved) return { model: resolved, explicitModel: resolved }
+  if (resolved) return { model: resolved, explicitModel: undefined }
   return { model: DEFAULT_MODEL, explicitModel: input }
 }
 

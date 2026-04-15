@@ -110,6 +110,28 @@ describe("runHeadless", () => {
     })
   })
 
+  describe("explicitModel and faber.json config interaction", () => {
+    it("passes explicitModel through when a raw model string is given", async () => {
+      await runHeadless(tmpRoot, "do a thing", "anthropic/claude-sonnet-4-6", undefined, {}, "google/gemini-2.5-pro")
+      const opts = dispatchMock.mock.calls[0]?.[0] as Record<string, unknown>
+      expect(opts.explicitModel).toBe("google/gemini-2.5-pro")
+    })
+
+    it("passes undefined explicitModel when no explicit override is given", async () => {
+      await runHeadless(tmpRoot, "do a thing", "anthropic/claude-sonnet-4-6", undefined, { smart: "openai/gpt-4o" })
+      const opts = dispatchMock.mock.calls[0]?.[0] as Record<string, unknown>
+      expect(opts.explicitModel).toBeUndefined()
+    })
+
+    it("uses config model when explicitModel is undefined and loadedConfig has an override", async () => {
+      const loadedConfig = { smart: "openai/gpt-4o" }
+      await runHeadless(tmpRoot, "do a thing", "anthropic/claude-sonnet-4-6", undefined, loadedConfig, undefined)
+      const opts = dispatchMock.mock.calls[0]?.[0] as Record<string, unknown>
+      expect(opts.explicitModel).toBeUndefined()
+      expect(opts.loadedConfig).toEqual(loadedConfig)
+    })
+  })
+
   describe("custom base branch", () => {
     it("passes the provided baseBranch through to createAndDispatchTask", async () => {
       await runHeadless(tmpRoot, "do a thing", undefined, "my-feature-branch")

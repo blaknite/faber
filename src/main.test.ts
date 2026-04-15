@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
-import { main, stripFlags } from "./index.js"
+import { main, parseModelFlag, stripFlags } from "./index.js"
 
 // Mock out anything that would spawn real processes or touch the filesystem
 // in a way that would block the test from reaching the command dispatch.
@@ -81,6 +81,33 @@ describe("stripFlags", () => {
 
   it("returns an empty array when given only flags", () => {
     expect(stripFlags(["--model", "deep", "--base", "main"])).toEqual([])
+  })
+})
+
+describe("parseModelFlag", () => {
+  it("returns undefined explicitModel when a known label like 'smart' is used", () => {
+    const result = parseModelFlag(["run", "--model", "smart", "do a thing"])
+    expect(result.explicitModel).toBeUndefined()
+  })
+
+  it("returns undefined explicitModel when a known label like 'deep' is used", () => {
+    const result = parseModelFlag(["run", "--model", "deep", "do a thing"])
+    expect(result.explicitModel).toBeUndefined()
+  })
+
+  it("returns the raw string as explicitModel when a non-label model string is given", () => {
+    const result = parseModelFlag(["run", "--model", "google/gemini-2.5-pro", "do a thing"])
+    expect(result.explicitModel).toBe("google/gemini-2.5-pro")
+  })
+
+  it("returns undefined explicitModel when no --model flag is present", () => {
+    const result = parseModelFlag(["run", "do a thing"])
+    expect(result.explicitModel).toBeUndefined()
+  })
+
+  it("resolves known label to the correct model", () => {
+    const result = parseModelFlag(["run", "--model", "smart", "do a thing"])
+    expect(result.model).toBe("anthropic/claude-sonnet-4-6")
   })
 })
 
