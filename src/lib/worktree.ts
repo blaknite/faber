@@ -48,6 +48,12 @@ export function gitHeadPath(repoRoot: string): string {
   return join(repoRoot, ".git", "HEAD")
 }
 
+// Returns the path to the refs/heads directory where branch refs are stored.
+// Git writes branch tip updates here when merging or rebasing.
+export function gitRefsHeadsPath(repoRoot: string): string {
+  return join(repoRoot, ".git", "refs", "heads")
+}
+
 // Returns the path to FETCH_HEAD, which git rewrites on every push and fetch.
 // Watching this file is more reliable than watching per-branch remote refs
 // because those can be absorbed into packed-refs and disappear as loose files.

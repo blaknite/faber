@@ -9,7 +9,7 @@ import { BottomBar } from "./components/BottomBar.js"
 import { BranchSelector } from "./components/BranchSelector.js"
 import { HeaderBar } from "./components/HeaderBar.js"
 import { InterstitialView } from "./components/InterstitialView.js"
-import { hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, readCurrentBranch } from "./lib/worktree.js"
+import { hasUnpushedCommits, gitHeadPath, gitFetchHeadPath, gitRefsHeadsPath, readCurrentBranch } from "./lib/worktree.js"
 import { readState, stateFilePath } from "./lib/state.js"
 import { useKeyboardRouter } from "./lib/useKeyboardRouter.js"
 import { useFileWatch } from "./lib/useFileWatch.js"
@@ -99,6 +99,12 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedCon
     setFetchHeadWatchKey(k => k + 1)
   }, [repoRoot, refreshDirtyState])
   useFileWatch(gitHeadPath(repoRoot), refreshBranchState)
+
+  // Watch .git/refs/heads/ for branch ref changes. A fast-forward merge via
+  // `git merge --ff-only` doesn't write to .git/HEAD -- it only advances the
+  // branch ref tip, writing to .git/refs/heads/<baseBranch> or packed-refs.
+  // So we need to watch this directory to detect when a merge completes.
+  useFileWatch(gitRefsHeadsPath(repoRoot), refreshBranchState, { recursive: true })
 
   // Watch FETCH_HEAD so that pushing outside of Faber clears the dirty
   // indicator. Git rewrites FETCH_HEAD on every push and fetch, which is
