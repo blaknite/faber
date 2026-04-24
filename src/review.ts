@@ -49,6 +49,7 @@ async function waitForTask(repoRoot: string, taskId: string): Promise<string> {
 
   return new Promise<string>((resolve) => {
     let settled = false
+    let watcher: ReturnType<typeof fsWatch> | null = null
 
     function check() {
       if (settled) return
@@ -56,16 +57,18 @@ async function waitForTask(repoRoot: string, taskId: string): Promise<string> {
       const task = state.tasks.find((t) => t.id === taskId)
       if (!task || task.status !== "running") {
         settled = true
-        watcher.close()
+        watcher?.close()
         clearInterval(interval)
         resolve(task?.status ?? "unknown")
       }
     }
 
-    const watcher = fsWatch(statePath, () => check())
-    const interval = setInterval(check, 1000)
+    if (existsSync(statePath)) {
+      watcher = fsWatch(statePath, () => check())
+      watcher.on("error", () => {})
+    }
 
-    watcher.on("error", () => {})
+    const interval = setInterval(check, 1000)
   })
 }
 
