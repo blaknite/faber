@@ -131,8 +131,8 @@ Refer to *Kind Feedback* for instructions on your communication style. Your audi
 
 Structure:
 
-1. **One or two sentences summarising the change and your overall read.** What does it do? Is the approach sound? Any areas of concern? Keep it short and honest.
-2. **Findings, most significant first.** For each finding, give a `path/to/file.ts:42` reference, a short description of the concern, and (where useful) a suggested fix. Group related findings under a short heading only if there are enough of them to warrant one — usually a flat list reads better.
+1. **A concise summary of the change and your overall read.** What does it do? Is the approach sound? Any areas of concern? Keep it short and honest.
+2. **Findings, most significant first.** For each finding, give a `path/to/file.ts:42` reference, a short description of the concern, and (where useful) a suggested fix.
 3. **Close.** If there are unresolved questions for the author, name them plainly.
 
 Frame findings according to their tier:
@@ -144,13 +144,37 @@ Frame findings according to their tier:
 If the change is clean, say so in one or two sentences and stop. Don't pad. Don't invent findings.
 
 Do not include:
-
 - A "summary of the diff" section that just restates what the code does. The reader wrote it.
 - Praise like "great work" or "nicely done." If the code is good, a short review is the signal.
 - A conclusion or sign-off. End on your last finding (or on the "looks clean" line).
-- Intent-label prefixes like "Nit:" / "Blocking:". Those are artefacts of inline PR comments. In a single prose message, the tier framing does the work.
 
-Mention that the reader can follow up with `faber read <taskId>` (they know their own task ID) to re-open the session with more questions only if you have genuinely held-back findings worth revisiting. Otherwise don't bother — it reads as filler.
+State where the fix belongs, not where the symptom appears. The reader should be able to understand the issue with minimal effort.
+
+Every finding must start with a short intent label ("Nit:", "Minor:", "Thought:", "Important:", "Blocking:") that tells the author how much weight to give it. Avoid disclaimer sentences. The label handles severity signalling.
+
+When a comment has an exact code fix for specific lines, use a ` ```suggestion ` fence instead of a plain code block.
+
+````
+# Review Findings
+
+<summary of the change and your read>
+
+## 1. `src/foo.ts:42`
+
+<comment text>
+
+```suggestion
+  replacement code here
+```
+
+## 2. `src/bar.ts:15`
+
+<comment text>
+
+```
+  conceptual example here
+```
+````
 
 ## What not to do
 
