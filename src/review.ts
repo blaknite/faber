@@ -5,13 +5,13 @@ import { ensureFaberDir } from "./lib/state.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
 import { resolveReviewTarget, type ReviewMode } from "./lib/reviewTarget.js"
 import { loadConfig } from "./lib/config.js"
-import type { Model } from "./types.js"
-import { DEFAULT_MODEL } from "./types.js"
+import type { Tier } from "./types.js"
+import { DEFAULT_TIER } from "./types.js"
 
 export async function runReview(
   repoRoot: string,
   mode: ReviewMode,
-  model: Model = DEFAULT_MODEL,
+  tier: Tier = DEFAULT_TIER,
   explicitModel?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
@@ -39,7 +39,7 @@ export async function runReview(
   const task = await createAndDispatchTask({
     repoRoot,
     prompt,
-    model,
+    tier,
     baseBranch: target.worktreeBase,
     callSite: "review.ts:runReview",
     loadedConfig,
