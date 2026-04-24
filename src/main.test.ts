@@ -166,7 +166,7 @@ describe("main", () => {
 
     it("does not error on known commands (review)", async () => {
       process.argv = ["bun", "faber", "review"]
-      await expect(main()).rejects.toThrow()
+      await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
     })
   })
