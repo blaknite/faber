@@ -143,4 +143,6 @@ export async function runReview(
     const formatted = m.parse(message) as string
     process.stdout.write(formatted)
   }
+
+  process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n  faber continue ${task.id} "your instructions here"\n`)
 }
