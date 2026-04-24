@@ -6,12 +6,11 @@ import { createAndDispatchTask } from "./lib/dispatch.js"
 import { resolveReviewTarget, type ReviewMode } from "./lib/reviewTarget.js"
 import { loadConfig } from "./lib/config.js"
 import type { Tier } from "./types.js"
-import { DEFAULT_TIER } from "./types.js"
 
 export async function runReview(
   repoRoot: string,
   mode: ReviewMode,
-  tier: Tier = DEFAULT_TIER,
+  tier: Tier = "deep",
   explicitModel?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
