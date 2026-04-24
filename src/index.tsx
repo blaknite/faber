@@ -19,6 +19,8 @@ import type { Task, TaskStatus, Tier } from "./types.js"
 import { DEFAULT_TIER, resolveTier } from "./types.js"
 import { loadConfig } from "./lib/config.js"
 import type { AgentConfig } from "./lib/config.js"
+import { runReview } from "./review.js"
+import type { ReviewMode } from "./lib/reviewTarget.js"
 
 // Single exit point for the process. Everything routes through here so it's
 // easy to find all the places we terminate and to add any future cleanup.
@@ -55,18 +57,32 @@ function parseBaseFlag(args: string[]): string | null {
   return null
 }
 
+// Parse --branch <name> from an args array. Returns the branch name or null.
+function parseBranchFlag(args: string[]): string | null {
+  const i = args.indexOf("--branch")
+  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  return null
+}
+
+// Parse --pull-request <num-or-url> from an args array. Returns the value or null.
+function parsePullRequestFlag(args: string[]): string | null {
+  const i = args.indexOf("--pull-request")
+  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  return null
+}
+
 // Strip all recognised flags and their values from an args array so that the
 // remainder contains only positional arguments. This lets callers use index
 // arithmetic (positional[1], positional[2], ...) without worrying about flags
 // appearing before positionals.
 //
-// Flags that consume a following value: --model, --dir, --base, --status
+// Flags that consume a following value: --model, --dir, --base, --status, --branch, --pull-request
 // Boolean flags (no value): --full, --json, --yes, -h, --help
 //
 // The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
 // still work on the original args array before stripping.
 export function stripFlags(args: string[]): string[] {
-  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status"])
+  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status", "--branch", "--pull-request"])
   const result: string[] = []
   let i = 0
   while (i < args.length) {
@@ -114,6 +130,7 @@ Usage: faber [command] [options]
 Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
+  review            Dispatch a code-review task
   continue <taskId> Resume a stopped or failed task
   stop <taskId>     Stop a running task
   list              Print all tasks as a table
@@ -132,21 +149,25 @@ Commands:
 Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
   --model <label>   Model to use for the task: smart, fast, or deep
-                    (only applies to the run command)
+                  (only applies to the run command)
   --status <value>  Filter tasks by status (only applies to the list command)
-                    Valid values: running, ready, done, failed, stopped, unknown
+                  Valid values: running, ready, done, failed, stopped, unknown
   --full            Include tool call block content (only applies to the read command)
   --json            Output raw JSON (only applies to the read command)
+  --branch <name>   Branch to review (only applies to the review command)
+  --pull-request <n> PR number or URL to review (only applies to the review command)
 
 Examples:
   faber
   faber run "Fix the login bug"
+  faber review
+  faber review --pull-request 123
   faber run "Refactor the auth module" --model deep
   faber continue a3f2-fix-the-login-bug
   faber continue a3f2-fix-the-login-bug "do X instead"
   faber stop a3f2-fix-the-login-bug
   faber list
-  faber list --status ready
+  faber list --status running
   faber read a3f2-fix-the-login-bug
   faber read a3f2-fix-the-login-bug --full
   faber watch a3f2-fix-the-login-bug
@@ -292,7 +313,7 @@ Options:
 Examples:
   faber done a3f2-fix-the-login-bug`)
         exit(0)
-      case "delete":
+       case "delete":
         console.log(`Usage: faber delete <taskId> [options]
 
 Delete a task and remove its worktree and branch. This is destructive and
@@ -305,6 +326,27 @@ Options:
 Examples:
   faber delete a3f2-fix-the-login-bug
   faber delete a3f2-fix-the-login-bug --yes`)
+        exit(0)
+      case "review":
+        console.log(`Usage: faber review [options]
+
+Dispatch a code-review task. Reviews the current branch against the default
+branch by default. The task runs as a normal faber task: use "faber watch"
+to block until it finishes, "faber read" to see its output, and "faber diff"
+to inspect any fixes it applied.
+
+Options:
+  --branch <name>             Review <name> against the default branch
+  --pull-request <num-or-url> Review a pull request against its base branch
+  --model <label>             Model to use: smart (default), fast, or deep
+  --dir <path>                Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber review
+  faber review --branch feature/new-auth
+  faber review --pull-request 123
+  faber review --pull-request https://github.com/org/repo/pull/123
+  faber review --model deep`)
         exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
@@ -445,6 +487,42 @@ Safe to run multiple times.`)
     const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
     const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
     await runHeadless(repoRoot, prompt, tier, baseBranch, loadedConfig, explicitModel)
+    return
+  }
+
+  // faber review [--branch <name>] [--pull-request <num-or-url>] [--model <label>] [--dir <repo>]
+  if (command === "review") {
+    const branch = parseBranchFlag(args)
+    const pullRequest = parsePullRequestFlag(args)
+    if (branch && pullRequest) {
+      console.error("Usage: faber review [--branch <name> | --pull-request <num-or-url>]")
+      console.error("--branch and --pull-request cannot be used together")
+      exit(1)
+    }
+    if (args.includes("--pull-request") && !pullRequest) {
+      console.error("--pull-request requires an argument (PR number or URL)")
+      exit(1)
+    }
+    if (args.includes("--branch") && !branch) {
+      console.error("--branch requires an argument (branch name)")
+      exit(1)
+    }
+
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
+    const { model, explicitModel } = parseModelFlag(args)
+
+    const mode: ReviewMode =
+      pullRequest ? { kind: "pullRequest", arg: pullRequest } :
+      branch ? { kind: "branch", name: branch } :
+      { kind: "current" }
+
+    try {
+      await runReview(repoRoot, mode, model, explicitModel)
+    } catch (err: any) {
+      console.error(err.message ?? String(err))
+      exit(1)
+    }
     return
   }
 
