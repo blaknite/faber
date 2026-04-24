@@ -29,10 +29,12 @@ function lastActivityLabel(repoRoot: string, taskId: string): string {
 function startProgressSpinner(repoRoot: string, taskId: string): () => void {
   let tick = 0
 
+  process.stdout.write("Reviewing...\n")
+
   const spinInterval = setInterval(() => {
     const frame = SPINNER_FRAMES[tick % SPINNER_FRAMES.length]!
     const label = lastActivityLabel(repoRoot, taskId)
-    process.stdout.write(`\r${frame} ${label}`)
+    process.stdout.write(`\r\x1b[K${frame} ${label}`)
     tick++
   }, 100)
 
