@@ -109,6 +109,23 @@ describe("runReview", () => {
       expect(callOpts.prompt).toContain("feature-x")
     })
 
+    it("prints a faber continue hint after the review completes", async () => {
+      git("checkout -b feature-x")
+      const written: string[] = []
+      const origWrite = process.stdout.write.bind(process.stdout)
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+      try {
+        await runReview(tmpRoot, { kind: "current" })
+      } catch {
+        // expected
+      }
+      const output = written.join("")
+      expect(output).toContain(`faber continue ${fakeTask.id}`)
+    })
+
     it("throws on default branch", async () => {
       try {
         await runReview(tmpRoot, { kind: "current" })
