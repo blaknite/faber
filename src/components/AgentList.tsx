@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
-import type { Task, TaskStatus, Model, FilterMode } from "../types.js"
+import type { Task, TaskStatus, Tier, FilterMode } from "../types.js"
+import type { AgentConfig } from "../lib/config.js"
 import { TaskInput } from "./TaskInput.js"
 import { TaskRow } from "./TaskRow.js"
 
@@ -15,14 +16,15 @@ interface Props {
   width?: number | "auto" | `${number}%`
   inputActive: boolean
   currentBranch?: string
+  loadedConfig: AgentConfig
   onActivate: () => void
-  onSubmit: (prompt: string, model: Model) => void
+  onSubmit: (prompt: string, tier: Tier) => void
   onCancel: () => void
   onSelectTask: (id: string) => void
   onOpenTask: (id: string) => void
 }
 
-export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, onActivate, onSubmit, onCancel, onSelectTask, onOpenTask }: Props) {
+export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterChange, updateAvailable = false, width = undefined, inputActive, currentBranch, loadedConfig, onActivate, onSubmit, onCancel, onSelectTask, onOpenTask }: Props) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const cardRefs = useRef<Map<string, BoxRenderable>>(new Map())
 
@@ -99,7 +101,7 @@ export function AgentList({ repoRoot, tasks, selectedId, filterMode, onFilterCha
           <scrollbox ref={scrollRef} style={{ flexGrow: 1 }} scrollY scrollX={false} contentOptions={{ paddingRight: 1 }} viewportOptions={{ maxHeight: "100%" }}>
             <box style={{ flexDirection: "column" }}>
               {tasks.map((task, i) => (
-                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} repoRoot={repoRoot} onOpen={() => onOpenTask(task.id)} />
+                <TaskRow key={task.id} task={task} index={i} selected={task.id === selectedId} cardRef={setCardRef(task.id)} repoRoot={repoRoot} loadedConfig={loadedConfig} onOpen={() => onOpenTask(task.id)} />
               ))}
             </box>
           </scrollbox>

@@ -2,28 +2,25 @@ import { useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
 import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 import { DEFAULT_RESUME_PROMPT } from "../lib/agent.js"
-import { MODELS, DEFAULT_MODEL } from "../types.js"
-import type { Model } from "../types.js"
+import { TIERS, TIER_ORDER, DEFAULT_TIER } from "../types.js"
+import type { Tier } from "../types.js"
 import { useFileSelector } from "../lib/useFileSelector.js"
 
 interface Props {
   repoRoot: string
-  onSubmit: (prompt?: string, model?: Model) => void
+  onSubmit: (prompt?: string, tier?: Tier) => void
   onCancel: () => void
-  defaultModel?: string
+  defaultTier?: Tier
 }
 
-export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Props) {
-  const [modelIdx, setModelIdx] = useState(() => {
-    const idx = MODELS.findIndex((m) => m.value === (defaultModel ?? DEFAULT_MODEL))
-    return idx >= 0 ? idx : 0
-  })
+export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultTier }: Props) {
+  const [tier, setTier] = useState<Tier>(defaultTier ?? DEFAULT_TIER)
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
 
-  const model = MODELS[modelIdx]!
-  const modelRef = useRef(model)
-  modelRef.current = model
+  const tierMeta = TIERS[tier]
+  const tierRef = useRef(tier)
+  tierRef.current = tier
 
   const { suggestions, selectedSuggestion, hasSuggestions, onContentChange: onFileSelectorContentChange, onKeyDown: onFileSelectorKeyDown } = useFileSelector({ repoRoot, textareaRef })
 
@@ -70,7 +67,7 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
       )}
       <box
         border={["left"]}
-        borderColor={model.color}
+        borderColor={tierMeta.color}
         style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
       >
         <textarea
@@ -82,7 +79,7 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
           placeholder={DEFAULT_RESUME_PROMPT}
           onSubmit={() => {
             const trimmed = textareaRef.current?.plainText.trim()
-            onSubmit(trimmed || undefined, modelRef.current.value)
+            onSubmit(trimmed || undefined, tierRef.current)
           }}
           onKeyDown={(key) => {
             if (onFileSelectorKeyDown(key)) return
@@ -98,14 +95,14 @@ export function ContinueInput({ repoRoot, onSubmit, onCancel, defaultModel }: Pr
               return
             }
             if (key.name === "tab") {
-              setModelIdx((i) => (i + 1) % MODELS.length)
+              setTier((t) => TIER_ORDER[(TIER_ORDER.indexOf(t) + 1) % TIER_ORDER.length])
               key.preventDefault()
             }
           }}
           focused
         />
         <box style={{ height: 1 }} />
-        <text fg={model.color}>{model.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] {hasSuggestions ? "select" : "model"}</span></text>
+        <text fg={tierMeta.color}>{tierMeta.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] {hasSuggestions ? "select" : "model"}</span></text>
       </box>
     </box>
   )

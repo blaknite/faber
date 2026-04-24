@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { TextareaRenderable } from "@opentui/core"
-import { MODELS, DEFAULT_MODEL } from "../types.js"
-import type { Model } from "../types.js"
+import { TIERS, TIER_ORDER, DEFAULT_TIER } from "../types.js"
+import type { Tier } from "../types.js"
 import { KEY_BINDINGS, MIN_LINES, MAX_LINES } from "../lib/textarea.js"
 import { useFileSelector } from "../lib/useFileSelector.js"
 
@@ -9,18 +9,18 @@ interface Props {
   repoRoot: string
   active: boolean
   onActivate: () => void
-  onSubmit: (prompt: string, model: Model) => void
+  onSubmit: (prompt: string, tier: Tier) => void
   onCancel: () => void
 }
 
 export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: Props) {
-  const [modelIdx, setModelIdx] = useState(() => MODELS.findIndex((m) => m.value === DEFAULT_MODEL))
+  const [tier, setTier] = useState<Tier>(DEFAULT_TIER)
   const [textareaHeight, setTextareaHeight] = useState(MIN_LINES)
   const textareaRef = useRef<TextareaRenderable>(null)
 
-  const model = MODELS[modelIdx]!
-  const modelRef = useRef(model)
-  modelRef.current = model
+  const tierMeta = TIERS[tier]
+  const tierRef = useRef(tier)
+  tierRef.current = tier
 
   const { suggestions, selectedSuggestion, hasSuggestions, onContentChange: onFileSelectorContentChange, onKeyDown: onFileSelectorKeyDown } = useFileSelector({ repoRoot, textareaRef })
 
@@ -46,13 +46,13 @@ export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: 
         {!active ? (
           <box
             border={["left"]}
-            borderColor={model.dimColor}
+            borderColor={tierMeta.dimColor}
             style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
             onMouseDown={(e) => { if (e.button === 0) onActivate() }}
           >
             <text fg="#444444">Press [n] to create a new task</text>
             <box style={{ height: 1 }} />
-            <text fg={model.dimColor}>{model.label}</text>
+            <text fg={tierMeta.dimColor}>{tierMeta.label}</text>
           </box>
         ) : (
           <>
@@ -84,7 +84,7 @@ export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: 
             )}
             <box
               border={["left"]}
-              borderColor={model.color}
+              borderColor={tierMeta.color}
               style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column", height: borderHeight }}
             >
               <textarea
@@ -95,7 +95,7 @@ export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: 
                 onContentChange={onContentChange}
                 onSubmit={() => {
                   const trimmed = textareaRef.current?.plainText.trim()
-                  if (trimmed) onSubmit(trimmed, modelRef.current.value)
+                  if (trimmed) onSubmit(trimmed, tierRef.current)
                 }}
                 onKeyDown={(key) => {
                   if (onFileSelectorKeyDown(key)) return
@@ -111,14 +111,14 @@ export function TaskInput({ repoRoot, active, onActivate, onSubmit, onCancel }: 
                     return
                   }
                   if (key.name === "tab") {
-                    setModelIdx((i) => (i + 1) % MODELS.length)
+                    setTier((t) => TIER_ORDER[(TIER_ORDER.indexOf(t) + 1) % TIER_ORDER.length])
                     key.preventDefault()
                   }
                 }}
                 focused
               />
               <box style={{ height: 1 }} />
-              <text fg={model.color}>{model.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] {hasSuggestions ? "select" : "model"}</span></text>
+              <text fg={tierMeta.color}>{tierMeta.label}  <span fg="#444444">[enter] submit  [esc] cancel  [tab] {hasSuggestions ? "select" : "model"}</span></text>
             </box>
           </>
         )}

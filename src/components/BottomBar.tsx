@@ -1,7 +1,10 @@
 import { useSpinnerFrame } from "../lib/tick.js"
 import { ContinueInput } from "./ContinueInput.js"
 import { StatusBar } from "./StatusBar.js"
-import type { Task, Mode, Model } from "../types.js"
+import type { Task, Mode, Tier } from "../types.js"
+import { DEFAULT_TIER } from "../types.js"
+import type { AgentConfig } from "../lib/config.js"
+import { tierForModel } from "../lib/config.js"
 import type { FlashType } from "../lib/useAppState.js"
 import type { KeyBinding } from "../lib/useKeyboardRouter.js"
 
@@ -35,7 +38,8 @@ interface Props {
   selectedTask: Task | null
   currentBranch: string
   bindings: KeyBinding[]
-  onContinueSubmit: (prompt?: string, model?: Model) => void
+  loadedConfig: AgentConfig
+  onContinueSubmit: (prompt?: string, tier?: Tier) => void
   onContinueCancel: () => void
 }
 
@@ -48,6 +52,7 @@ export function BottomBar({
   selectedTask,
   currentBranch,
   bindings,
+  loadedConfig,
   onContinueSubmit,
   onContinueCancel,
 }: Props) {
@@ -63,7 +68,10 @@ export function BottomBar({
   }
 
   if (mode === "continue") {
-    return <ContinueInput repoRoot={repoRoot} onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultModel={activeTask?.model} />
+    const defaultTier = activeTask?.model
+      ? (tierForModel(activeTask.model, loadedConfig) ?? DEFAULT_TIER)
+      : DEFAULT_TIER
+    return <ContinueInput repoRoot={repoRoot} onSubmit={onContinueSubmit} onCancel={onContinueCancel} defaultTier={defaultTier} />
   }
 
   if (mode === "kill" && activeTask) {

@@ -196,6 +196,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedCon
               repoRoot={repoRoot}
               task={diffTask}
               disabled={mode === "continue" || mode === "switch_branch"}
+              loadedConfig={loadedConfig}
             />
           ) : null
         })() : paneTaskId && paneView === "log" ? (() => {
@@ -205,6 +206,7 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedCon
               repoRoot={repoRoot}
               task={logTask}
               disabled={mode === "continue" || mode === "switch_branch"}
+              loadedConfig={loadedConfig}
             />
           ) : null
         })() : (
@@ -217,8 +219,9 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedCon
             updateAvailable={updateAvailable}
             inputActive={mode === "input"}
             currentBranch={currentBranch}
+            loadedConfig={loadedConfig}
             onActivate={() => { prevSelectedIdx.current = selectedIdx; setMode("input"); setSelectedIdx(-1) }}
-            onSubmit={(prompt, model) => handleDispatch(prompt, model)}
+            onSubmit={(prompt, tier) => handleDispatch(prompt, tier)}
             onCancel={() => { setMode("normal"); setSelectedIdx(prevSelectedIdx.current) }}
             onSelectTask={(id) => {
               const idx = visibleTasks.findIndex((t) => t.id === id)
@@ -242,7 +245,8 @@ function AppInner({ repoRoot, repoName, version, initialTasks, onExit, loadedCon
           selectedTask={selectedTask}
           currentBranch={currentBranch}
           bindings={bindings}
-          onContinueSubmit={(prompt, model) => handleContinue(prompt, model)}
+          loadedConfig={loadedConfig}
+          onContinueSubmit={(prompt, tier) => handleContinue(prompt, tier)}
           onContinueCancel={() => setMode("normal")}
         />
       )}
