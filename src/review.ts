@@ -98,7 +98,7 @@ export async function runReview(
   const promptLines = [
     `Review ${target.summary} against \`${target.reviewBase}\`.`,
     "",
-    "Load the skill `reviewing-code`.",
+    "Load the skill `reviewing-code-in-faber`.",
   ]
   if (target.contextLine) {
     promptLines.push("", target.contextLine)

@@ -1,5 +1,5 @@
 ---
-name: reviewing-code
+name: reviewing-code-in-faber
 description: "Performs a code review inside a faber task and returns findings as the final assistant message. Use when the faber review command dispatches a task to review a branch, the current branch, or a pull request."
 ---
 

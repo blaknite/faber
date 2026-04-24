@@ -83,7 +83,7 @@ describe("runReview", () => {
 
       const callOpts = dispatchMock.mock.calls[0]?.[0] as any
       expect(callOpts.baseBranch).toBe("feature-x")
-      expect(callOpts.prompt).toContain("reviewing-code")
+      expect(callOpts.prompt).toContain("reviewing-code-in-faber")
       expect(callOpts.prompt).toContain("feature-x")
     })
 
