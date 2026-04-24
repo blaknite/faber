@@ -96,10 +96,10 @@ describe("runReview", () => {
       }
     })
 
-    it("prints task ID", async () => {
+    it("prints task ID in background mode", async () => {
       git("checkout -b feature-x")
       try {
-        await runReview(tmpRoot, { kind: "current" })
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, true)
       } catch {
         // expected
       }
