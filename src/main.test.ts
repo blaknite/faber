@@ -82,6 +82,18 @@ describe("stripFlags", () => {
   it("returns an empty array when given only flags", () => {
     expect(stripFlags(["--model", "deep", "--base", "main"])).toEqual([])
   })
+
+  it("strips --branch and its value", () => {
+    expect(stripFlags(["review", "--branch", "feature-x"])).toEqual(["review"])
+  })
+
+  it("strips --pull-request and its value", () => {
+    expect(stripFlags(["review", "--pull-request", "123"])).toEqual(["review"])
+  })
+
+  it("strips --branch and --pull-request together with other flags", () => {
+    expect(stripFlags(["review", "--branch", "feature-x", "--model", "deep"])).toEqual(["review"])
+  })
 })
 
 describe("parseModelFlag", () => {
@@ -148,6 +160,12 @@ describe("main", () => {
       process.argv = ["bun", "faber", "--dir", "/nonexistent"]
       // parseDirFlag exits 1 when the path doesn't exist, which is fine -- it
       // just shouldn't exit with "Unknown command"
+      await expect(main()).rejects.toThrow()
+      expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+
+    it("does not error on known commands (review)", async () => {
+      process.argv = ["bun", "faber", "review"]
       await expect(main()).rejects.toThrow()
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
     })
