@@ -510,7 +510,7 @@ Safe to run multiple times.`)
 
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
-    const { model, explicitModel } = parseModelFlag(args)
+    const { tier, explicitModel } = parseModelFlag(args)
 
     const mode: ReviewMode =
       pullRequest ? { kind: "pullRequest", arg: pullRequest } :
@@ -518,7 +518,7 @@ Safe to run multiple times.`)
       { kind: "current" }
 
     try {
-      await runReview(repoRoot, mode, model, explicitModel)
+      await runReview(repoRoot, mode, tier, explicitModel)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)
