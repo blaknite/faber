@@ -149,9 +149,9 @@ Commands:
 Options:
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
   --model <label>   Model to use for the task: smart, fast, or deep
-                  (only applies to the run command)
+                    (only applies to the run command)
   --status <value>  Filter tasks by status (only applies to the list command)
-                  Valid values: running, ready, done, failed, stopped, unknown
+                    Valid values: running, ready, done, failed, stopped, unknown
   --full            Include tool call block content (only applies to the read command)
   --json            Output raw JSON (only applies to the read command)
   --branch <name>   Branch to review (only applies to the review command)
@@ -167,7 +167,7 @@ Examples:
   faber continue a3f2-fix-the-login-bug "do X instead"
   faber stop a3f2-fix-the-login-bug
   faber list
-  faber list --status running
+  faber list --status ready
   faber read a3f2-fix-the-login-bug
   faber read a3f2-fix-the-login-bug --full
   faber watch a3f2-fix-the-login-bug
@@ -313,7 +313,7 @@ Options:
 Examples:
   faber done a3f2-fix-the-login-bug`)
         exit(0)
-       case "delete":
+      case "delete":
         console.log(`Usage: faber delete <taskId> [options]
 
 Delete a task and remove its worktree and branch. This is destructive and
