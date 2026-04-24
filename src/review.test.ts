@@ -8,12 +8,12 @@ import type { Task } from "./types.js"
 const dispatchMock = mock(async (_opts: unknown) => fakeTask)
 
 const fakeTask: Task = {
-  id: "abcd-fake-task",
+  id: "abcd12-fake-task",
   prompt: "do something",
   model: "anthropic/claude-sonnet-4-6",
   status: "running",
   pid: null,
-  worktree: ".worktrees/abcd-fake-task",
+  worktree: ".worktrees/abcd12-fake-task",
   sessionId: null,
   startedAt: new Date().toISOString(),
   completedAt: null,
@@ -123,7 +123,7 @@ describe("runReview", () => {
         // expected
       }
       const output = written.join("")
-      expect(output).toContain(`faber continue ${fakeTask.id}`)
+      expect(output).toContain(`faber continue ${fakeTask.id.slice(0, 6)}`)
     })
 
     it("throws on default branch", async () => {
