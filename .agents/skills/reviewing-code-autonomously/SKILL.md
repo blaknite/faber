@@ -1,33 +1,32 @@
 ---
 name: reviewing-code-autonomously
-description: "Performs autonomous code reviews on GitHub PRs with progressive disclosure. Posts a brief summary with high-confidence findings and offers to dig deeper. Responds to replies conversationally. Use when a bot or automation triggers a code review."
+description: "Performs a code review inside a faber task and returns findings as the final assistant message. Use when the faber review command dispatches a task to review a branch, the current branch, or a pull request."
 ---
 
 # Autonomous Code Review
 
 Thorough analysis, selective output.
 
-Perform a complete code review but only surface what matters. High-confidence findings get posted. Everything else is held back and offered on request. The goal is to be useful without wasting the author's time.
+Perform a complete code review but only surface what matters. High-confidence findings go in the final message. Everything else is held back — if the developer wants more, they can reopen the session and ask.
 
-Load skills: gathering-context, reading-pull-requests, code-review, giving-kind-feedback, submitting-code-reviews
+The review runs inside a faber task. You're already on a worktree checked out at the target ref, based on `<reviewBase>`. The output artifact is your final assistant message in this session — not a GitHub review, not a comment, not a PR submission. Whoever ran `faber review` will read that message in their terminal (or via `faber read <taskId>`).
 
 ## Design principles
 
 1. **Understand the intent, then stress-test the execution.** Before looking for issues, understand what the change is trying to achieve and the system it operates in. Then ask whether the change achieves it without fault, not just whether each line is correct.
-2. **Read everything, comment where it counts.** Analyze the full diff thoroughly. Comment as much as the PR requires. Nothing more.
-3. **Confidence determines visibility.** Only post findings you can prove. Offer the rest.
-4. **Invite conversation, don't lecture.** The best findings often come from the author's follow-up questions, not the initial pass.
-5. **Respect attention.** A three-line review that gets read beats a twenty-line review that gets skimmed.
+2. **Read everything, comment where it counts.** Analyze the full diff thoroughly. Surface as much as the change requires. Nothing more.
+3. **Confidence determines visibility.** Only surface findings you can prove. Hold the rest back.
+4. **Respect attention.** A three-line review that gets read beats a twenty-line review that gets skimmed. If the change is clean, say so in a sentence or two and stop.
 
 ## Confidence tiers
 
-Classify every finding by how it was derived:
+Classify every finding by how it was derived. The tier shapes how you frame the finding in the final message.
 
 ### Tier 1: Provably correct or incorrect
 
 Things you can demonstrate are wrong by explaining exactly why they fail. Dead code with zero call sites. Broken method signatures. Code that won't behave as intended because of how the language, framework, or surrounding system works.
 
-These are facts, not opinions. Post them.
+These are facts, not opinions. State them plainly.
 
 ### Tier 2: Pattern deviations
 
@@ -41,117 +40,235 @@ You can demonstrate these by pointing to the existing pattern, but you can't kno
 
 Findings that require reasoning about runtime behavior, user interaction, timing, or failure modes. "If this API call fails and retries three times, the effect will fire and yank the scroll position." "Under concurrent access this could race."
 
-These are often the most valuable findings but also the most likely to be wrong. Post them, but own the ambiguity. Frame them as reasoning, not facts: "I think this might..." or "I traced this path and it looks like..." The author knows more about how this runs in production than you do.
+These are often the most valuable findings but also the most likely to be wrong. Surface them, but own the ambiguity. Frame them as reasoning, not facts: "I think this might..." or "I traced this path and it looks like..." The author knows more about how this runs in production than you do.
 
 ## Workflow
 
-### 1. Gather context
+### 1. Understand what you're reviewing
 
-Determine the PR to review. The PR number or URL will be provided as input, or identify it from the current branch.
+Your prompt names the target and the base branch — something like "Review branch `feature-x` against `main`" or "Review pull request #123 against `main`". HEAD is already on the target. Confirm with `git status` if you need to.
 
-Load the `gathering-context` skill workflow to collect:
-
-1. **Linear issue** (title, description, acceptance criteria)
-2. **Pull request** (description, status, author)
-3. **Build status** (passed/failed)
-
-**You must attempt to find each of these sources before performing your review.** If a source is genuinely unavailable, note it and move on.
-
-### 2. Checkout the branch
-
-**You must check out the PR branch before doing anything else.** The diff from `gh pr diff` comes from GitHub and doesn't require a local checkout, but every subsequent step (the code_review tool, manual file reads, tracing call sites) reads local files. If you're on the wrong branch, you're reviewing the wrong code.
+For PR reviews, the prompt includes the PR URL and title. Fetch the PR body and any linked Linear issue to understand the intended change:
 
 ```bash
-git fetch
-git checkout <branch-name>
+gh pr view <number> --json body,title,author
 ```
 
-Do not proceed until the checkout succeeds. Verify you're on the correct branch before continuing.
+If the PR body references an issue (e.g. `ENG-123`), load the `using-linear` skill and read the issue to understand the acceptance criteria.
 
-### 3. Read the diff
+For branch or current-branch reviews there's often no PR and no issue. Work from commit messages and the diff. Don't go hunting for context that isn't there.
 
-Get the full diff:
+### 2. Read the diff
+
+Get the full diff against the review base:
 
 ```bash
-gh pr diff <number>
+git diff <reviewBase>...HEAD
 ```
 
-And the changed file list:
+And the list of changed files:
 
 ```bash
-gh pr diff <number> --name-only
+git diff <reviewBase>...HEAD --name-only
 ```
 
-### 4. Run the code_review tool
+The base is whatever the prompt named. For PR reviews you can also use `gh pr diff <number>` — same content, different framing.
 
-Load the `code-review` skill. This gives you access to the `code_review` tool. Call it now, before doing any manual analysis. Pass the PR diff description (e.g., `gh pr diff <number>`) as `diff_description` and the gathered context (Linear issue, PR description) as `instructions` so findings are evaluated against the stated intent.
+### 3. Read the PR conversation (PR mode only)
 
-Wait for the tool to return results before moving on. These results are your tier 1 candidates.
+Skip this step for branch or current-branch reviews.
 
-**Do not skip this step. Do not start manual analysis until the code_review tool has returned.**
+For PR reviews, read any existing review comments. The developer asked faber for a review, but human reviewers may have already raised concerns — duplicating those wastes the reader's time:
 
-### 5. Manual read-through
+```bash
+gh api repos/<owner>/<repo>/pulls/<number>/comments --paginate
+```
 
-Now do your own read-through. The automated tool catches mechanical issues well but misses problems that only emerge from understanding how the change fits into the system. Read the surrounding code, not just the diff lines. Trace call sites. Check how similar things are done elsewhere in the codebase.
+Note what's been raised and what's been resolved. You'll dedupe against this in step 5.
 
-Work through whether the change actually achieves its intent end-to-end. Don't just verify each block of code is locally correct. Ask whether the change works as a whole, given the system it operates in.
+### 4. Read the code
 
-Look for what's missing, not just what's wrong. If the codebase establishes a pattern (tests for each method, migrations paired with schema changes, docs updated alongside config), check whether the PR follows it. Missing artifacts that the pattern calls for are Tier 2 findings.
+Do a full read-through. Read surrounding code, not just the diff lines. Trace call sites. Check how similar things are done elsewhere in the codebase.
 
-**Do not skip this step.** The manual read-through is where the most valuable findings come from.
+Work through whether the change actually achieves its intent end-to-end. Don't just verify each block is locally correct. Ask whether the change works as a whole, given the system it operates in.
 
-If you need a second opinion on how changes interact with the wider codebase, use the oracle tool.
+Look for what's missing, not just what's wrong. If the codebase establishes a pattern (tests for each method, migrations paired with schema changes, docs updated alongside config), check whether the change follows it. Missing artifacts that the pattern calls for are Tier 2 findings.
 
-### 6. Classify findings
+This is where the most valuable findings come from. Don't shortcut it.
 
-Go through every finding (from both the automated tool and your manual read) and assign a confidence tier.
+#### What to Look For
 
-For each finding, ask yourself:
+**Bugs** - Your primary focus.
+- Logic errors, off-by-one mistakes, incorrect conditionals
+- If-else guards: missing guards, incorrect branching, unreachable code paths
+- Edge cases: null/empty/undefined inputs, error conditions, race conditions
+- Security issues: injection, auth bypass, data exposure
+- Broken error handling that swallows failures, throws unexpectedly or returns error types that are not caught.
+
+**Structure** - Does the code fit the codebase?
+- Does it follow existing patterns and conventions?
+- Are there established abstractions it should use but doesn't?
+- Excessive nesting that could be flattened with early returns or extraction
+
+**Performance** - Only flag if obviously problematic.
+- O(n²) on unbounded data, N+1 queries, blocking I/O on hot paths
+
+**Behavior Changes** - If a behavioral change is introduced, raise it (especially if it's possibly unintentional).
+
+### 5. Classify
+
+Go through every finding and assign a confidence tier:
+
 - Can I explain exactly why this is wrong? -> Tier 1
 - Can I point to an existing pattern this deviates from? -> Tier 2
 - Am I speculating about what might happen? -> Tier 3
 
-### 7. Draft the review
+If a finding is weaker than Tier 3 — a gut feeling you can't ground in anything — drop it.
 
-Load the `giving-kind-feedback` skill. All output must follow its principles.
+### 6. Write the final message
 
-Write inline comments on the lines they pertain to. That's it. No summary comment, no structured body, no sections. Just comments on code, like a human reviewer.
+Refer to *Kind Feedback* for instructions on your communication style. Your audience is the developer who ran `faber review` — usually the author of the change — reading your message in a terminal.
 
-Every comment starts with a short intent label: "Nit:", "Minor:", "Thought:", "Important:", or "Blocking:". This tells the author how much weight to give it.
+Structure:
 
-When a comment has an exact code fix for specific lines, use a ` ```suggestion ` fence instead of a plain code block. Only do this when you can provide the complete replacement text for the lines covered by the comment's line range. Use a regular code block for conceptual or ambiguous fixes.
+1. **One or two sentences summarising the change and your overall read.** What does it do? Is the approach sound? Any areas of concern? Keep it short and honest.
+2. **Findings, most significant first.** For each finding, give a `path/to/file.ts:42` reference, a short description of the concern, and (where useful) a suggested fix. Group related findings under a short heading only if there are enough of them to warrant one — usually a flat list reads better.
+3. **Close.** If there are unresolved questions for the author, name them plainly.
 
-The code-review tool's "why" and "fix" fields are diagnostic notes for your understanding, not comment templates. Look at each issue in the context of the whole PR and frame your comments accordingly.
+Frame findings according to their tier:
 
-- Tier 1 findings: direct inline comments.
-- Tier 2 findings: inline comments framed as genuine questions. You're asking because you might be wrong.
-- Tier 3 findings: post these, but own the ambiguity. You're reasoning about runtime behavior, not stating facts. Frame them accordingly: "I think this might..." or "I traced this path and it looks like..." The author knows more about how this runs in production than you do.
+- **Tier 1** — state them plainly. "`src/foo.ts:42` — this branch is unreachable because `kind` was narrowed to `'a'` on line 38."
+- **Tier 2** — frame as a question. "`src/foo.ts:42` — the other handlers in this file call `logError` before re-throwing. Intentional that this one doesn't?"
+- **Tier 3** — own the ambiguity. "`src/foo.ts:42` — I think this might race if two callers hit it at the same time. Worth checking."
 
-If the PR is clean and you have nothing to post, say so in the review body. Don't force comments where there are none.
+If the change is clean, say so in one or two sentences and stop. Don't pad. Don't invent findings.
 
-For the review body (the top-level comment that accompanies the inline comments), write a concise qualitative assessment of the PR. What's your overall read? Is the approach sound? Are there areas of concern? Keep it short and honest. Then include a continuation prompt so the author can dig into the review findings locally:
+Do not include:
 
-> Got more questions? Ask me more in Amp:
-> ```
-> Let's discuss the code review feedback in @T-<thread-id>
-> ```
+- A "summary of the diff" section that just restates what the code does. The reader wrote it.
+- Praise like "great work" or "nicely done." If the code is good, a short review is the signal.
+- A conclusion or sign-off. End on your last finding (or on the "looks clean" line).
+- Intent-label prefixes like "Nit:" / "Blocking:". Those are artefacts of inline PR comments. In a single prose message, the tier framing does the work.
 
-Replace `<thread-id>` with the current thread's ID. The author copies the prompt into their local Amp session, which pulls in the full review context from this thread so they can ask follow-up questions.
-
-### 8. Submit
-
-Use the `submitting-code-reviews` skill workflow to map line numbers and submit via the GitHub API.
-
-For the review event:
-- If any tier 1 finding is a genuine bug (not a nit), use `REQUEST_CHANGES`.
-- Otherwise, use `COMMENT`.
-- Never use `APPROVE`. A bot shouldn't approve PRs.
+Mention that the reader can follow up with `faber read <taskId>` (they know their own task ID) to re-open the session with more questions only if you have genuinely held-back findings worth revisiting. Otherwise don't bother — it reads as filler.
 
 ## What not to do
 
 - Don't comment on style unless it violates a linter rule that isn't being caught. The linter's job is style. Your job is substance.
-- Don't explain what the code does back to the author. They wrote it. They know.
-- Don't praise the PR. Developers see through performative positivity from bots immediately. If the code is good, the review is short. That's the signal.
-- Don't post a comment on every file. Silence is approval.
-- Don't suggest refactors that aren't related to the PR's intent. Stay in scope.
-- Don't caveat every finding with "I might be wrong but..." Your confidence tier system handles uncertainty. Trust it.
+- Don't explain what the code does back to the author. They wrote it.
+- Don't praise the change. If the code is good, the review is short. That's the signal.
+- Don't invent findings to pad the output. A clean review is allowed to be two sentences long.
+- Don't suggest refactors that aren't related to the change's intent. Stay in scope.
+- Don't caveat every finding with "I might be wrong but..." The tier framing handles uncertainty. Trust it.
+- Don't try to post to GitHub. There is no review to submit. The final message is the artefact.
+
+# Kind Feedback
+
+Principles for giving kind, honest, effective feedback. Based on Kind Engineering by Evan Smith, Radical Candor by Kim Scott, Give and Take by Adam Grant, and real-world patterns from exemplary code reviewers.
+
+## Kind vs. Nice
+
+**Nice** is polite and agreeable. **Kind** is invested in helping someone grow.
+
+- Nice brings in cake. Kind advocates for your promotion behind the scenes.
+- Nice says "good job!" when the meeting went badly. Kind says what went well, what didn't, and how to improve.
+- White lies are nice but they don't help people grow.
+
+**Be kind, not just nice.** Meet people where *they* are, not where *you* are.
+
+## The Three Elements of Giving Feedback
+
+Every piece of feedback needs all three:
+
+### 1. Emotion
+Take the *listener's* emotions into account, not your own. Set your own feelings aside so the message stays clear. If the feedback is about an emotion they caused, don't still be living in that emotion when you deliver it — it will cloud your message.
+
+### 2. Credibility
+Demonstrate expertise and humility. Call out what went well alongside what needs to change. Building credibility over time makes future feedback land better.
+
+### 3. Logic
+Show your work. Be specific about why you're giving this feedback and how you reached your conclusion. Clear reasoning lets the recipient check for flaws or fill in missing context.
+
+## Understand the Why, Not Just the How
+- Put yourself in the author's shoes. Why did they make this change? Why this approach?
+- Assume you're missing something and ask for clarification rather than correction.
+- Ask open-ended questions instead of strong statements. Give people the chance to fill in gaps in your understanding.
+
+| Instead of | Try |
+|-----------|-----|
+| "This is wrong" | "What was the reasoning behind this approach?" |
+| "We do it like this" | "Have you considered X? It might handle Y better because..." |
+| "You should know better" | "I think there might be an issue with Z here — what do you think?" |
+
+## Own the Confusion
+When something is unclear, frame it as *your* experience, not the author's failure. This invites clarification without blame.
+
+| Instead of | Try |
+|-----------|-----|
+| "This is confusing" | "Upon first read, I was a little confused by this condition" |
+| "This is hard to follow" | "It took me a few reads of this method to get it, but I got there in the end" |
+| "You need to explain this" | "I wonder if a short doc comment would help here — it took me a moment to see what's happening" |
+
+## Signal Blocking Status
+The author needs to know how much weight to give your feedback. Most of the time your tone already does this. When severity genuinely is ambiguous, a short statement or prefix will suffice. Don't restate what the tone or a prefix already conveys.
+
+## Keep It Concise
+
+- Focus on what matters most. Trying to cover everything dilutes the points that really need attention.
+- Being concise matters. The longer the feedback, the harder it is to act on.
+- If the same theme comes up more than once, name the pattern rather than repeating yourself.
+
+## Match Explanation Depth to Expertise
+
+- Pay attention to what someone has already demonstrated they know. If they got something right elsewhere and slipped up once, that's an oversight, not a gap in understanding.
+- When the mistake is clearly an oversight, pointing to where they already got it right is more respectful than re-explaining the concept.
+- Deeper explanations belong where the person's work suggests genuine unfamiliarity: new concepts, subtle gotchas, or territory they haven't worked in before.
+
+## Be Direct When It Matters
+
+- Kindness and directness aren't opposites. Being vague about a real problem isn't kind, it's confusing.
+- When something is clearly wrong, say so plainly.
+- Questions can be teaching tools, but don't use them to hide a problem — name the issue, then ask.
+
+## Don't Make It Personal
+
+- Comment on work and actions, not the person
+- We are not defined by our work — a mistake is not a personal failing
+- Be specific: specificity shows attention and makes both praise and criticism feel genuine
+- Understand individual failure is usually a failure of process, environment, or workflow - focus on fixing the system
+
+## Always Offer a Path Forward
+
+- If you give critical feedback, offer a solution or a first step
+- "Your answer was a bit rambly and you missed the chance to convince the team. But it's a good idea — practice your elevator pitch and you'll get it next time."
+- The pattern is: honest assessment, acknowledge what's good, clear way to improve
+- In code reviews, frame forward paths as questions that invite collaboration: *"Are we sure about `app/contracts/` for these? Possibly `app/kafka/contracts/` might be better and more intention-revealing?"*
+- Offer permission to defer: *"Won't block on this, just something to think about."*
+
+## Turn Failure Into Learning
+- Every failure is an opportunity to grow
+- To promote innovation, people need to feel safe taking risks
+- Use the retrospective framework: What went well? What went badly? What should we do differently?
+
+## Advocate for the Next Reader, Not Your Preferences
+
+- Frame suggestions in terms of *future readers*, not personal taste. This depersonalizes the feedback and makes it about the codebase.
+- *"People from outside our small portals group are definitely going to look at this line in the future and wonder what's going on."*
+- *"A short comment here would make it easier for someone to confidently change this setting in the future."*
+- The argument isn't "I want this" — it's "the codebase needs this." That's much harder to take personally.
+
+## Empower, Don't Gatekeep
+
+- Grant the author decision-making autonomy wherever possible.
+- *"I'll trust you to decide what you'd like to do now vs after merging."*
+- *"You should feel empowered to make the call here."*
+- *"I'm more than happy to trust you with this particular call!"*
+- Use "Request Changes" as a conversation opener, not a verdict: *"I'm just dropping a 'request changes' status here to at least ensure we get to have a conversation about this."*
+- Disclose conflicts of interest transparently so the author can weigh your feedback fairly.
+
+## Be Inclusive
+
+- Be aware of people's backgrounds, experiences, and communication preferences
+- Watch for people who don't speak up in meetings — find ways to give them a voice
+- Let people express themselves in whatever format works for them
+- Kindness is not "meet me halfway" — it's meeting people where *they* are
