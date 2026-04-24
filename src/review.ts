@@ -40,7 +40,7 @@ function startProgressSpinner(repoRoot: string, taskId: string): () => void {
 
   return () => {
     clearInterval(spinInterval)
-    process.stdout.write("\r\x1b[K")
+    process.stdout.write("\r\x1b[K\n")
   }
 }
 
