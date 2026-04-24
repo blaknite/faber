@@ -8,6 +8,23 @@ mock.module("./lib/agent.js", () => ({
   DEFAULT_RESUME_PROMPT: "The task was interrupted. Please continue where you left off.",
 }))
 
+mock.module("./lib/dispatch.js", () => ({
+  createAndDispatchTask: mock(async () => ({
+    id: "abcd-fake-task",
+    prompt: "do something",
+    model: "anthropic/claude-sonnet-4-6",
+    status: "done",
+    pid: null,
+    worktree: ".worktrees/abcd-fake-task",
+    sessionId: null,
+    startedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+    exitCode: 0,
+    hasCommits: false,
+    baseBranch: "main",
+  })),
+}))
+
 // Mock the TUI renderer so launching "faber" with no command doesn't start a
 // real terminal renderer and block the test.
 mock.module("@opentui/react", () => ({
