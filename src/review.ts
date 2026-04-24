@@ -11,6 +11,37 @@ import type { Tier } from "./types.js"
 
 const DEFAULT_REVIEW_TIER: Tier = "deep"
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+function lastActivityLabel(repoRoot: string, taskId: string): string {
+  const entries = readLogEntries(repoRoot, taskId)
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!
+    if (entry.kind === "tool_use" && entry.title) return entry.title
+    if (entry.kind === "text" && entry.text) {
+      const firstLine = entry.text.split("\n")[0]!.trim()
+      return firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine
+    }
+  }
+  return "Starting..."
+}
+
+function startProgressSpinner(repoRoot: string, taskId: string): () => void {
+  let tick = 0
+
+  const spinInterval = setInterval(() => {
+    const frame = SPINNER_FRAMES[tick % SPINNER_FRAMES.length]!
+    const label = lastActivityLabel(repoRoot, taskId)
+    process.stdout.write(`\r${frame} ${label}`)
+    tick++
+  }, 100)
+
+  return () => {
+    clearInterval(spinInterval)
+    process.stdout.write("\r\x1b[K")
+  }
+}
+
 async function waitForTask(repoRoot: string, taskId: string): Promise<string> {
   const statePath = stateFilePath(repoRoot)
 
@@ -86,7 +117,9 @@ export async function runReview(
     return
   }
 
+  const stopProgress = startProgressSpinner(repoRoot, task.id)
   await waitForTask(repoRoot, task.id)
+  stopProgress()
 
   const message = lastAgentMessage(repoRoot, task.id)
   if (message) {
