@@ -6,37 +6,39 @@ export const ACTIVE_STATUSES: TaskStatus[] = ["running", "ready", "failed", "sto
 
 export type Mode = "normal" | "input" | "delete" | "kill" | "done" | "merge" | "push" | "pushing" | "continue" | "switch_branch"
 
-export type Model = "anthropic/claude-haiku-4-5" | "anthropic/claude-sonnet-4-6" | "anthropic/claude-opus-4-6"
+export type Tier = 'fast' | 'smart' | 'deep'
 
-export const MODELS: { label: string; value: Model; color: string; dimColor: string; contextWindow: number }[] = [
-  { label: "Smart", value: "anthropic/claude-sonnet-4-6", color: "#0088ff", dimColor: "#1a4466", contextWindow: 200000 },
-  { label: "Fast", value: "anthropic/claude-haiku-4-5", color: "#00cc66", dimColor: "#1a4d36", contextWindow: 200000 },
-  { label: "Deep", value: "anthropic/claude-opus-4-6", color: "#9966ff", dimColor: "#3d2d55", contextWindow: 200000 },
-]
+export type DefaultModelId =
+  | "anthropic/claude-haiku-4-5"
+  | "anthropic/claude-sonnet-4-6"
+  | "anthropic/claude-opus-4-6"
 
-export const DEFAULT_MODEL: Model = "anthropic/claude-sonnet-4-6"
-
-export const DEFAULT_MODELS: Record<'fast' | 'smart' | 'deep', string> = {
-  fast: 'anthropic/claude-haiku-4-5',
-  smart: 'anthropic/claude-sonnet-4-6',
-  deep: 'anthropic/claude-opus-4-6',
+export const DEFAULT_MODELS: Record<Tier, DefaultModelId> = {
+  fast: "anthropic/claude-haiku-4-5",
+  smart: "anthropic/claude-sonnet-4-6",
+  deep: "anthropic/claude-opus-4-6",
 }
 
-// Resolves a --model flag value to a Model. Accepts case-insensitive labels
-// (smart, fast, deep) or a literal model ID string. Returns null if the value
-// doesn't match anything known.
-export function resolveModel(input: string): Model | null {
+export const DEFAULT_TIER: Tier = 'smart'
+
+export const TIERS: Record<Tier, { label: string; color: string; dimColor: string; contextWindow: number }> = {
+  smart: { label: "Smart", color: "#0088ff", dimColor: "#1a4466", contextWindow: 200000 },
+  fast:  { label: "Fast",  color: "#00cc66", dimColor: "#1a4d36", contextWindow: 200000 },
+  deep:  { label: "Deep",  color: "#9966ff", dimColor: "#3d2d55", contextWindow: 200000 },
+}
+
+export const TIER_ORDER: Tier[] = ['smart', 'fast', 'deep']
+
+export function resolveTier(input: string): Tier | null {
   const lower = input.toLowerCase()
-  const byLabel = MODELS.find((m) => m.label.toLowerCase() === lower)
-  if (byLabel) return byLabel.value
-  const byValue = MODELS.find((m) => m.value.toLowerCase() === lower)
-  if (byValue) return byValue.value
+  for (const tier of TIER_ORDER) {
+    if (tier === lower) return tier
+    if (TIERS[tier].label.toLowerCase() === lower) return tier
+  }
+  for (const tier of TIER_ORDER) {
+    if (DEFAULT_MODELS[tier].toLowerCase() === lower) return tier
+  }
   return null
-}
-
-export function getModelContextWindow(model: string): number {
-  const found = MODELS.find((m) => m.value === model)
-  return found?.contextWindow ?? 200000
 }
 
 export interface Task {

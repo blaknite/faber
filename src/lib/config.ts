@@ -1,14 +1,9 @@
 import fs from "node:fs"
+import { DEFAULT_MODELS, TIERS, type Tier } from "../types.js"
 
-export type AgentConfig = Partial<Record<'fast' | 'smart' | 'deep', string>>
+export type AgentConfig = Partial<Record<Tier, string>>
 
 const KNOWN_AGENT_TYPES = new Set(['fast', 'smart', 'deep'])
-
-const DEFAULTS: Record<string, string> = {
-  fast: 'anthropic/claude-haiku-4-5',
-  smart: 'anthropic/claude-sonnet-4-6',
-  deep: 'anthropic/claude-opus-4-6',
-}
 
 function loadFromPath(filePath: string): AgentConfig | null {
   if (!fs.existsSync(filePath)) return null
@@ -32,7 +27,7 @@ function loadFromPath(filePath: string): AgentConfig | null {
       continue
     }
     if (typeof value === 'string') {
-      result[key as 'fast' | 'smart' | 'deep'] = value
+      result[key as Tier] = value
     }
   }
   return result
@@ -48,15 +43,25 @@ export function loadConfig(globalPath: string, projectPath: string): AgentConfig
   return {}
 }
 
-export const MODEL_TO_AGENT: Record<string, string> = {
-  'anthropic/claude-haiku-4-5': 'fast',
-  'anthropic/claude-sonnet-4-6': 'smart',
-  'anthropic/claude-opus-4-6': 'deep',
+export function modelForTier(tier: Tier, config: AgentConfig): string {
+  return config[tier] ?? DEFAULT_MODELS[tier]
 }
 
-export function getEffectiveModel(agentType: string, loadedConfig: AgentConfig): string {
-  const configured = loadedConfig[agentType as keyof AgentConfig]
-  if (typeof configured === 'string') return configured
+// If the user configures two tiers to the same model ID, the first tier in
+// iteration order (fast, smart, deep) wins. This is acceptable ambiguity
+// in user config.
+export function tierForModel(modelId: string, config: AgentConfig): Tier | null {
+  for (const tier of ['fast', 'smart', 'deep'] as const) {
+    if (config[tier] === modelId) return tier
+  }
+  for (const tier of ['fast', 'smart', 'deep'] as const) {
+    if (DEFAULT_MODELS[tier] === modelId) return tier
+  }
+  return null
+}
 
-  return DEFAULTS[agentType] ?? 'anthropic/claude-sonnet-4-6'
+export function getModelContextWindow(modelId: string, config: AgentConfig): number {
+  const tier = tierForModel(modelId, config)
+  if (tier) return TIERS[tier].contextWindow
+  return 200000
 }
