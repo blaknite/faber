@@ -130,7 +130,7 @@ export async function runReview(
 
   const message = lastAgentMessage(repoRoot, task.id)
   if (message) {
-    marked.use(markedTerminal() as any)
+    marked.use(markedTerminal({ reflowText: true, width: process.stdout.columns || 80 }) as any)
     const formatted = marked(message) as string
     process.stdout.write(formatted)
   }
