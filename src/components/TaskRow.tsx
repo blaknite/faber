@@ -3,7 +3,8 @@ import type { BoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import { useState } from "react"
 import type { Task } from "../types.js"
-import { getModelContextWindow } from "../types.js"
+import type { AgentConfig } from "../lib/config.js"
+import { getModelContextWindow } from "../lib/config.js"
 import { useSpinnerFrame } from "../lib/tick.js"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
 import { formatElapsed, readLogStats } from "../lib/logParser.js"
@@ -42,6 +43,7 @@ interface Props {
   selected: boolean
   cardRef: (el: BoxRenderable | null) => void
   repoRoot: string
+  loadedConfig: AgentConfig
   onOpen: () => void
 }
 
@@ -57,7 +59,7 @@ function StaticStatus({ task, selected }: { task: Task; selected: boolean }) {
   )
 }
 
-export function TaskRow({ task, index, selected, cardRef, repoRoot, onOpen }: Props) {
+export function TaskRow({ task, index, selected, cardRef, repoRoot, loadedConfig, onOpen }: Props) {
   const { width: termWidth } = useTerminalDimensions()
   const [stats, setStats] = useState(() => readLogStats(repoRoot, task.id))
 
@@ -65,7 +67,7 @@ export function TaskRow({ task, index, selected, cardRef, repoRoot, onOpen }: Pr
   useFileWatch(logPath, () => setStats(readLogStats(repoRoot, task.id)), { pollUntilExists: true })
 
   const contextPercent = stats.totalTokens > 0
-    ? Math.round((stats.totalTokens / getModelContextWindow(task.model)) * 100)
+    ? Math.round((stats.totalTokens / getModelContextWindow(task.model, loadedConfig)) * 100)
     : null
 
   const summaryText = truncateWithEllipsis(

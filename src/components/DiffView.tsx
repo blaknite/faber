@@ -7,8 +7,9 @@ import type { ViewMode } from "../lib/diff/index.js"
 import { readLogEntries, readLogStats, formatElapsed } from "../lib/logParser.js"
 import { useSpinnerFrame } from "../lib/tick.js"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "../lib/status.js"
-import { getModelContextWindow } from "../types.js"
 import type { Task } from "../types.js"
+import type { AgentConfig } from "../lib/config.js"
+import { getModelContextWindow } from "../lib/config.js"
 
 const syntaxStyle = SyntaxStyle.create()
 
@@ -16,6 +17,7 @@ interface Props {
   repoRoot: string
   task: Task
   disabled?: boolean
+  loadedConfig: AgentConfig
 }
 
 function LastMessage({ repoRoot, task }: { repoRoot: string; task: Task }) {
@@ -60,7 +62,7 @@ function DiffLoadingSpinner() {
   )
 }
 
-export function DiffView({ repoRoot, task, disabled }: Props) {
+export function DiffView({ repoRoot, task, disabled, loadedConfig }: Props) {
   const [diff, setDiff] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showLoading, setShowLoading] = useState(false)
@@ -68,7 +70,7 @@ export function DiffView({ repoRoot, task, disabled }: Props) {
 
   const stats = readLogStats(repoRoot, task.id)
   const contextPercent = stats.totalTokens > 0
-    ? Math.round((stats.totalTokens / getModelContextWindow(task.model)) * 100)
+    ? Math.round((stats.totalTokens / getModelContextWindow(task.model, loadedConfig)) * 100)
     : null
 
   useKeyboard((key) => {

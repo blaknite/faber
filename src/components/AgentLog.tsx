@@ -13,8 +13,10 @@ import {
   formatElapsedMs,
 } from "../lib/logParser.js"
 import type { LogEntry } from "../lib/logParser.js"
-import { MODELS, getModelContextWindow } from "../types.js"
-import type { Task } from "../types.js"
+import { TIERS, DEFAULT_TIER } from "../types.js"
+import type { Task, Tier } from "../types.js"
+import type { AgentConfig } from "../lib/config.js"
+import { tierForModel, getModelContextWindow } from "../lib/config.js"
 import { DiffViewer, countDiffLines } from "../lib/diff/index.js"
 
 const syntaxStyle = SyntaxStyle.create()
@@ -121,19 +123,14 @@ function DiffContent({ diff }: { diff: string }) {
 }
 
 
-function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] }) {
-  // Prefer the model stored in the log entry (set at prompt time) so that each
-  // prompt row reflects the model it was actually sent with, not whatever model
-  // the task was last run with. Fall back to task.model for older log entries
-  // that predate this field.
-  const resolvedModel = (entry.model as Task["model"]) ?? model
-  const modelDef = MODELS.find((m) => m.value === resolvedModel) ?? MODELS[0]!
+function PromptLogRow({ entry, tier }: { entry: LogEntry; tier: Tier }) {
+  const meta = TIERS[tier]
   return (
     <box style={{ paddingBottom: 1 }}>
       <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#111111" }}>
         <box
           border={["left"]}
-          borderColor={modelDef.color}
+          borderColor={meta.color}
           style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
         >
           <markdown
@@ -149,7 +146,7 @@ function PromptLogRow({ entry, model }: { entry: LogEntry; model: Task["model"] 
             }}
           />
           <text> </text>
-          <text fg={modelDef.color}>{modelDef.label}</text>
+          <text fg={meta.color}>{meta.label}</text>
         </box>
       </box>
     </box>
@@ -307,8 +304,12 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
   )
 }
 
-function LogRow({ entry, index, entries, model, taskStatus }: { entry: LogEntry; index: number; entries: LogEntry[]; model: Task["model"]; taskStatus: Task["status"] }) {
-  if (entry.kind === "prompt") return <PromptLogRow entry={entry} model={model} />
+function LogRow({ entry, index, entries, model, taskStatus, loadedConfig }: { entry: LogEntry; index: number; entries: LogEntry[]; model: Task["model"]; taskStatus: Task["status"]; loadedConfig: AgentConfig }) {
+  if (entry.kind === "prompt") {
+    const resolvedModel = (entry.model as Task["model"]) ?? model
+    const tier = tierForModel(resolvedModel, loadedConfig) ?? DEFAULT_TIER
+    return <PromptLogRow entry={entry} tier={tier} />
+  }
   if (entry.kind === "tool_use") return <ToolRow entry={entry} />
   if (entry.kind === "step_finish") {
     if (shouldShowStepFinish(entries, index, taskStatus === "running")) {
@@ -346,10 +347,10 @@ function StaticStatus({ task }: { task: Task }) {
   )
 }
 
-function TitleBar({ task, repoRoot }: { task: Task; repoRoot: string }) {
+function TitleBar({ task, repoRoot, loadedConfig }: { task: Task; repoRoot: string; loadedConfig: AgentConfig }) {
   const stats = readLogStats(repoRoot, task.id)
   const contextPercent = stats.totalTokens > 0
-    ? Math.round((stats.totalTokens / getModelContextWindow(task.model)) * 100)
+    ? Math.round((stats.totalTokens / getModelContextWindow(task.model, loadedConfig)) * 100)
     : null
 
   return (
@@ -376,9 +377,10 @@ interface Props {
   repoRoot: string
   task: Task
   disabled?: boolean
+  loadedConfig: AgentConfig
 }
 
-export function AgentLog({ repoRoot, task, disabled }: Props) {
+export function AgentLog({ repoRoot, task, disabled, loadedConfig }: Props) {
   const taskId = task.id
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const [entries, setEntries] = useState<LogEntry[]>(() => readLogEntries(repoRoot, taskId))
@@ -414,7 +416,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
       style={{ flexDirection: "column", flexGrow: 1, paddingBottom: 1 }}
     >
       <box style={{ paddingLeft: 1, paddingRight: 1, paddingTop: 1, paddingBottom: 1, backgroundColor: "#111111", marginBottom: 1 }}>
-        <TitleBar task={task} repoRoot={repoRoot} />
+        <TitleBar task={task} repoRoot={repoRoot} loadedConfig={loadedConfig} />
       </box>
 
       <box style={{ flexGrow: 1, paddingLeft: 2, paddingRight: 2, paddingBottom: 1, overflow: "hidden" }}>
@@ -424,7 +426,7 @@ export function AgentLog({ repoRoot, task, disabled }: Props) {
               <text fg="#555555">No output yet.</text>
             ) : (
               entries.map((entry, i) => (
-                <LogRow key={i} entry={entry} index={i} entries={entries} model={task.model} taskStatus={task.status} />
+                <LogRow key={i} entry={entry} index={i} entries={entries} model={task.model} taskStatus={task.status} loadedConfig={loadedConfig} />
               ))
             )}
           </box>

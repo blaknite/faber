@@ -105,9 +105,9 @@ describe("parseModelFlag", () => {
     expect(result.explicitModel).toBeUndefined()
   })
 
-  it("resolves known label to the correct model", () => {
+  it("resolves known label to the correct tier", () => {
     const result = parseModelFlag(["run", "--model", "smart", "do a thing"])
-    expect(result.model).toBe("anthropic/claude-sonnet-4-6")
+    expect(result.tier).toBe("smart")
   })
 })
 
