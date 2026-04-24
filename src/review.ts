@@ -7,10 +7,12 @@ import { resolveReviewTarget, type ReviewMode } from "./lib/reviewTarget.js"
 import { loadConfig } from "./lib/config.js"
 import type { Tier } from "./types.js"
 
+const DEFAULT_REVIEW_TIER: Tier = "deep"
+
 export async function runReview(
   repoRoot: string,
   mode: ReviewMode,
-  tier: Tier = "deep",
+  tier: Tier = DEFAULT_REVIEW_TIER,
   explicitModel?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
