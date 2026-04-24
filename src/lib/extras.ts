@@ -10,6 +10,7 @@ export const BUNDLED_SKILL_NAMES = [
   "executing-work",
   "orchestrating-faber-tasks",
   "reading-faber-logs",
+  "reviewing-code-autonomously",
   "reviewing-faber-tasks",
   "running-faber-tasks",
   "shaping-work",
