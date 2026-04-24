@@ -144,5 +144,5 @@ export async function runReview(
     process.stdout.write(formatted)
   }
 
-  process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n  faber continue ${task.id} "your instructions here"\n`)
+  process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
 }
