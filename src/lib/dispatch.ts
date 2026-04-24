@@ -4,15 +4,15 @@ import { spawnAgent } from "./agent.js"
 import { generateSlug } from "./slug.js"
 import { generateFilterText } from "./filterText.js"
 import { logTaskFailure } from "./failureLog.js"
-import type { Task, Model } from "../types.js"
-import { DEFAULT_MODEL } from "../types.js"
+import type { Task, Tier } from "../types.js"
+import { DEFAULT_TIER } from "../types.js"
 import type { AgentConfig } from "./config.js"
-import { getEffectiveModel, MODEL_TO_AGENT } from "./config.js"
+import { modelForTier } from "./config.js"
 
 export interface DispatchOptions {
   repoRoot: string
   prompt: string
-  model?: Model
+  tier?: Tier
   baseBranch: string
   callSite?: string
   loadedConfig?: AgentConfig
@@ -28,7 +28,7 @@ export interface DispatchOptions {
 export async function createAndDispatchTask({
   repoRoot,
   prompt,
-  model = DEFAULT_MODEL,
+  tier = DEFAULT_TIER,
   baseBranch,
   callSite = "dispatch",
   loadedConfig = {},
@@ -37,8 +37,7 @@ export async function createAndDispatchTask({
   const slug = generateSlug(prompt)
   const worktree = `.worktrees/${slug}`
 
-  const agentType = MODEL_TO_AGENT[model] ?? 'smart'
-  const resolvedModel = explicitModel ?? getEffectiveModel(agentType, loadedConfig)
+  const resolvedModel = explicitModel ?? modelForTier(tier, loadedConfig)
 
   const task: Task = {
     id: slug,
@@ -76,7 +75,7 @@ export async function createAndDispatchTask({
   }
 
   spawnAgent(task, repoRoot, loadedConfig)
-  generateFilterText(prompt, repoRoot).then(filterText => {
+  generateFilterText(prompt, repoRoot, loadedConfig).then(filterText => {
     if (filterText) updateTask(repoRoot, task.id, { summaryText: filterText })
   })
 

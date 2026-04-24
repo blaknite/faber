@@ -4,9 +4,9 @@ import { spawnAgent, killAgent } from "./agent.js"
 import { removeWorktree, mergeBranch, switchBranch, pushBranch } from "./worktree.js"
 import { removeTask, updateTask } from "./state.js"
 import { createAndDispatchTask } from "./dispatch.js"
-import type { Task, Mode, Model, TaskPatch } from "../types.js"
-import { DEFAULT_MODEL, taskUsesDiffView } from "../types.js"
-import { getEffectiveModel, MODEL_TO_AGENT } from "./config.js"
+import type { Task, Mode, Tier, TaskPatch } from "../types.js"
+import { DEFAULT_TIER, taskUsesDiffView } from "../types.js"
+import { modelForTier } from "./config.js"
 import type { FlashType, PaneView } from "./useAppState.js"
 import type { AgentConfig } from "./config.js"
 
@@ -53,7 +53,7 @@ export function useAppActions({
     removeTask(repoRoot, id)
   }, [repoRoot])
 
-  const handleDispatch = useCallback(async (prompt: string, model: Model = DEFAULT_MODEL) => {
+  const handleDispatch = useCallback(async (prompt: string, tier: Tier = DEFAULT_TIER) => {
     setMode("normal")
     setSelectedIdx(0)
     prevSelectedIdx.current = 0
@@ -62,7 +62,7 @@ export function useAppActions({
       await createAndDispatchTask({
         repoRoot,
         prompt,
-        model,
+        tier,
         baseBranch: currentBranch,
         callSite: "App.tsx:handleDispatch",
         loadedConfig,
@@ -106,15 +106,13 @@ export function useAppActions({
     setPaneView(taskUsesDiffView(task) ? "diff" : "log")
   }, [setPaneTaskId, setPaneView])
 
-  const handleContinue = useCallback((prompt?: string, model?: Model) => {
+  const handleContinue = useCallback((prompt?: string, tier?: Tier) => {
     const task = paneTask ?? selectedTask
     if (!task || !task.sessionId) return
     if (task.status === "running") return
     setMode("normal")
     if (task.pid) killAgent(task.pid)
-    const resolvedModel = model
-      ? getEffectiveModel(MODEL_TO_AGENT[model] ?? 'smart', loadedConfig)
-      : undefined
+    const resolvedModel = tier ? modelForTier(tier, loadedConfig) : undefined
     const patch: TaskPatch = {
       status: "running",
       completedAt: null,

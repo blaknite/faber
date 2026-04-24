@@ -15,8 +15,8 @@ import { createAndDispatchTask } from "./lib/dispatch.js"
 import { checkAndUpdate } from "./lib/update.js"
 import { formatElapsed, readLogEntries } from "./lib/logParser.js"
 import { formatLog } from "./lib/formatLog.js"
-import type { Task, TaskStatus, Model } from "./types.js"
-import { DEFAULT_MODEL, MODELS, resolveModel } from "./types.js"
+import type { Task, TaskStatus, Tier } from "./types.js"
+import { DEFAULT_TIER, resolveTier } from "./types.js"
 import { loadConfig } from "./lib/config.js"
 import type { AgentConfig } from "./lib/config.js"
 
@@ -85,13 +85,13 @@ export function stripFlags(args: string[]): string[] {
   return result
 }
 
-export function parseModelFlag(args: string[]): { model: Model; explicitModel: string | undefined } {
+export function parseModelFlag(args: string[]): { tier: Tier; explicitModel: string | undefined } {
   const i = args.indexOf("--model")
-  if (i === -1 || !args[i + 1]) return { model: DEFAULT_MODEL, explicitModel: undefined }
+  if (i === -1 || !args[i + 1]) return { tier: DEFAULT_TIER, explicitModel: undefined }
   const input = args[i + 1]!
-  const resolved = resolveModel(input)
-  if (resolved) return { model: resolved, explicitModel: undefined }
-  return { model: DEFAULT_MODEL, explicitModel: input }
+  const resolvedTier = resolveTier(input)
+  if (resolvedTier) return { tier: resolvedTier, explicitModel: undefined }
+  return { tier: DEFAULT_TIER, explicitModel: input }
 }
 
 // FABER_VERSION is injected at compile time via --define. When running from
@@ -439,12 +439,12 @@ Safe to run multiple times.`)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
-    const { model, explicitModel } = parseModelFlag(args)
+    const { tier, explicitModel } = parseModelFlag(args)
     const baseBranch = parseBaseFlag(args) ?? undefined
     const globalConfigPath = join(homedir(), '.faber', 'faber.json')
     const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
     const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
-    await runHeadless(repoRoot, prompt, model, baseBranch, loadedConfig, explicitModel)
+    await runHeadless(repoRoot, prompt, tier, baseBranch, loadedConfig, explicitModel)
     return
   }
 
@@ -771,7 +771,7 @@ Safe to run multiple times.`)
   renderer.start()
 }
 
-export async function runHeadless(repoRoot: string, prompt: string, model: Model = DEFAULT_MODEL, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
+export async function runHeadless(repoRoot: string, prompt: string, tier: Tier = DEFAULT_TIER, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
@@ -786,7 +786,7 @@ export async function runHeadless(repoRoot: string, prompt: string, model: Model
     task = await createAndDispatchTask({
       repoRoot,
       prompt,
-      model,
+      tier,
       baseBranch: resolvedBaseBranch,
       callSite: "index.tsx:runHeadless",
       loadedConfig,

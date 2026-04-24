@@ -1,6 +1,6 @@
 import { useKeyboard } from "@opentui/react"
 import type { MutableRefObject } from "react"
-import { ACTIVE_STATUSES, type Task, type Mode } from "../types.js"
+import { ACTIVE_STATUSES, type Task, type Mode, type Tier } from "../types.js"
 import type { PaneView } from "./useAppState.js"
 
 export interface KeyBinding {
@@ -33,7 +33,7 @@ interface UseKeyboardRouterParams {
   handleMarkDone: (task?: Task | null) => void
   handleDelete: (task?: Task | null) => void
   handlePush: () => void
-  handleContinue: (prompt?: string) => void
+  handleContinue: (prompt?: string, tier?: Tier) => void
   handleOpenLog: () => void
   handleOpenDiff: () => void
   openTaskView: (task: Task) => void
