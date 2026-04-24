@@ -152,8 +152,6 @@ State where the fix belongs, not where the symptom appears. The reader should be
 
 Every finding must start with a short intent label ("Nit:", "Minor:", "Thought:", "Important:", "Blocking:") that tells the author how much weight to give it. Avoid disclaimer sentences. The label handles severity signalling.
 
-When a comment has an exact code fix for specific lines, use a ` ```suggestion ` fence instead of a plain code block.
-
 ````
 # Review Findings
 
@@ -163,7 +161,7 @@ When a comment has an exact code fix for specific lines, use a ` ```suggestion `
 
 <comment text>
 
-```suggestion
+```
   replacement code here
 ```
 
