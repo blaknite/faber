@@ -74,10 +74,18 @@ async function waitForTask(repoRoot: string, taskId: string): Promise<string> {
   })
 }
 
+export function trimToReviewFindings(text: string): string {
+  const headingMatch = text.match(/(^|\n)(# Review Findings\b)/)
+  if (!headingMatch) return text
+  return text.slice(headingMatch.index! + (headingMatch[1]?.length ?? 0))
+}
+
 function lastAgentMessage(repoRoot: string, taskId: string): string | null {
   const entries = readLogEntries(repoRoot, taskId)
   const last = [...entries].reverse().find((e) => e.kind === "text")
-  return last?.text ?? null
+  const text = last?.text ?? null
+  if (!text) return null
+  return trimToReviewFindings(text)
 }
 
 export async function runReview(

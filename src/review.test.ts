@@ -26,7 +26,7 @@ mock.module("./lib/dispatch.js", () => ({
   createAndDispatchTask: dispatchMock,
 }))
 
-import { runReview } from "./review.js"
+import { runReview, trimToReviewFindings } from "./review.js"
 
 let tmpRoot: string
 let logLines: string[]
@@ -69,6 +69,28 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(tmpRoot, { recursive: true, force: true })
+})
+
+describe("trimToReviewFindings", () => {
+  it("returns the full string when heading is absent", () => {
+    const text = "Some preamble\n\nNo heading here."
+    expect(trimToReviewFindings(text)).toBe(text)
+  })
+
+  it("strips content before the heading when heading is mid-string", () => {
+    const text = "Preamble text.\n# Review Findings\n\nActual findings."
+    expect(trimToReviewFindings(text)).toBe("# Review Findings\n\nActual findings.")
+  })
+
+  it("returns the full string when heading is at the start", () => {
+    const text = "# Review Findings\n\nActual findings."
+    expect(trimToReviewFindings(text)).toBe(text)
+  })
+
+  it("matches only the exact heading", () => {
+    const text = "Some text.\n# Review Findings Extra\n\nContent."
+    expect(trimToReviewFindings(text)).toBe("# Review Findings Extra\n\nContent.")
+  })
 })
 
 describe("runReview", () => {
