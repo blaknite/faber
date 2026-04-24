@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { watch as fsWatch } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
-import { marked } from "marked"
+import { Marked } from "marked"
 import { markedTerminal } from "marked-terminal"
 import { ensureFaberDir, stateFilePath, readState } from "./lib/state.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
@@ -130,8 +130,9 @@ export async function runReview(
 
   const message = lastAgentMessage(repoRoot, task.id)
   if (message) {
-    marked.use(markedTerminal({ reflowText: true, width: process.stdout.columns || 80 }) as any)
-    const formatted = marked(message) as string
+    const m = new Marked()
+    m.use(markedTerminal({ reflowText: true, width: process.stdout.columns || 80 }) as any)
+    const formatted = m.parse(message) as string
     process.stdout.write(formatted)
   }
 }
