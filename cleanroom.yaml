@@ -2,6 +2,12 @@ version: 1
 sandbox:
   image:
     ref: ghcr.io/buildkite/cleanroom-base/alpine@sha256:91a63856cdf97b2e5659660b41d1a131d3b57bfa4cad254018e391ffef6fa4b9
+  dependencies:
+    command: mise install
+    key:
+      files:
+        - mise.toml
+        - bun.lock
   network:
     default: deny
     allow:
@@ -12,4 +18,8 @@ sandbox:
       - host: objects.githubusercontent.com
         ports: [443]
       - host: registry.npmjs.org
+        ports: [443]
+      - host: mise.jdx.dev
+        ports: [443]
+      - host: mise-versions.jdx.dev
         ports: [443]
