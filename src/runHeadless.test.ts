@@ -118,13 +118,13 @@ describe("runHeadless", () => {
     })
 
     it("passes undefined explicitModel when no explicit override is given", async () => {
-      await runHeadless(tmpRoot, "do a thing", "smart", undefined, { smart: "openai/gpt-4o" })
+      await runHeadless(tmpRoot, "do a thing", "smart", undefined, { models: { smart: "openai/gpt-4o" } })
       const opts = dispatchMock.mock.calls[0]?.[0] as Record<string, unknown>
       expect(opts.explicitModel).toBeUndefined()
     })
 
     it("uses config model when explicitModel is undefined and loadedConfig has an override", async () => {
-      const loadedConfig = { smart: "openai/gpt-4o" }
+      const loadedConfig = { models: { smart: "openai/gpt-4o" } }
       await runHeadless(tmpRoot, "do a thing", "smart", undefined, loadedConfig, undefined)
       const opts = dispatchMock.mock.calls[0]?.[0] as Record<string, unknown>
       expect(opts.explicitModel).toBeUndefined()

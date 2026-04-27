@@ -5,6 +5,7 @@ import type { Task } from "../types.js"
 import { updateTask, taskOutputPath } from "./state.js"
 import { logTaskFailure } from "./failureLog.js"
 import type { AgentConfig } from "./config.js"
+import { cleanroomEnabled } from "./config.js"
 
 export const DEFAULT_RESUME_PROMPT = "The task was interrupted. Please continue where you left off."
 
@@ -103,7 +104,7 @@ export function spawnAgent(
             "*": "deny",
             "git *": "allow",
           },
-          cleanroom_exec: "allow",
+          ...(cleanroomEnabled(loadedConfig) ? { cleanroom_exec: "allow" } : {}),
         },
       }),
     },

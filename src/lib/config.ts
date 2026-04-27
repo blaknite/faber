@@ -1,7 +1,12 @@
 import fs from "node:fs"
 import { DEFAULT_MODELS, TIERS, type Tier } from "../types.js"
 
-export type AgentConfig = Partial<Record<Tier, string>>
+export type ModelConfig = Partial<Record<Tier, string>>
+
+export interface AgentConfig {
+  models?: ModelConfig
+  cleanroom?: boolean
+}
 
 const KNOWN_AGENT_TYPES = new Set(['fast', 'smart', 'deep'])
 
@@ -21,15 +26,27 @@ function loadFromPath(filePath: string): AgentConfig | null {
   }
 
   const result: AgentConfig = {}
-  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-    if (!KNOWN_AGENT_TYPES.has(key)) {
-      process.stderr.write(`Warning: unknown agent type "${key}" in config file "${filePath}"\n`)
-      continue
-    }
-    if (typeof value === 'string') {
-      result[key as Tier] = value
-    }
+  const record = parsed as Record<string, unknown>
+
+  if (typeof record.cleanroom === 'boolean') {
+    result.cleanroom = record.cleanroom
   }
+
+  const modelsRaw = record.models
+  if (typeof modelsRaw === 'object' && modelsRaw !== null && !Array.isArray(modelsRaw)) {
+    const models: ModelConfig = {}
+    for (const [key, value] of Object.entries(modelsRaw as Record<string, unknown>)) {
+      if (!KNOWN_AGENT_TYPES.has(key)) {
+        process.stderr.write(`Warning: unknown agent type "${key}" in config file "${filePath}"\n`)
+        continue
+      }
+      if (typeof value === 'string') {
+        models[key as Tier] = value
+      }
+    }
+    result.models = models
+  }
+
   return result
 }
 
@@ -44,7 +61,7 @@ export function loadConfig(globalPath: string, projectPath: string): AgentConfig
 }
 
 export function modelForTier(tier: Tier, config: AgentConfig): string {
-  return config[tier] ?? DEFAULT_MODELS[tier]
+  return config.models?.[tier] ?? DEFAULT_MODELS[tier]
 }
 
 // If the user configures two tiers to the same model ID, the first tier in
@@ -52,7 +69,7 @@ export function modelForTier(tier: Tier, config: AgentConfig): string {
 // in user config.
 export function tierForModel(modelId: string, config: AgentConfig): Tier | null {
   for (const tier of ['fast', 'smart', 'deep'] as const) {
-    if (config[tier] === modelId) return tier
+    if (config.models?.[tier] === modelId) return tier
   }
   for (const tier of ['fast', 'smart', 'deep'] as const) {
     if (DEFAULT_MODELS[tier] === modelId) return tier
@@ -64,4 +81,8 @@ export function getModelContextWindow(modelId: string, config: AgentConfig): num
   const tier = tierForModel(modelId, config)
   if (tier) return TIERS[tier].contextWindow
   return 200000
+}
+
+export function cleanroomEnabled(config: AgentConfig): boolean {
+  return config.cleanroom === true
 }

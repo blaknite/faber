@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { tierForModel, modelForTier } from "./config.js"
+import { tierForModel, modelForTier, cleanroomEnabled } from "./config.js"
 import { DEFAULT_MODELS } from "../types.js"
 
 describe("tierForModel", () => {
@@ -10,19 +10,21 @@ describe("tierForModel", () => {
   })
 
   it("returns the configured tier when the config overrides a tier with a custom model ID", () => {
-    const config = { smart: "lmstudio/unsloth/qwen3.5-9b" }
+    const config = { models: { smart: "lmstudio/unsloth/qwen3.5-9b" } }
     expect(tierForModel("lmstudio/unsloth/qwen3.5-9b", config)).toBe("smart")
   })
 
   it("returns null for an unknown model ID", () => {
     expect(tierForModel("openai/gpt-4o", {})).toBeNull()
-    expect(tierForModel("openai/gpt-4o", { smart: "lmstudio/foo" })).toBeNull()
+    expect(tierForModel("openai/gpt-4o", { models: { smart: "lmstudio/foo" } })).toBeNull()
   })
 
   it("with two tiers pointing to the same custom model, returns the first-iterated tier", () => {
     const config = {
-      fast: "lmstudio/unsloth/qwen3.5-9b",
-      smart: "lmstudio/unsloth/qwen3.5-9b",
+      models: {
+        fast: "lmstudio/unsloth/qwen3.5-9b",
+        smart: "lmstudio/unsloth/qwen3.5-9b",
+      },
     }
     expect(tierForModel("lmstudio/unsloth/qwen3.5-9b", config)).toBe("fast")
   })
@@ -36,8 +38,26 @@ describe("modelForTier", () => {
   })
 
   it("returns the config override when set", () => {
-    const config = { deep: "anthropic/claude-opus-4-7" }
+    const config = { models: { deep: "anthropic/claude-opus-4-7" } }
     expect(modelForTier("deep", config)).toBe("anthropic/claude-opus-4-7")
     expect(modelForTier("smart", config)).toBe(DEFAULT_MODELS.smart)
+  })
+})
+
+describe("cleanroomEnabled", () => {
+  it("returns false when config is empty", () => {
+    expect(cleanroomEnabled({})).toBe(false)
+  })
+
+  it("returns false when cleanroom is not set", () => {
+    expect(cleanroomEnabled({ models: { smart: "anthropic/claude-sonnet-4-6" } })).toBe(false)
+  })
+
+  it("returns true when cleanroom is true", () => {
+    expect(cleanroomEnabled({ cleanroom: true })).toBe(true)
+  })
+
+  it("returns false when cleanroom is false", () => {
+    expect(cleanroomEnabled({ cleanroom: false })).toBe(false)
   })
 })
