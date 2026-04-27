@@ -85,15 +85,19 @@ export function spawnAgent(
       OPENCODE_CONFIG_CONTENT: JSON.stringify({
         permission: {
           // Allow tools to reach files in the repo root (outside the worktree cwd).
+          // external_directory is checked against absolute paths.
           external_directory: {
             [`${repoRoot}/**`]: "allow",
           },
-          // Deny writes outside the worktree. Anything under the worktree is fine
-          // (covered by workspace defaults), but the rest of the repo root should
-          // be read-only from the agent's perspective.
+          // Deny writes everywhere by default, then allow them inside the linked
+          // worktree. Patterns here are matched against paths relative to
+          // opencode's Instance.worktree, which for a linked git worktree
+          // resolves to the main repo root (via `git rev-parse --git-common-dir`).
+          // So the linked worktree shows up as `.worktrees/<slug>/...`, which is
+          // exactly what task.worktree holds.
           edit: {
-            [`${worktreePath}/**`]: "allow",
-            [`${repoRoot}/**`]: "deny",
+            "*": "deny",
+            [`${task.worktree}/**`]: "allow",
           },
           bash: "deny",
           cleanroom_exec: "allow",
