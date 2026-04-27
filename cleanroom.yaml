@@ -1,9 +1,12 @@
 version: 1
 sandbox:
   image:
-    ref: ghcr.io/buildkite/cleanroom-base/alpine@sha256:91a63856cdf97b2e5659660b41d1a131d3b57bfa4cad254018e391ffef6fa4b9
+    ref: ghcr.io/buildkite/cleanroom-base/debian@sha256:66d2bafc1cd64e594b32d9c091f1bc79bc1fb3811686ea920c58f6e4275f6663
   dependencies:
-    command: MISE_TRUSTED_CONFIG_PATHS=/workspace MISE_USE_VERSIONS_HOST=false MISE_LIBC=musl mise install
+    command: >-
+      MISE_TRUSTED_CONFIG_PATHS=/workspace MISE_USE_VERSIONS_HOST=false mise install &&
+      ln -sf /root/.local/share/mise/shims/bun /usr/local/bin/bun &&
+      ln -sf /root/.local/share/mise/shims/bunx /usr/local/bin/bunx
     key:
       files:
         - mise.toml
