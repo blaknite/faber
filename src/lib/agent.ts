@@ -99,7 +99,10 @@ export function spawnAgent(
             "*": "allow",
             "../*": "deny",
           },
-          bash: "deny",
+          bash: {
+            "*": "deny",
+            "git *": "allow",
+          },
           cleanroom_exec: "allow",
         },
       }),
