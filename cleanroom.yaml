@@ -17,5 +17,7 @@ sandbox:
         ports: [443]
       - host: objects.githubusercontent.com
         ports: [443]
+      - host: release-assets.githubusercontent.com
+        ports: [443]
       - host: registry.npmjs.org
         ports: [443]
