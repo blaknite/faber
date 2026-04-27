@@ -3,7 +3,7 @@ sandbox:
   image:
     ref: ghcr.io/buildkite/cleanroom-base/alpine@sha256:91a63856cdf97b2e5659660b41d1a131d3b57bfa4cad254018e391ffef6fa4b9
   dependencies:
-    command: MISE_TRUSTED_CONFIG_PATHS=/workspace MISE_USE_VERSIONS_HOST=false mise install
+    command: MISE_TRUSTED_CONFIG_PATHS=/workspace MISE_USE_VERSIONS_HOST=false MISE_LIBC=musl mise install
     key:
       files:
         - mise.toml
