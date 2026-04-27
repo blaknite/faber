@@ -6,7 +6,8 @@ sandbox:
     command: >-
       MISE_TRUSTED_CONFIG_PATHS=/workspace MISE_USE_VERSIONS_HOST=false mise install &&
       ln -sf /root/.local/share/mise/shims/bun /usr/local/bin/bun &&
-      ln -sf /root/.local/share/mise/shims/bunx /usr/local/bin/bunx
+      ln -sf /root/.local/share/mise/shims/bunx /usr/local/bin/bunx &&
+      bun install --frozen-lockfile
     key:
       files:
         - mise.toml
