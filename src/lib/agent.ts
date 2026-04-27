@@ -89,15 +89,15 @@ export function spawnAgent(
           external_directory: {
             [`${repoRoot}/**`]: "allow",
           },
-          // Deny writes everywhere by default, then allow them inside the linked
-          // worktree. Patterns here are matched against paths relative to
-          // opencode's Instance.worktree, which for a linked git worktree
-          // resolves to the main repo root (via `git rev-parse --git-common-dir`).
-          // So the linked worktree shows up as `.worktrees/<slug>/...`, which is
-          // exactly what task.worktree holds.
+          // Allow edits inside the worktree, deny anything that escapes it.
+          // Patterns are matched against `path.relative(Instance.worktree, filepath)`,
+          // and Instance.worktree is the linked worktree itself (set from
+          // `git rev-parse --show-toplevel`). So files inside the worktree look
+          // like `src/foo.ts` or `README.md`, while paths outside come back as
+          // `../something`. `../*` catches every escape.
           edit: {
-            "*": "deny",
-            [`${task.worktree}/**`]: "allow",
+            "*": "allow",
+            "../*": "deny",
           },
           bash: "deny",
           cleanroom_exec: "allow",
