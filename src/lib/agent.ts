@@ -95,6 +95,8 @@ export function spawnAgent(
             [`${worktreePath}/**`]: "allow",
             [`${repoRoot}/**`]: "deny",
           },
+          bash: "deny",
+          cleanroom_exec: "allow",
         },
       }),
     },
