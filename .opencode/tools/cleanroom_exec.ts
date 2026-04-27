@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin"
-import { join } from "path"
+import { isAbsolute, join, relative, resolve } from "path"
 import { stat } from "fs/promises"
 
 async function which(cmd: string): Promise<string | null> {
@@ -26,8 +26,10 @@ async function findGitRoot(cwd: string): Promise<string | null> {
       stderr: "pipe",
     })
     const stdout = await new Response(proc.stdout).text()
-    await proc.exited
-    return stdout.trim()
+    const exit = await proc.exited
+    if (exit !== 0) return null
+    const trimmed = stdout.trim()
+    return trimmed || null
   } catch {
     return null
   }
@@ -36,19 +38,18 @@ async function findGitRoot(cwd: string): Promise<string | null> {
 async function resolveWorkdir(workdir: string | undefined, directory: string): Promise<string | null> {
   if (!workdir) return directory
 
-  const resolved = join(directory, workdir)
-
   const root = await findGitRoot(directory)
   if (!root) return null
 
-  const absResolved = join(process.cwd(), resolved)
-  const absRoot = join(process.cwd(), root)
+  const absRoot = resolve(root)
+  const absResolved = isAbsolute(workdir) ? resolve(workdir) : resolve(absRoot, workdir)
 
-  if (!absResolved.startsWith(absRoot)) {
+  const rel = relative(absRoot, absResolved)
+  if (rel.startsWith("..") || isAbsolute(rel)) {
     return null
   }
 
-  return resolved
+  return absResolved
 }
 
 async function findPolicyFile(cwd: string): Promise<string | null> {
