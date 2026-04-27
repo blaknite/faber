@@ -4,6 +4,5 @@ dist/
 .worktrees/
 faber
 .bk.yaml
-cleanroom.yaml
 .plans
 .plans/
