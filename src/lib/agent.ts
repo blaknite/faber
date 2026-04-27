@@ -100,11 +100,13 @@ export function spawnAgent(
             "*": "allow",
             "../*": "deny",
           },
-          bash: {
-            "*": "deny",
-            "git *": "allow",
-          },
-          ...(cleanroomEnabled(loadedConfig) ? { cleanroom_exec: "allow" } : {}),
+          ...(cleanroomEnabled(loadedConfig) ? {
+            bash: {
+              "*": "deny",
+              "git *": "allow",
+            },
+            cleanroom_exec: "allow",
+          } : {}),
         },
       }),
     },
