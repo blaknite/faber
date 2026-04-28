@@ -1,40 +1,52 @@
 ---
 name: reviewing-faber-tasks
-description: Assess what a ready Faber task produced and act on it. Use after faber watch returns to inspect the diff, form a judgment, and route the task to merge, done, continue, or delete.
+description: Assess what a ready Faber task produced and act on it. Use after faber watch returns to dispatch a review and route the task to merge, done, continue, or delete.
 ---
 
 # Reviewing Faber tasks
 
-Load the `using-faber` skill for the full CLI reference. This skill covers the mechanics of assessing a completed task and routing it based on what you find.
+Load the `using-faber` skill for the full CLI reference. This skill covers
+the mechanics of assessing a completed task and routing it based on what
+the review found.
 
-## Step 1: Read the diff
+## Step 1: Run a review
 
-Use `faber diff` to see what the task branch has on top of the base branch. Empty output means no changes were committed. If the diff alone doesn't give you enough to judge, load the `reading-faber-logs` skill for guidance on reading logs.
+Use `faber review --task <id>` to dispatch a review of the task's branch
+against its base. The review runs as another faber task at the `deep` tier
+and blocks until it finishes, then prints its findings to stdout. The
+original task prompt is automatically included in the review prompt, so
+the reviewer knows what was asked.
 
-## Step 2: Review the changes
+If you have additional context the reviewer should know -- a follow-up
+direction, a constraint that emerged after dispatch, or "ignore the test
+file changes, those are out of scope" -- pass it with `--context`:
 
-Read full changed files, not just diff hunks. The diff shows what changed; the file shows what it means. If the change touches a function, check its callers. If it changes a type, check its consumers. If it introduces a pattern, check whether the codebase already does the same thing a different way.
+```bash
+faber review --task <id> --context "the auth changes are the focus; tests are deferred"
+```
 
-Look for problems in priority order:
+`faber review --task` rejects tasks that aren't `ready` and tasks with no
+commits. If the task has no commits, skip to `faber done` (see Step 2).
+For trivial mechanical changes you can pass `--model fast` to save tokens,
+but the default is right for almost everything.
 
-1. **Correctness** -- Logic errors, wrong conditions, unhandled null/empty/error cases, off-by-one, ignored return values.
-2. **Security** -- Unsanitized input, hardcoded secrets, missing auth checks. Only flag what you can trace to a concrete risk.
-3. **Data integrity** -- Race conditions, missing transactions, inconsistent state on partial failure.
-4. **Behavioral changes** -- Unintentional changes to existing behavior, especially in refactors.
-5. **Pattern consistency** -- Handles something differently from how the rest of the codebase does it.
-6. **Performance** -- Unbounded loops, N+1 queries, missing pagination. Only flag when the code path makes the problem realistic.
+The review task itself is auto-completed once it finishes, so you don't
+need to chase it down with `faber done`. If you want to ask the reviewer
+follow-up questions, the `faber continue <reviewTaskId>` hint at the end
+of the output still works.
 
-Don't flag style preferences unless they violate established project conventions. Don't review code the diff didn't touch. If you can't explain exactly why something is wrong, it's not a finding.
+If you need more context than the findings give you -- to understand what
+the agent attempted, or why -- load the `reading-faber-logs` skill.
 
-## Step 3: Route the task
+## Step 2: Route the task
 
-Based on your findings, pick one of four paths.
+Pick one of four paths based on the review findings.
 
-**The work looks good and has commits:** merge it with `faber merge`. This rebases the task branch onto the current base branch HEAD, fast-forward merges it, and removes the worktree. Only merge when you're confident the changes are correct -- if something feels off but you can't pin it down, that's not "looks good."
+**The work looks good and has commits:** merge it with `faber merge`. This rebases the task branch onto the current base branch HEAD, fast-forward merges it, and removes the worktree. Only merge when the review came back clean (or with findings you've judged not to be blockers).
 
-**The task is ready but made no commits:** mark it done with `faber done`. Use this when the task was exploratory, when the agent correctly determined there was nothing to change, or when you want to keep the branch around for reference.
+**The task is ready but made no commits:** mark it done with `faber done`. This case is reached when `faber review --task` errors with `Task "<id>" has no commits to review.`; the response is to call `faber done` directly.
 
-**The work needs correction, is incomplete, or you're unsure about something:** continue it with `faber continue "<new direction>"`. The agent picks up where it left off with full context of what it already did. Be specific about what's wrong, what's missing, or what you need investigated. After continuing, watch again and run through this loop from the top.
+**The work needs correction, is incomplete, or you're unsure about something:** continue it with `faber continue "<new direction>"`. The agent picks up where it left off with full context of what it already did. Use the review findings as the basis for the new prompt. Be specific about which findings to address and which to ignore. After continuing, watch again and run through this loop from the top.
 
 **The task should be discarded entirely:** delete it with `faber delete --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
 
@@ -46,25 +58,26 @@ If `faber merge` fails with a conflict, the rebase is aborted automatically and 
 
 ```bash
 # The work looks good
-faber diff b7c1-add-rate-limiting
-# (diff looks correct -- middleware added, tests included)
+faber review --task b7c1-add-rate-limiting
+# (review finds nothing blocking)
 faber merge b7c1-add-rate-limiting
 # Merged and removed worktree.
 ```
 
 ```bash
-# Task is ready but made no commits -- nothing to change was the right answer
-faber diff b7c1-add-rate-limiting
-# (empty -- agent correctly determined no changes were needed)
+# Task has no commits -- review surfaces the error, then mark done
+faber review --task b7c1-add-rate-limiting
+# Error: Task "b7c1-add-rate-limiting" has no commits to review.
 faber done b7c1-add-rate-limiting
 ```
 
 ```bash
-# The implementation missed something
-faber diff b7c1-add-rate-limiting
-# (middleware added but no handling for admin users)
-faber continue b7c1-add-rate-limiting "The rate limiter needs to skip authenticated admin users. Update the middleware and the tests."
+# Review flagged something -- continue with specific feedback
+faber review --task b7c1-add-rate-limiting
+# Review flagged that admin users aren't skipped.
+faber continue b7c1-add-rate-limiting "The review found that admin users aren't skipped by the rate limiter. Update the middleware and the tests."
 faber watch b7c1-add-rate-limiting
+faber review --task b7c1-add-rate-limiting
 faber merge b7c1-add-rate-limiting
 ```
 
@@ -79,9 +92,8 @@ faber merge b7c1-add-rate-limiting
 ```
 
 ```bash
-# The work is too far off to salvage
-faber diff b7c1-add-rate-limiting
-# (completely wrong approach -- rewrote unrelated files)
+# The approach is wrong -- discard
+faber review --task b7c1-add-rate-limiting
+# Review flagged that the approach is fundamentally wrong.
 faber delete b7c1-add-rate-limiting --yes
-# Deleted. Dispatch a replacement with a better-scoped prompt.
 ```

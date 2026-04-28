@@ -58,6 +58,8 @@ If the PR body references an issue (e.g. `ENG-123`), load the `using-linear` ski
 
 For branch or current-branch reviews there's often no PR and no issue. Work from commit messages and the diff. Don't go hunting for context that isn't there.
 
+The prompt may include `## Original task` (the prompt the task was originally given, when reviewing a faber task) and `## Additional context` (any extra direction passed via `--context`). Treat these as the stated intent for the change. They replace the role a PR body would play in PR mode -- don't go hunting for context elsewhere when these are present.
+
 ### 2. Read the diff
 
 Get the full diff against the review base:
