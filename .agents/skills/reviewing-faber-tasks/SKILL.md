@@ -17,7 +17,7 @@ Dispatch a review in the background using these four calls in sequence:
 
 ```bash
 faber review --background --task <originalTaskId>
-# prints the review task ID -- capture it
+# Task <reviewTaskId> running  <- capture this ID
 ```
 
 Pass `--context` if you have anything the reviewer should know -- a constraint that emerged after dispatch, scope that's out of bounds, a follow-up direction:
@@ -116,11 +116,12 @@ If it conflicts again, repeat -- give the agent more context about what changed 
 
 ```bash
 # Clean review -> merge
-REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
-faber watch $REVIEW_ID
-faber read $REVIEW_ID
+faber review --background --task b7c1-add-rate-limiting
+# Task r1v2-review-b7c1-add-rate-limiting running  <- capture this ID
+faber watch r1v2-review-b7c1-add-rate-limiting
+faber read r1v2-review-b7c1-add-rate-limiting
 # (findings section shows nothing blocking)
-faber done $REVIEW_ID
+faber done r1v2-review-b7c1-add-rate-limiting
 faber merge b7c1-add-rate-limiting
 ```
 
@@ -134,20 +135,22 @@ faber done b7c1-add-rate-limiting
 
 ```bash
 # Findings -> fix loop -> merge
-REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
-faber watch $REVIEW_ID
-faber read $REVIEW_ID
+faber review --background --task b7c1-add-rate-limiting
+# Task r1v2-review-b7c1-add-rate-limiting running  <- capture this ID
+faber watch r1v2-review-b7c1-add-rate-limiting
+faber read r1v2-review-b7c1-add-rate-limiting
 # findings: admin users aren't skipped (src/middleware/rateLimit.ts:42)
-faber done $REVIEW_ID
+faber done r1v2-review-b7c1-add-rate-limiting
 
 faber continue b7c1-add-rate-limiting 'Review finding: admin users are not skipped by the rate limiter (src/middleware/rateLimit.ts:42). Fix the middleware and update the tests. The unrelated comment in src/config.ts is intentional -- ignore it.'
 faber watch b7c1-add-rate-limiting
 
-REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting --context 'addressed the admin-skip finding from the previous review; the src/config.ts comment was intentional and not addressed')
-faber watch $REVIEW_ID
-faber read $REVIEW_ID
+faber review --background --task b7c1-add-rate-limiting --context 'addressed the admin-skip finding from the previous review; the src/config.ts comment was intentional and not addressed'
+# Task r3v4-review-b7c1-add-rate-limiting running  <- capture this ID
+faber watch r3v4-review-b7c1-add-rate-limiting
+faber read r3v4-review-b7c1-add-rate-limiting
 # (findings section shows nothing blocking)
-faber done $REVIEW_ID
+faber done r3v4-review-b7c1-add-rate-limiting
 faber merge b7c1-add-rate-limiting
 ```
 
@@ -162,10 +165,11 @@ faber merge b7c1-add-rate-limiting
 
 ```bash
 # Approach is wrong -> delete
-REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
-faber watch $REVIEW_ID
-faber read $REVIEW_ID
+faber review --background --task b7c1-add-rate-limiting
+# Task r1v2-review-b7c1-add-rate-limiting running  <- capture this ID
+faber watch r1v2-review-b7c1-add-rate-limiting
+faber read r1v2-review-b7c1-add-rate-limiting
 # findings: the approach patches the wrong layer; this needs to be redone at the router level
-faber done $REVIEW_ID
+faber done r1v2-review-b7c1-add-rate-limiting
 faber delete b7c1-add-rate-limiting --yes
 ```

@@ -49,7 +49,7 @@ Run a background review of the current branch to get a fresh read of the merged 
 
 ```bash
 faber review --background --context 'implements the plan at .plans/<feature>/PLAN.md; check for gaps against the requirements'
-# Capture the review task ID, then:
+# Task <reviewTaskId> running  <- capture this ID, then:
 faber watch <reviewTaskId>
 faber read <reviewTaskId>
 faber done <reviewTaskId>
