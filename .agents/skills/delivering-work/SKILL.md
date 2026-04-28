@@ -11,13 +11,16 @@ Reference `reviewing-faber-tasks` for the review->fix loop mechanics and `using-
 
 ## Step 1: Execute the plan
 
-Run `faber execute` in foreground mode and capture the task ID from the printed status line (`Task <shortId> ended in status: <status>`):
+Dispatch the executor in the background, then watch it to completion:
 
 ```bash
-faber execute <plan-path>
+faber execute <plan-path> --background
+# Task <executeTaskId> running  <- capture this ID
+faber watch <executeTaskId>
+# Task <executeTaskId> finished (status: <status>)
 ```
 
-When it returns, read the status line. If the status is `failed` or `stopped`, or if `faber diff <executeTaskId>` produces empty output (no commits), surface the situation to the user and stop. Do not attempt to ship a broken or empty implementation.
+If the status is `failed` or `stopped`, or if `faber diff <executeTaskId>` produces empty output (no commits), surface the situation to the user and stop. Do not attempt to ship a broken or empty implementation.
 
 ## Step 2: Review the implementation
 
@@ -39,15 +42,19 @@ Route based on the findings:
 
 ## Step 3: Ship the merged branch
 
-Run `faber ship` in foreground mode against the current branch (the orchestrator's branch, which now includes the merged executor work). Run in foreground mode to capture the status line and final message:
+Dispatch the ship agent in the background, then watch it to completion. The current branch (the orchestrator's branch) now includes the merged executor work, so `faber ship` with no flags ships that:
 
 ```bash
-faber ship
+faber ship --background
+# Task <shipTaskId> running  <- capture this ID
+faber watch <shipTaskId>
+# Task <shipTaskId> finished (status: <status>)
+faber read <shipTaskId>
 ```
 
-Read the agent's last message for the PR URL. The prompt asks the ship agent for `PR: <url>`. Surface that URL to the user.
+The PR URL is in the ship agent's last message. Surface it to the user.
 
-If the status line shows anything other than `ready`, or if the final message does not contain a parseable PR URL, surface what happened and stop. Do not retry ship -- CI flakes are the user's call, not the orchestrator's.
+If the status is anything other than `ready`, or if the agent's last message does not contain a PR URL, surface what happened and stop. Do not retry ship -- CI flakes are the user's call, not the orchestrator's.
 
 ## Step 4: Surface a summary
 
@@ -65,6 +72,6 @@ Four conditions end the workflow before a PR is open. In each case, output a cle
 1. **Executor failed.** Status is `failed` or `stopped`, or `faber diff <executeTaskId>` is empty. Cannot ship nothing.
 2. **Review never converged.** Two iterations of continue -> review -> findings, with the same finding returning unfixed or new findings appearing each time.
 3. **Reviewer flagged a fundamentally wrong approach.** A finding that says the work needs to be redone differently. This is a re-shaping decision; stop and surface to the user.
-4. **Ship failed.** `faber ship` printed a non-`ready` status, or the agent's final message did not include a PR URL.
+4. **Ship failed.** The ship task ended in a non-`ready` status, or the agent's last message did not include a PR URL.
 
 Do not loop indefinitely. Do not delete tasks autonomously. Preserve the failure state for the user to inspect.
