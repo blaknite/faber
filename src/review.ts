@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { homedir } from "node:os"
 import { Marked } from "marked"
 import { markedTerminal } from "marked-terminal"
-import { ensureFaberDir, stateFilePath, readState } from "./lib/state.js"
+import { ensureFaberDir, stateFilePath, readState, updateTask } from "./lib/state.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
 import { resolveReviewTarget, type ReviewMode } from "./lib/reviewTarget.js"
 import { loadConfig } from "./lib/config.js"
@@ -94,6 +94,7 @@ export async function runReview(
   tier: Tier = DEFAULT_REVIEW_TIER,
   explicitModel?: string,
   background: boolean = false,
+  extraContext?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
     throw new Error(`Not a git repository: ${repoRoot}`)
@@ -110,6 +111,12 @@ export async function runReview(
   ]
   if (target.contextLine) {
     promptLines.push("", target.contextLine)
+  }
+  if (target.originalTask) {
+    promptLines.push("", "## Original task", "", target.originalTask)
+  }
+  if (extraContext && extraContext.trim()) {
+    promptLines.push("", "## Additional context", "", extraContext)
   }
   const prompt = promptLines.join("\n")
 
@@ -133,7 +140,7 @@ export async function runReview(
   }
 
   const stopProgress = startProgressSpinner(repoRoot, task.id)
-  await waitForTask(repoRoot, task.id)
+  const finalStatus = await waitForTask(repoRoot, task.id)
   stopProgress()
 
   const message = lastAgentMessage(repoRoot, task.id)
@@ -144,5 +151,15 @@ export async function runReview(
     process.stdout.write(formatted)
   }
 
-  process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
+  let autoCompleted = false
+  if (finalStatus === "ready") {
+    updateTask(repoRoot, task.id, { status: "done" })
+    autoCompleted = true
+  }
+
+  if (autoCompleted) {
+    process.stdout.write(`\nReview complete. To ask follow-up questions, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
+  } else {
+    process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
+  }
 }

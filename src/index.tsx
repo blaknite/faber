@@ -71,6 +71,20 @@ function parsePullRequestFlag(args: string[]): string | null {
   return null
 }
 
+// Parse --task <id> from an args array. Returns the task id or null.
+function parseTaskFlag(args: string[]): string | null {
+  const i = args.indexOf("--task")
+  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  return null
+}
+
+// Parse --context <text> from an args array. Returns the context text or null.
+function parseContextFlag(args: string[]): string | null {
+  const i = args.indexOf("--context")
+  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  return null
+}
+
 // Strip all recognised flags and their values from an args array so that the
 // remainder contains only positional arguments. This lets callers use index
 // arithmetic (positional[1], positional[2], ...) without worrying about flags
@@ -82,7 +96,7 @@ function parsePullRequestFlag(args: string[]): string | null {
 // The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
 // still work on the original args array before stripping.
 export function stripFlags(args: string[]): string[] {
-  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status", "--branch", "--pull-request"])
+  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status", "--branch", "--pull-request", "--task", "--context"])
   const result: string[] = []
   let i = 0
   while (i < args.length) {
@@ -156,12 +170,15 @@ Options:
   --json            Output raw JSON (only applies to the read command)
   --branch <name>   Branch to review (only applies to the review command)
   --pull-request <n> PR number or URL to review (only applies to the review command)
+  --task <id>       Task to review (only applies to the review command)
+  --context <text>  Extra context for the reviewer (only applies to the review command)
 
 Examples:
   faber
   faber run "Fix the login bug"
   faber review
   faber review --pull-request 123
+  faber review --task a3f2-fix-the-login-bug
   faber run "Refactor the auth module" --model deep
   faber continue a3f2-fix-the-login-bug
   faber continue a3f2-fix-the-login-bug "do X instead"
@@ -331,13 +348,14 @@ Examples:
         console.log(`Usage: faber review [options]
 
 Dispatch a code-review task. Reviews the current branch against the default
-branch by default. The task runs as a normal faber task: use "faber watch"
-to block until it finishes, "faber read" to see its output, and "faber diff"
-to inspect any fixes it applied.
+branch by default. Pass --branch, --pull-request, or --task to review something
+else. Use --context to attach extra notes for the reviewer.
 
 Options:
   --branch <name>             Review <name> against the default branch
   --pull-request <num-or-url> Review a pull request against its base branch
+  --task <id>                 Review a faber task's branch against its base branch
+  --context <text>            Extra context appended to the review prompt
   --model <label>             Model to use: smart (default), fast, or deep
   --dir <path>                Path to the git repo root (defaults to nearest repo from cwd)
 
@@ -346,6 +364,8 @@ Examples:
   faber review --branch feature/new-auth
   faber review --pull-request 123
   faber review --pull-request https://github.com/org/repo/pull/123
+  faber review --task a3f2
+  faber review --pull-request 123 --context "focus on the auth changes"
   faber review --model deep`)
         exit(0)
       case "setup":
@@ -490,13 +510,17 @@ Safe to run multiple times.`)
     return
   }
 
-  // faber review [--branch <name>] [--pull-request <num-or-url>] [--model <label>] [--dir <repo>]
+  // faber review [--branch <name>] [--pull-request <num-or-url>] [--task <id>] [--context <text>] [--model <label>] [--dir <repo>]
   if (command === "review") {
     const branch = parseBranchFlag(args)
     const pullRequest = parsePullRequestFlag(args)
-    if (branch && pullRequest) {
-      console.error("Usage: faber review [--branch <name> | --pull-request <num-or-url>]")
-      console.error("--branch and --pull-request cannot be used together")
+    const task = parseTaskFlag(args)
+    const context = parseContextFlag(args)
+
+    const modeCount = [branch, pullRequest, task].filter(Boolean).length
+    if (modeCount > 1) {
+      console.error("Usage: faber review [--branch <name> | --pull-request <num-or-url> | --task <id>] [--context <text>]")
+      console.error("--branch, --pull-request, and --task cannot be used together")
       exit(1)
     }
     if (args.includes("--pull-request") && !pullRequest) {
@@ -507,6 +531,18 @@ Safe to run multiple times.`)
       console.error("--branch requires an argument (branch name)")
       exit(1)
     }
+    if (args.includes("--task") && !task) {
+      console.error("--task requires an argument (task id)")
+      exit(1)
+    }
+    if (args.includes("--context") && !context) {
+      console.error("--context requires an argument (text)")
+      exit(1)
+    }
+    if (context !== null && !context.trim()) {
+      console.error("--context requires non-empty text")
+      exit(1)
+    }
 
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
@@ -514,12 +550,13 @@ Safe to run multiple times.`)
     const background = args.includes("--background")
 
     const mode: ReviewMode =
+      task ? { kind: "task", id: task } :
       pullRequest ? { kind: "pullRequest", arg: pullRequest } :
       branch ? { kind: "branch", name: branch } :
       { kind: "current" }
 
     try {
-      await runReview(repoRoot, mode, tier, explicitModel, background)
+      await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)

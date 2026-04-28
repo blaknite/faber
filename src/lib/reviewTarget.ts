@@ -1,22 +1,49 @@
 import { execa, execaSync } from "execa"
 import { readCurrentBranch } from "./worktree.js"
 import { findDefaultBranch } from "./defaultBranch.js"
+import { readState, findTask } from "./state.js"
 
 export type ReviewTarget = {
   worktreeBase: string
   reviewBase: string
   summary: string
   contextLine: string
+  originalTask?: string
 }
 
 export type ReviewMode =
   | { kind: "current" }
   | { kind: "branch"; name: string }
   | { kind: "pullRequest"; arg: string }
+  | { kind: "task"; id: string }
 
 export async function resolveReviewTarget(repoRoot: string, mode: ReviewMode): Promise<ReviewTarget> {
   if (mode.kind === "pullRequest") {
     return await resolvePullRequest(repoRoot, mode.arg)
+  }
+
+  if (mode.kind === "task") {
+    const state = readState(repoRoot)
+    const task = findTask(state.tasks, mode.id)
+    if (!task) {
+      throw new Error(`No task matching "${mode.id}"`)
+    }
+    if (task.status !== "ready") {
+      throw new Error(`Task "${task.id}" has status "${task.status}" -- only "ready" tasks can be reviewed.`)
+    }
+    if (!task.hasCommits) {
+      throw new Error(`Task "${task.id}" has no commits to review.`)
+    }
+    if (task.id === task.baseBranch) {
+      throw new Error(`Cannot review task ${task.id}: its branch matches its base.`)
+    }
+    return {
+      worktreeBase: task.id,
+      reviewBase: task.baseBranch,
+      summary: `task \`${task.id}\``,
+      contextLine: `This is faber task \`${task.id}\` based on \`${task.baseBranch}\`.`,
+      originalTask: task.prompt,
+    }
   }
 
   const defaultBranch = findDefaultBranch(repoRoot)
