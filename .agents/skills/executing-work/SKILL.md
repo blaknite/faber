@@ -29,7 +29,9 @@ Dispatch all independent tasks upfront. Hold dependent tasks until their prerequ
 
 ### Review
 
-As each task completes, follow `reviewing-faber-tasks` to assess it. The mechanics live there -- run `faber review --task <id>`, read the findings, route the task. This step exists to remind you that the quality bar matters: don't merge work you're not confident in. Everything that follows builds on what you merge here.
+As each task completes, follow `reviewing-faber-tasks` to dispatch a background review (`--background`), read the findings, and drive the review->fix loop until the task is mergeable. This step exists to remind you that the quality bar matters: don't merge work you're not confident in. Everything that follows builds on what you merge here.
+
+The review->fix loop runs on each task individually. Iterating here means running review, acting on findings, and reviewing again -- on that one task -- until it's clean. It doesn't mean moving on to the next task while issues are unresolved. Don't merge work that hasn't passed a clean review.
 
 If a task isn't right, continue it with specific feedback drawn from the review. If it's unsalvageable, delete it and dispatch a replacement with a better prompt. Only merge work you're genuinely satisfied with.
 
@@ -43,14 +45,20 @@ Dispatch the next round and repeat. Keep going until every piece of the plan has
 
 Do a proper review of the combined result before handing off to shipping. The per-task reviews in step 3 checked each slice individually; now you're seeing it as one change for the first time.
 
-Run `faber review` on the current branch (no flags) to get a fresh read of the merged work against the base branch. Add `--context` to point the reviewer at the plan or anything else worth flagging:
+Run a background review of the current branch to get a fresh read of the merged work against the base branch. Add `--context` to point the reviewer at the plan or anything else worth flagging:
 
 ```bash
-faber review --context "implements the plan at .plans/<feature>/PLAN.md; check for gaps against the requirements"
+faber review --background --context 'implements the plan at .plans/<feature>/PLAN.md; check for gaps against the requirements'
+# Capture the review task ID, then:
+faber watch <reviewTaskId>
+faber read <reviewTaskId>
+faber done <reviewTaskId>
 ```
+
+If the final review surfaces findings, dispatch targeted follow-up tasks via `faber run` and run them through their own review->fix loops (using `reviewing-faber-tasks`) before re-running the final review.
 
 The findings tell you whether the slices hold together, whether anything was missed, and whether the code reads well as a whole. Skim the diff yourself too -- you're the one signing off.
 
 Run the tests that are relevant to what changed. For small projects that might mean the full suite. For large codebases, focus on the tests that cover the areas that were touched. The full integration test happens in CI later, but you should be confident the code works before you get there.
 
-If something isn't right, dispatch targeted follow-up tasks to fix it and review the results before moving on. The goal is to hand off code that a human reviewer could approve without sending it back for rework. Don't stop until the code on the branch matches the plan.
+Don't stop until the code on the branch matches the plan.
