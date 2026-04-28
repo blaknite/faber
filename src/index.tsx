@@ -20,6 +20,8 @@ import { DEFAULT_TIER, resolveTier } from "./types.js"
 import { loadConfig } from "./lib/config.js"
 import type { AgentConfig } from "./lib/config.js"
 import { runReview } from "./review.js"
+import { runExecute } from "./execute.js"
+import { runShip } from "./ship.js"
 import type { ReviewMode } from "./lib/reviewTarget.js"
 
 // Single exit point for the process. Everything routes through here so it's
@@ -147,6 +149,8 @@ Commands:
   (none)            Launch the TUI and manage tasks interactively
   run "<prompt>"    Dispatch a task headlessly without the TUI
   review            Dispatch a code-review task
+  execute <plan>    Dispatch a managed task to execute a PLAN.md
+  ship              Push the current branch and open a PR
   continue <taskId> Resume a stopped or failed task
   stop <taskId>     Stop a running task
   list              Print all tasks as a table
@@ -180,6 +184,8 @@ Examples:
   faber run "Fix the login bug"
   faber review
   faber review --pull-request 123
+  faber execute .plans/foo/PLAN.md
+  faber ship
   faber review --task a3f2-fix-the-login-bug
   faber run "Refactor the auth module" --model deep
   faber continue a3f2-fix-the-login-bug
@@ -370,6 +376,45 @@ Examples:
   faber review --pull-request 123 --context "focus on the auth changes"
   faber review --model deep`)
         exit(0)
+      case "execute":
+        console.log(`Usage: faber execute <plan-path> [options]
+
+Execute a PLAN.md as a managed faber task. The agent loads the
+"executing-work" skill and implements the plan in a fresh worktree.
+
+Arguments:
+  <plan-path>       Path to the plan file (relative to cwd or absolute)
+
+Options:
+  --model <label>   Model to use: smart (default), fast, or deep
+  --background      Dispatch and exit; do not wait for completion
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber execute .plans/foo/PLAN.md
+  faber execute /tmp/plan.md --model deep
+  faber execute .plans/foo/PLAN.md --background`)
+        exit(0)
+      case "ship":
+        console.log(`Usage: faber ship [options]
+
+Ship the current branch: push it to origin, open a pull request, and pass
+CI. Runs in a sandbox worktree so the agent can work without disturbing
+your main checkout. The worktree, slug branch, and task are left in place
+when the agent finishes -- inspect the result, then route the task with
+"faber done", "faber delete", or "faber continue".
+
+Options:
+  --branch <name>   Ship <name> instead of the current branch
+  --model <label>   Model to use: smart (default), fast, or deep
+  --background      Dispatch and exit; do not wait for completion
+  --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
+
+Examples:
+  faber ship
+  faber ship --branch feature/new-auth
+  faber ship --background`)
+        exit(0)
       case "setup":
         console.log(`Usage: faber setup [options]
 
@@ -555,6 +600,46 @@ Safe to run multiple times.`)
 
     try {
       await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined)
+    } catch (err: any) {
+      console.error(err.message ?? String(err))
+      exit(1)
+    }
+    return
+  }
+
+  // faber execute <plan-path> [--dir <repo>] [--model <label>] [--background]
+  if (command === "execute") {
+    const planPath = positional[1]
+    if (!planPath) {
+      console.error("Usage: faber execute <plan-path> [--dir <repo>] [--model <label>] [--background]")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
+    const { tier, explicitModel } = parseModelFlag(args)
+    const background = args.includes("--background")
+    try {
+      await runExecute(repoRoot, planPath, tier, explicitModel, background)
+    } catch (err: any) {
+      console.error(err.message ?? String(err))
+      exit(1)
+    }
+    return
+  }
+
+  // faber ship [--branch <name>] [--dir <repo>] [--model <label>] [--background]
+  if (command === "ship") {
+    const branch = parseBranchFlag(args)
+    if (args.includes("--branch") && !branch) {
+      console.error("--branch requires an argument (branch name)")
+      exit(1)
+    }
+    const dirArg = parseDirFlag(args)
+    const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
+    const { tier, explicitModel } = parseModelFlag(args)
+    const background = args.includes("--background")
+    try {
+      await runShip(repoRoot, branch, tier, explicitModel, background)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)

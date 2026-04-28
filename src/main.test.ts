@@ -8,6 +8,14 @@ mock.module("./lib/agent.js", () => ({
   DEFAULT_RESUME_PROMPT: "The task was interrupted. Please continue where you left off.",
 }))
 
+mock.module("./execute.js", () => ({
+  runExecute: mock(async () => {}),
+}))
+
+mock.module("./ship.js", () => ({
+  runShip: mock(async () => {}),
+}))
+
 mock.module("./lib/dispatch.js", () => ({
   createAndDispatchTask: mock(async () => ({
     id: "abcd-fake-task",
@@ -111,6 +119,10 @@ describe("stripFlags", () => {
   it("strips --branch and --pull-request together with other flags", () => {
     expect(stripFlags(["review", "--branch", "feature-x", "--model", "deep"])).toEqual(["review"])
   })
+
+  it("strips --background as a boolean flag without consuming the next token", () => {
+    expect(stripFlags(["execute", "--background", ".plans/foo/PLAN.md"])).toEqual(["execute", ".plans/foo/PLAN.md"])
+  })
 })
 
 describe("parseModelFlag", () => {
@@ -183,6 +195,49 @@ describe("main", () => {
 
     it("does not error on known commands (review)", async () => {
       process.argv = ["bun", "faber", "review"]
+      await main().catch(() => {})
+      expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+
+    it("does not error on known commands (execute)", async () => {
+      process.argv = ["bun", "faber", "execute"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+
+    it("does not error on known commands (ship)", async () => {
+      process.argv = ["bun", "faber", "ship"]
+      await main().catch(() => {})
+      expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+  })
+
+  describe("execute", () => {
+    it("exits 1 with a usage message when no plan path is given", async () => {
+      process.argv = ["bun", "faber", "execute"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("faber execute <plan-path>"))).toBe(true)
+    })
+
+    it("parses a plan path positional correctly (--background does not consume it)", async () => {
+      process.argv = ["bun", "faber", "execute", "--background", ".plans/foo/PLAN.md"]
+      await main().catch(() => {})
+      expect(errorLines.some((l) => l.includes("faber execute <plan-path>"))).toBe(false)
+    })
+  })
+
+  describe("ship", () => {
+    it("exits 1 with an error when --branch has no argument", async () => {
+      process.argv = ["bun", "faber", "ship", "--branch"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--branch requires an argument"))).toBe(true)
+    })
+
+    it("dispatches without error when called with no flags", async () => {
+      process.argv = ["bun", "faber", "ship"]
       await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
     })
