@@ -7,10 +7,6 @@ description: Takes a PLAN.md and drives it through implementation, review, and s
 
 Take a PLAN.md and produce a pull request with passing CI. Input: a path to a PLAN.md. Output: a PR URL. This skill chains three faber subcommands -- `faber execute`, `faber review`, and `faber ship` -- with a review->fix loop in between when needed.
 
-## Why this is a separate skill from `executing-work`
-
-`executing-work` ends with the implementer's own pre-handoff review: a sanity check by the agent that wrote the code. This skill is the next agent in the chain. It did not write the code and cannot rely on the implementer's self-assessment. It runs its own post-handoff review before shipping because shipping creates external artefacts (a PR, CI runs) that are expensive to roll back.
-
 Reference `reviewing-faber-tasks` for the review->fix loop mechanics and `using-faber` for command flags and exit codes.
 
 ## Step 1: Execute the plan
@@ -72,9 +68,3 @@ Four conditions end the workflow before a PR is open. In each case, output a cle
 4. **Ship failed.** `faber ship` printed a non-`ready` status, or the agent's final message did not include a PR URL.
 
 Do not loop indefinitely. Do not delete tasks autonomously. Preserve the failure state for the user to inspect.
-
-## What this skill does not do
-
-- No autonomous deletion or rollback of any task.
-- No skipping the review step on the assumption that `executing-work` already reviewed -- that was a different agent with a different lens.
-- No retrying ship more than once.
