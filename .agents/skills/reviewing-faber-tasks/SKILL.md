@@ -11,32 +11,48 @@ the review found.
 
 ## Step 1: Run a review
 
-Use `faber review --task <id>` to dispatch a review of the task's branch
-against its base. The review runs as another faber task at the `deep` tier
-and blocks until it finishes, then prints its findings to stdout. The
-original task prompt is automatically included in the review prompt, so
-the reviewer knows what was asked.
+Dispatch a review in the background using these four calls in sequence:
 
-If you have additional context the reviewer should know -- a follow-up
-direction, a constraint that emerged after dispatch, or "ignore the test
-file changes, those are out of scope" -- pass it with `--context`:
+**1. Dispatch the review:**
 
 ```bash
-faber review --task <id> --context "the auth changes are the focus; tests are deferred"
+faber review --background --task <originalTaskId>
+# prints the review task ID -- capture it
 ```
 
-`faber review --task` rejects tasks that aren't `ready` and tasks with no
-commits. If the task has no commits, skip to `faber done` (see Step 2).
-For trivial mechanical changes you can pass `--model fast` to save tokens,
-but the default is right for almost everything.
+Pass `--context` if you have anything the reviewer should know -- a constraint that emerged after dispatch, scope that's out of bounds, a follow-up direction:
 
-The review task itself is auto-completed once it finishes, so you don't
-need to chase it down with `faber done`. If you want to ask the reviewer
-follow-up questions, the `faber continue <reviewTaskId>` hint at the end
-of the output still works.
+```bash
+faber review --background --task <originalTaskId> --context 'the auth changes are the focus; tests are deferred'
+```
 
-If you need more context than the findings give you -- to understand what
-the agent attempted, or why -- load the `reading-faber-logs` skill.
+For trivial mechanical changes you can pass `--model fast` to save tokens, but the default is right for almost everything.
+
+`faber review --task` rejects tasks that aren't `ready` and tasks with no commits. If the task has no commits, the command errors before it dispatches a review task -- skip straight to `faber done <originalTaskId>` in Step 2.
+
+**2. Wait for the review to finish:**
+
+```bash
+faber watch <reviewTaskId>
+```
+
+**3. Read the findings:**
+
+```bash
+faber read <reviewTaskId>
+```
+
+The findings are the final text section starting with `# Review Findings`. If the review task ended in `failed` or `stopped` (visible via `faber list`, or absent findings heading), the review didn't complete -- retry the four-call sequence or escalate rather than routing the original task.
+
+**4. Close the review task:**
+
+```bash
+faber done <reviewTaskId>
+```
+
+Background mode does not auto-complete the review task, so this step is required.
+
+If you need more context than the findings give you -- to understand what the agent attempted, or why -- load the `reading-faber-logs` skill.
 
 ## Step 2: Route the task
 
@@ -44,56 +60,116 @@ Pick one of four paths based on the review findings.
 
 **The work looks good and has commits:** merge it with `faber merge`. This rebases the task branch onto the current base branch HEAD, fast-forward merges it, and removes the worktree. Only merge when the review came back clean (or with findings you've judged not to be blockers).
 
-**The task is ready but made no commits:** mark it done with `faber done`. This case is reached when `faber review --task` errors with `Task "<id>" has no commits to review.`; the response is to call `faber done` directly.
+**The task is ready but made no commits:** mark it done with `faber done`. This case is reached when `faber review --task` errors with `Task "<id>" has no commits to review.` -- the command errors before dispatching a review task, so there is nothing to `faber done` on the review side. Call `faber done <originalTaskId>` directly.
 
-**The work needs correction, is incomplete, or you're unsure about something:** continue it with `faber continue "<new direction>"`. The agent picks up where it left off with full context of what it already did. Use the review findings as the basis for the new prompt. Be specific about which findings to address and which to ignore. After continuing, watch again and run through this loop from the top.
+**The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Be specific about which findings to address and which to ignore.
 
 **The task should be discarded entirely:** delete it with `faber delete --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
 
-## Conflict recovery
+## Step 3: The review->fix loop
 
-If `faber merge` fails with a conflict, the rebase is aborted automatically and the worktree is left intact. Continue the task with instructions to rebase onto the base branch, resolve the conflicts, and commit. Then watch again and retry the merge. If it conflicts again, repeat the loop -- give the agent more context about what changed on the base branch to help it resolve correctly.
+When a review surfaces findings that need addressing, the pattern is:
+
+**1. Send directed feedback to the original task:**
+
+```bash
+faber continue <originalTaskId> '<directed feedback>'
+```
+
+The prompt should cite specific findings by location (`path:line` from the review output) and state explicitly which findings to address and which to intentionally skip.
+
+**2. Wait for the fix:**
+
+```bash
+faber watch <originalTaskId>
+```
+
+**3. Run a fresh review** using Step 1's four calls. Each iteration dispatches a new review task. Old review tasks are closed and done -- do not `faber continue` a closed review task to ask whether a finding was addressed. Start fresh.
+
+**4. Pass `--context` to the re-review** describing what was addressed in this iteration:
+
+```bash
+faber review --background --task <originalTaskId> --context 'addressed findings 1-3 from the previous review; intentionally skipped finding 4 because it is out of scope'
+```
+
+Without this, the reviewer may re-flag findings the agent intentionally ignored.
+
+**5. Route via Step 2** -- merge if clean, continue if there are new findings, delete if the approach is wrong.
+
+**When to stop looping:** two unproductive iterations is the limit. If the same finding keeps coming back, or each fix introduces a different problem, stop and surface the situation to the user. Don't loop indefinitely.
+
+---
+
+**Asking the reviewer follow-up questions** is a separate use case. If you want to ask the reviewer to clarify something in its own findings before you decide how to route, `faber continue <reviewTaskId>` still works -- but only while the review task is still open. This is distinct from Step 3; don't conflate the two. In Step 3 you are always continuing the *original* task, not the review task.
+
+---
+
+### Conflict recovery
+
+If `faber merge` fails with a conflict, the rebase is aborted automatically and the worktree is left intact. This follows the same shape as the fix loop:
+
+```bash
+faber continue <originalTaskId> 'faber merge failed with a conflict in <file>. Rebase onto the base branch, resolve the conflict, and commit.'
+faber watch <originalTaskId>
+faber merge <originalTaskId>
+```
+
+If it conflicts again, repeat -- give the agent more context about what changed on the base branch to help it resolve correctly.
 
 ## Examples
 
 ```bash
-# The work looks good
-faber review --task b7c1-add-rate-limiting
-# (review finds nothing blocking)
+# Clean review -> merge
+REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
+faber watch $REVIEW_ID
+faber read $REVIEW_ID
+# (findings section shows nothing blocking)
+faber done $REVIEW_ID
 faber merge b7c1-add-rate-limiting
-# Merged and removed worktree.
 ```
 
 ```bash
-# Task has no commits -- review surfaces the error, then mark done
-faber review --task b7c1-add-rate-limiting
+# No commits -> faber done (no review task is dispatched)
+faber review --background --task b7c1-add-rate-limiting
 # Error: Task "b7c1-add-rate-limiting" has no commits to review.
 faber done b7c1-add-rate-limiting
 ```
 
 ```bash
-# Review flagged something -- continue with specific feedback
-faber review --task b7c1-add-rate-limiting
-# Review flagged that admin users aren't skipped.
-faber continue b7c1-add-rate-limiting "The review found that admin users aren't skipped by the rate limiter. Update the middleware and the tests."
+# Findings -> fix loop -> merge
+REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
+faber watch $REVIEW_ID
+faber read $REVIEW_ID
+# findings: admin users aren't skipped (src/middleware/rateLimit.ts:42)
+faber done $REVIEW_ID
+
+faber continue b7c1-add-rate-limiting 'Review finding: admin users are not skipped by the rate limiter (src/middleware/rateLimit.ts:42). Fix the middleware and update the tests. The unrelated comment in src/config.ts is intentional -- ignore it.'
 faber watch b7c1-add-rate-limiting
-faber review --task b7c1-add-rate-limiting
+
+REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting --context 'addressed the admin-skip finding from the previous review; the src/config.ts comment was intentional and not addressed')
+faber watch $REVIEW_ID
+faber read $REVIEW_ID
+# (findings section shows nothing blocking)
+faber done $REVIEW_ID
 faber merge b7c1-add-rate-limiting
 ```
 
-```bash
-# Merge failed due to a conflict
-faber merge b7c1-add-rate-limiting
-# Error: merge conflict in src/middleware/rateLimit.ts
-faber continue b7c1-add-rate-limiting "faber merge failed with a conflict in src/middleware/rateLimit.ts. Rebase onto main, resolve the conflict, and commit."
-faber watch b7c1-add-rate-limiting
-faber merge b7c1-add-rate-limiting
-# Merged and removed worktree.
-```
+> **Conflict on merge** -- if `faber merge` fails, follow the conflict recovery pattern from Step 3:
+>
+> ```bash
+> faber merge b7c1-add-rate-limiting
+> # Error: merge conflict in src/middleware/rateLimit.ts
+> faber continue b7c1-add-rate-limiting 'faber merge failed with a conflict in src/middleware/rateLimit.ts. Rebase onto main, resolve the conflict, and commit.'
+> faber watch b7c1-add-rate-limiting
+> faber merge b7c1-add-rate-limiting
+> ```
 
 ```bash
-# The approach is wrong -- discard
-faber review --task b7c1-add-rate-limiting
-# Review flagged that the approach is fundamentally wrong.
+# Approach is wrong -> delete
+REVIEW_ID=$(faber review --background --task b7c1-add-rate-limiting)
+faber watch $REVIEW_ID
+faber read $REVIEW_ID
+# findings: the approach patches the wrong layer; this needs to be redone at the router level
+faber done $REVIEW_ID
 faber delete b7c1-add-rate-limiting --yes
 ```
