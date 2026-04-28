@@ -27,6 +27,17 @@ mock.module("./lib/dispatch.js", () => ({
   createAndDispatchTask: dispatchMock,
 }))
 
+const stopProgressMock = mock(() => {})
+const startProgressSpinnerMock = mock((_repoRoot: string, _taskId: string, _intro: string) => stopProgressMock)
+const waitForTaskMock = mock(async (_repoRoot: string, _taskId: string): Promise<string> => "ready")
+const lastAgentMessageMock = mock((_repoRoot: string, _taskId: string): string | null => null)
+
+mock.module("./lib/managedStep.js", () => ({
+  startProgressSpinner: startProgressSpinnerMock,
+  waitForTask: waitForTaskMock,
+  lastAgentMessage: lastAgentMessageMock,
+}))
+
 import { runReview, trimToReviewFindings } from "./review.js"
 
 let tmpRoot: string
@@ -56,6 +67,10 @@ beforeEach(() => {
   exitCode = null
   dispatchMock.mockClear()
   dispatchMock.mockImplementation(async (_opts: unknown) => fakeTask)
+  waitForTaskMock.mockClear()
+  waitForTaskMock.mockImplementation(async (_repoRoot: string, _taskId: string): Promise<string> => "ready")
+  startProgressSpinnerMock.mockClear()
+  lastAgentMessageMock.mockClear()
   spyOn(console, "log").mockImplementation((...args: unknown[]) => {
     logLines.push(args.map(String).join(" "))
   })
@@ -386,7 +401,8 @@ describe("runReview", () => {
 
     it("marks the review task done and prints 'Review complete' when it ends in ready status", async () => {
       git("checkout -b feature-x")
-      seedReviewTask(tmpRoot, "ready")
+      seedReviewTask(tmpRoot, "running")
+      waitForTaskMock.mockImplementation(async () => "ready")
 
       const written: string[] = []
       spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
@@ -410,7 +426,7 @@ describe("runReview", () => {
 
     it("does not mark done and prints original hint when task ends in non-ready status", async () => {
       git("checkout -b feature-x")
-      seedReviewTask(tmpRoot, "failed")
+      waitForTaskMock.mockImplementation(async () => "failed")
 
       const written: string[] = []
       spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
