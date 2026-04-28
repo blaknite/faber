@@ -35,7 +35,7 @@ export async function runExecute(
   const baseBranch = readCurrentBranch(repoRoot) || "HEAD"
 
   const prompt = [
-    `Execute the plan at ${absPlan}.`,
+    `Execute the following plan:`,
     "",
     "Load the skill `executing-work`.",
     "",
