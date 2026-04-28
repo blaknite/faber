@@ -98,11 +98,7 @@ Without this, the reviewer may re-flag findings the agent intentionally ignored.
 
 **When to stop looping:** two unproductive iterations is the limit. If the same finding keeps coming back, or each fix introduces a different problem, stop and surface the situation to the user. Don't loop indefinitely.
 
----
-
-**Asking the reviewer follow-up questions** is a separate use case. If you want to ask the reviewer to clarify something in its own findings before you decide how to route, `faber continue <reviewTaskId>` still works -- but only while the review task is still open. This is distinct from Step 3; don't conflate the two. In Step 3 you are always continuing the *original* task, not the review task.
-
----
+> **Note:** Asking the reviewer follow-up questions is a separate use case. If you want to ask the reviewer to clarify something in its own findings before you decide how to route, `faber continue <reviewTaskId>` still works -- but only while the review task is still open. This is distinct from Step 3; don't conflate the two. In Step 3 you are always continuing the *original* task, not the review task.
 
 ### Conflict recovery
 
@@ -132,6 +128,7 @@ faber merge b7c1-add-rate-limiting
 # No commits -> faber done (no review task is dispatched)
 faber review --background --task b7c1-add-rate-limiting
 # Error: Task "b7c1-add-rate-limiting" has no commits to review.
+# command errored before dispatching a review task -- no faber done needed on the review side
 faber done b7c1-add-rate-limiting
 ```
 
@@ -154,15 +151,14 @@ faber done $REVIEW_ID
 faber merge b7c1-add-rate-limiting
 ```
 
-> **Conflict on merge** -- if `faber merge` fails, follow the conflict recovery pattern from Step 3:
->
-> ```bash
-> faber merge b7c1-add-rate-limiting
-> # Error: merge conflict in src/middleware/rateLimit.ts
-> faber continue b7c1-add-rate-limiting 'faber merge failed with a conflict in src/middleware/rateLimit.ts. Rebase onto main, resolve the conflict, and commit.'
-> faber watch b7c1-add-rate-limiting
-> faber merge b7c1-add-rate-limiting
-> ```
+```bash
+# Conflict on merge -- follow the conflict recovery pattern from Step 3
+faber merge b7c1-add-rate-limiting
+# Error: merge conflict in src/middleware/rateLimit.ts
+faber continue b7c1-add-rate-limiting 'faber merge failed with a conflict in src/middleware/rateLimit.ts. Rebase onto main, resolve the conflict, and commit.'
+faber watch b7c1-add-rate-limiting
+faber merge b7c1-add-rate-limiting
+```
 
 ```bash
 # Approach is wrong -> delete
