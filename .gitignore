@@ -6,3 +6,4 @@ faber
 .bk.yaml
 .plans
 .plans/
+.opencode/package-lock.json
