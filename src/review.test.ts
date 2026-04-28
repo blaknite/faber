@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 import type { Task } from "./types.js"
+import { addTask, ensureFaberDir } from "./lib/state.js"
 
 const dispatchMock = mock(async (_opts: unknown) => fakeTask)
 
@@ -198,6 +199,242 @@ describe("runReview", () => {
       } catch (e) {
         expect(String(e)).toContain("default branch")
       }
+    })
+  })
+
+  describe("task mode", () => {
+    function seedTask(root: string, patch: Partial<Task> = {}): Task {
+      ensureFaberDir(root)
+      const task: Task = {
+        id: "a1b2c3-task-for-review",
+        prompt: "Fix the login bug so users can sign in",
+        model: "anthropic/claude-sonnet-4-6",
+        status: "ready",
+        pid: null,
+        worktree: ".worktrees/a1b2c3-task-for-review",
+        sessionId: null,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        exitCode: 0,
+        hasCommits: true,
+        baseBranch: "main",
+        ...patch,
+      }
+      addTask(root, task)
+      return task
+    }
+
+    it("resolves task branch and uses baseBranch as review base", async () => {
+      const task = seedTask(tmpRoot)
+      try {
+        await runReview(tmpRoot, { kind: "task", id: task.id })
+      } catch {
+        // expected (worktree doesn't exist)
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.baseBranch).toBe(task.id)
+      expect(callOpts.prompt).toContain(`Review task \`${task.id}\` against \`main\``)
+    })
+
+    it("includes the original task prompt under ## Original task", async () => {
+      const task = seedTask(tmpRoot)
+      try {
+        await runReview(tmpRoot, { kind: "task", id: task.id })
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).toContain("## Original task")
+      expect(callOpts.prompt).toContain(task.prompt)
+    })
+
+    it("errors when the task is not found", async () => {
+      ensureFaberDir(tmpRoot)
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "nonexistent" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain('No task matching "nonexistent"')
+      }
+    })
+
+    it("errors when the task status is running", async () => {
+      seedTask(tmpRoot, { status: "running" })
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "a1b2c3-task-for-review" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain('only "ready" tasks can be reviewed')
+      }
+    })
+
+    it("errors when the task status is failed", async () => {
+      seedTask(tmpRoot, { status: "failed" })
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "a1b2c3-task-for-review" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain('only "ready" tasks can be reviewed')
+      }
+    })
+
+    it("errors when the task status is done", async () => {
+      seedTask(tmpRoot, { status: "done" })
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "a1b2c3-task-for-review" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain('only "ready" tasks can be reviewed')
+      }
+    })
+
+    it("errors when the task has no commits", async () => {
+      seedTask(tmpRoot, { hasCommits: false })
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "a1b2c3-task-for-review" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain("has no commits to review")
+      }
+    })
+
+    it("errors when task.id equals task.baseBranch", async () => {
+      seedTask(tmpRoot, { baseBranch: "a1b2c3-task-for-review" })
+      try {
+        await runReview(tmpRoot, { kind: "task", id: "a1b2c3-task-for-review" })
+        expect(true).toBe(false)
+      } catch (e) {
+        expect(String(e)).toContain("its branch matches its base")
+      }
+    })
+  })
+
+  describe("extra context", () => {
+    it("includes ## Additional context when extraContext is passed", async () => {
+      git("checkout -b feature-x")
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, "pay attention to auth")
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).toContain("## Additional context")
+      expect(callOpts.prompt).toContain("pay attention to auth")
+    })
+
+    it("places ## Original task before ## Additional context in task mode", async () => {
+      ensureFaberDir(tmpRoot)
+      const task: Task = {
+        id: "a1b2c3-task-for-review",
+        prompt: "Fix the login bug",
+        model: "anthropic/claude-sonnet-4-6",
+        status: "ready",
+        pid: null,
+        worktree: ".worktrees/a1b2c3-task-for-review",
+        sessionId: null,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        exitCode: 0,
+        hasCommits: true,
+        baseBranch: "main",
+      }
+      addTask(tmpRoot, task)
+      try {
+        await runReview(tmpRoot, { kind: "task", id: task.id }, undefined, undefined, false, "focus on error handling")
+      } catch {
+        // expected (worktree doesn't exist)
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      const prompt: string = callOpts.prompt
+      const originalIdx = prompt.indexOf("## Original task")
+      const additionalIdx = prompt.indexOf("## Additional context")
+      expect(originalIdx).toBeGreaterThan(-1)
+      expect(additionalIdx).toBeGreaterThan(-1)
+      expect(originalIdx).toBeLessThan(additionalIdx)
+    })
+
+    it("does not add ## Additional context for empty string", async () => {
+      git("checkout -b feature-x")
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, "")
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).not.toContain("## Additional context")
+    })
+
+    it("does not add ## Additional context for whitespace-only string", async () => {
+      git("checkout -b feature-x")
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, "   ")
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).not.toContain("## Additional context")
+    })
+  })
+
+  describe("auto-completion", () => {
+    function seedReviewTask(root: string, status: Task["status"]): Task {
+      ensureFaberDir(root)
+      const task: Task = { ...fakeTask, status }
+      addTask(root, task)
+      return task
+    }
+
+    it("marks the review task done and prints 'Review complete' when it ends in ready status", async () => {
+      git("checkout -b feature-x")
+      seedReviewTask(tmpRoot, "ready")
+
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      try {
+        await runReview(tmpRoot, { kind: "current" })
+      } catch {
+        // expected
+      }
+
+      const output = written.join("")
+      expect(output).toContain("Review complete.")
+    })
+
+    it("does not mark done and prints original hint when task ends in non-ready status", async () => {
+      git("checkout -b feature-x")
+      seedReviewTask(tmpRoot, "failed")
+
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      try {
+        await runReview(tmpRoot, { kind: "current" })
+      } catch {
+        // expected
+      }
+
+      const output = written.join("")
+      expect(output).toContain("To ask follow-up questions or request changes")
+      expect(output).not.toContain("Review complete.")
+    })
+
+    it("does not auto-complete in background mode", async () => {
+      git("checkout -b feature-x")
+
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, true)
+      } catch {
+        // expected
+      }
+
+      expect(logLines.some((l) => l.includes(fakeTask.id))).toBe(true)
     })
   })
 })
