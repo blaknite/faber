@@ -84,19 +84,17 @@ The prompt should cite specific findings by location (`path:line` from the revie
 faber watch <originalTaskId>
 ```
 
-**3. Run a fresh review** using Step 1's four calls. Each iteration dispatches a new review task. Old review tasks are closed and done -- do not `faber continue` a closed review task to ask whether a finding was addressed. Start fresh.
-
-**4. Pass `--context` to the re-review** describing what was addressed in this iteration:
+**3. Run a fresh review** using Step 1's four calls, passing `--context` to describe what was addressed in this iteration and what was intentionally skipped:
 
 ```bash
 faber review --background --task <originalTaskId> --context 'addressed findings 1-3 from the previous review; intentionally skipped finding 4 because it is out of scope'
 ```
 
-Without this, the reviewer may re-flag findings the agent intentionally ignored.
+Each iteration dispatches a new review task. Old review tasks are closed and done -- do not `faber continue` a closed review task. Without `--context`, the reviewer may re-flag findings the agent intentionally ignored.
 
-**5. Route via Step 2** -- merge if clean, continue if there are new findings, delete if the approach is wrong.
+**4. Route via Step 2** -- merge if clean, continue if there are new findings, delete if the approach is wrong.
 
-**When to stop looping:** two unproductive iterations is the limit. If the same finding keeps coming back, or each fix introduces a different problem, stop and surface the situation to the user. Don't loop indefinitely.
+**When to stop looping:** stop after two unproductive iterations and surface the situation to the user. An iteration is unproductive if (a) the same finding comes back unfixed, or (b) each fix introduces a different problem -- meaning the task isn't converging. Don't loop indefinitely.
 
 > **Note:** Asking the reviewer follow-up questions is a separate use case. If you want to ask the reviewer to clarify something in its own findings before you decide how to route, `faber continue <reviewTaskId>` still works -- but only while the review task is still open. This is distinct from Step 3; don't conflate the two. In Step 3 you are always continuing the *original* task, not the review task.
 
