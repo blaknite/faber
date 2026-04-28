@@ -37,13 +37,13 @@ faber done <reviewTaskId>
 
 Route based on the findings:
 
-- **Clean** -- run `faber merge <executeTaskId>` to merge the executor branch, then proceed to Step 3.
-- **Findings that need addressing** -- run `faber continue <executeTaskId>` with directed feedback citing the specific findings, wait for the fix, then re-review. Pass `--context` on the next review to tell the reviewer what was addressed and what was intentionally skipped. Stop after two unproductive iterations (same finding returns unfixed, or each fix introduces a different problem) and surface what was tried to the user.
+- **Clean** -- when `faber watch <reviewTaskId>` returns and findings are clean, run `faber merge <executeTaskId>` to merge the executor branch, then proceed to Step 3.
+- **Findings that need addressing** -- run `faber continue <executeTaskId>` with directed feedback citing the specific findings, then run `faber watch <executeTaskId>` to wait for the fix, then re-review. Pass `--context` on the next review to tell the reviewer what was addressed and what was intentionally skipped. Stop after two unproductive iterations (same finding returns unfixed, or each fix introduces a different problem) and surface what was tried to the user.
 - **Approach is fundamentally wrong** -- surface the finding to the user and stop. Do not delete the executor task autonomously; the user decides what to do with it.
 
 ## Step 3: Ship the merged branch
 
-Run `faber ship` in foreground mode against the current branch (the orchestrator's branch, which now includes the merged executor work):
+Run `faber ship` in foreground mode against the current branch (the orchestrator's branch, which now includes the merged executor work). Run in foreground mode to capture the status line and final message:
 
 ```bash
 faber ship
