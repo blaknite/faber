@@ -54,31 +54,32 @@ Exits immediately if the task is already in a terminal state (`ready`, `done`, `
 ## Reviewing a task
 
 ```bash
-faber review --background
+faber review --background [--task <id>] [--branch <name>] [--pull-request <num-or-url>] [--context <text>] [--model <label>]
 ```
 
-Options:
-- `--task <id>`: specify a task to review
-- `--branch <name>`: specify a branch to review
-- `--pull-request <num-or-url>`: specify a PR to review
-- `--context`: pass information to the reviewer (scope out of bounds, follow-up direction, what was addressed previously)
-- `--model`: reviewer tier (`fast` for trivial changes, `deep` for complex work)
+`--background` is the mode agents use. Without it, the command runs in the foreground for humans -- spinner, rendered findings, auto-complete. That mode is not suitable for agents.
 
-`--background` is the mode agents use. Without it, the command runs in the foreground for humans (spinner, rendered findings, auto-complete). That mode is not suitable for agents.
+With `--background`, the command prints `Task <reviewTaskId> running` and exits immediately. The caller is responsible for watching, reading, and closing the review task. Background mode does not auto-complete the review task.
 
-`--background` prints the review task ID and exits immediately. The caller is responsible for watching, reading, and closing the review task. Background mode does not auto-complete the review task.
-
-Four-call pattern:
 ```bash
-REVIEW_ID=$(faber review --background --task taskId)
-faber watch $REVIEW_ID
-faber read $REVIEW_ID
-faber done $REVIEW_ID
+faber review --background --task <taskId>
+# Task <reviewTaskId> running  <- capture this ID
+faber watch <reviewTaskId>
+faber read <reviewTaskId>
+faber done <reviewTaskId>
 ```
 
-The findings are the final assistant message in the review task log, identifiable by the `Review Findings` heading. Everything before that heading in `faber read` output is tool calls and earlier messages. Locate the heading and read from there.
+The findings are the final assistant message in the review task log, identifiable by the `# Review Findings` heading. Everything before that heading in `faber read` output is tool calls and earlier messages. Locate the heading and read from there.
+
+Use `--context` to pass the reviewer anything it should know: scope that is out of bounds, follow-up direction, what was addressed in a previous iteration. Use `--model fast` for trivial changes; the default deep tier is right for almost everything.
 
 Load `reviewing-faber-tasks` for the full review->fix loop pattern.
+
+## Listing tasks
+
+```bash
+faber list
+```
 
 Prints a table of all tasks with their ID, status, elapsed time, and prompt. Filter by status:
 
