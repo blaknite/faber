@@ -266,23 +266,21 @@ describe("runShip", () => {
       expect(output).toContain("faber delete")
     })
 
-    it("does not call updateTask, removeTask, or removeWorktree", async () => {
+    it("does not transition task status after completing", async () => {
       makeFeatureBranch("feature-x")
-      const written: string[] = []
-      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
-        written.push(String(chunk))
-        return true
-      })
+      const { ensureFaberDir, addTask, readState } = await import("./lib/state.js")
 
-      const updateTaskSpy = mock(() => {})
-      const removeTaskSpy = mock(() => {})
-      const removeWorktreeSpy = mock(async () => {})
+      ensureFaberDir(tmpRoot)
+      addTask(tmpRoot, { ...fakeTask, status: "ready" })
+
+      waitForTaskMock.mockImplementation(async () => "ready")
+      spyOn(process.stdout, "write").mockImplementation(() => true)
 
       await runShip(tmpRoot, "feature-x")
 
-      expect(updateTaskSpy).not.toHaveBeenCalled()
-      expect(removeTaskSpy).not.toHaveBeenCalled()
-      expect(removeWorktreeSpy).not.toHaveBeenCalled()
+      const state = readState(tmpRoot)
+      const found = state.tasks.find((t) => t.id === fakeTask.id)
+      expect(found?.status).toBe("ready")
     })
   })
 
