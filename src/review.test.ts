@@ -426,6 +426,7 @@ describe("runReview", () => {
 
     it("does not mark done and prints original hint when task ends in non-ready status", async () => {
       git("checkout -b feature-x")
+      seedReviewTask(tmpRoot, "failed")
       waitForTaskMock.mockImplementation(async () => "failed")
 
       const written: string[] = []
@@ -443,6 +444,10 @@ describe("runReview", () => {
       const output = written.join("")
       expect(output).toContain("To ask follow-up questions or request changes")
       expect(output).not.toContain("Review complete.")
+
+      const state = readState(tmpRoot)
+      const reviewTask = state.tasks.find((t) => t.id === fakeTask.id)
+      expect(reviewTask?.status).toBe("failed")
     })
 
     it("does not auto-complete in background mode", async () => {
