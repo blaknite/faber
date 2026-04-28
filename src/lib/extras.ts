@@ -7,6 +7,7 @@ const RAW_BASE = "https://raw.githubusercontent.com"
 
 // The skills bundled with faber. Keep this in sync with .agents/skills/.
 export const BUNDLED_SKILL_NAMES = [
+  "delivering-work",
   "executing-work",
   "orchestrating-faber-tasks",
   "reading-faber-logs",
@@ -21,9 +22,11 @@ export const BUNDLED_SKILL_NAMES = [
 
 // The opencode slash commands bundled with faber.
 export const BUNDLED_COMMAND_NAMES = [
+  "faber-deliver",
   "faber-execute",
   "faber-logs",
   "faber-plan",
+  "faber-review",
   "faber-run",
   "faber-ship",
 ]
