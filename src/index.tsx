@@ -78,10 +78,12 @@ function parseTaskFlag(args: string[]): string | null {
   return null
 }
 
-// Parse --context <text> from an args array. Returns the context text or null.
+// Parse --context <text> from an args array. Returns the raw value (including
+// empty string) when --context is followed by a token, or null when the flag
+// is absent or has no following token.
 function parseContextFlag(args: string[]): string | null {
   const i = args.indexOf("--context")
-  if (i !== -1 && args[i + 1]) return args[i + 1]!
+  if (i !== -1 && i + 1 < args.length) return args[i + 1]!
   return null
 }
 
@@ -90,7 +92,7 @@ function parseContextFlag(args: string[]): string | null {
 // arithmetic (positional[1], positional[2], ...) without worrying about flags
 // appearing before positionals.
 //
-// Flags that consume a following value: --model, --dir, --base, --status, --branch, --pull-request
+// Flags that consume a following value: --model, --dir, --base, --status, --branch, --pull-request, --task, --context
 // Boolean flags (no value): --full, --json, --yes, -h, --help
 //
 // The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
@@ -535,11 +537,7 @@ Safe to run multiple times.`)
       console.error("--task requires an argument (task id)")
       exit(1)
     }
-    if (args.includes("--context") && !context) {
-      console.error("--context requires an argument (text)")
-      exit(1)
-    }
-    if (context !== null && !context.trim()) {
+    if (args.includes("--context") && (context === null || !context.trim())) {
       console.error("--context requires non-empty text")
       exit(1)
     }

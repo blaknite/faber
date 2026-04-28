@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 import type { Task } from "./types.js"
-import { addTask, ensureFaberDir } from "./lib/state.js"
+import { addTask, ensureFaberDir, readState } from "./lib/state.js"
 
 const dispatchMock = mock(async (_opts: unknown) => fakeTask)
 
@@ -402,6 +402,10 @@ describe("runReview", () => {
 
       const output = written.join("")
       expect(output).toContain("Review complete.")
+
+      const state = readState(tmpRoot)
+      const reviewTask = state.tasks.find((t) => t.id === fakeTask.id)
+      expect(reviewTask?.status).toBe("done")
     })
 
     it("does not mark done and prints original hint when task ends in non-ready status", async () => {
