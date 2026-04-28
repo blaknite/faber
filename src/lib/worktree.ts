@@ -1,4 +1,4 @@
-import { execa } from "execa"
+import { execa, execaSync } from "execa"
 import { join } from "node:path"
 import { readFileSync, existsSync, symlinkSync, rmSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -29,6 +29,24 @@ export async function removeWorktree(repoRoot: string, slug: string): Promise<vo
     await execa("git", ["branch", "-D", slug], { cwd: repoRoot })
   } catch {
     // Branch may already be gone, that's fine
+  }
+}
+
+export function branchExists(repoRoot: string, name: string): boolean {
+  try {
+    execaSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${name}`], { cwd: repoRoot })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function commitsAhead(repoRoot: string, branch: string, base: string): Promise<number> {
+  try {
+    const { stdout } = await execa("git", ["rev-list", "--count", `${base}..${branch}`], { cwd: repoRoot })
+    return parseInt(stdout.trim(), 10) || 0
+  } catch {
+    return 0
   }
 }
 

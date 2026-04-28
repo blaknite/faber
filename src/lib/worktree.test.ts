@@ -4,6 +4,8 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { execSync } from "node:child_process"
 import {
+  branchExists,
+  commitsAhead,
   createWorktree,
   getDiff,
   getProjectDirectories,
@@ -320,6 +322,50 @@ describe("mergeBranch", () => {
     const status = execSync("git status", { cwd: tmpRoot, encoding: "utf8" })
     expect(status).not.toContain("rebase in progress")
     expect(status).not.toContain("You have unmerged paths")
+  })
+})
+
+describe("branchExists", () => {
+  it("returns true for an existing branch", () => {
+    expect(branchExists(tmpRoot, "main")).toBe(true)
+  })
+
+  it("returns false for a branch that does not exist", () => {
+    expect(branchExists(tmpRoot, "no-such-branch")).toBe(false)
+  })
+
+  it("returns false outside a git repo", () => {
+    const noGit = join(tmpdir(), `faber-no-git-${Date.now()}`)
+    mkdirSync(noGit, { recursive: true })
+    try {
+      expect(branchExists(noGit, "main")).toBe(false)
+    } finally {
+      rmSync(noGit, { recursive: true, force: true })
+    }
+  })
+})
+
+describe("commitsAhead", () => {
+  it("returns the correct count when a feature branch is ahead of main", async () => {
+    git("checkout -b feature-ahead")
+    writeFileSync(join(tmpRoot, "feature-file.ts"), "export const x = 1\n")
+    git("add .")
+    git('commit -m "feature commit"')
+    git("checkout main")
+    const count = await commitsAhead(tmpRoot, "feature-ahead", "main")
+    expect(count).toBe(1)
+  })
+
+  it("returns 0 when the branch has no commits ahead of base", async () => {
+    git("checkout -b same-as-main")
+    git("checkout main")
+    const count = await commitsAhead(tmpRoot, "same-as-main", "main")
+    expect(count).toBe(0)
+  })
+
+  it("returns 0 on error (e.g. non-existent branch)", async () => {
+    const count = await commitsAhead(tmpRoot, "ghost-branch", "main")
+    expect(count).toBe(0)
   })
 })
 
