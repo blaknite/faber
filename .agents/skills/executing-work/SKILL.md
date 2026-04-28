@@ -29,9 +29,9 @@ Dispatch all independent tasks upfront. Hold dependent tasks until their prerequ
 
 ### Review
 
-As each task completes, read the diff. This is where the quality bar matters: read it like you'd review a colleague's work. Does it do what was asked? Does the code make sense? Is it something you'd be comfortable building on top of? Don't merge work you're not confident in. Everything that follows builds on what you merge here.
+As each task completes, follow `reviewing-faber-tasks` to assess it. The mechanics live there -- run `faber review --task <id>`, read the findings, route the task. This step exists to remind you that the quality bar matters: don't merge work you're not confident in. Everything that follows builds on what you merge here.
 
-If a task isn't right, continue it with specific feedback. If it's unsalvageable, delete it and dispatch a replacement with a better prompt. Only merge work you're genuinely satisfied with.
+If a task isn't right, continue it with specific feedback drawn from the review. If it's unsalvageable, delete it and dispatch a replacement with a better prompt. Only merge work you're genuinely satisfied with.
 
 ### Iterate
 
@@ -41,9 +41,15 @@ Dispatch the next round and repeat. Keep going until every piece of the plan has
 
 ## Step 4: Final review
 
-Do a proper review of the combined result before handing off to shipping.
+Do a proper review of the combined result before handing off to shipping. The per-task reviews in step 3 checked each slice individually; now you're seeing it as one change for the first time.
 
-Read through the full diff of all merged work. The per-task reviews in step 3 checked each slice individually. Now you're seeing it as one change for the first time. Does it hold together? Does the code read well as a whole, or does it feel like disconnected patches stitched together? Compare it against the plan's requirements and make sure nothing was missed or only partially addressed.
+Run `faber review` on the current branch (no flags) to get a fresh read of the merged work against the base branch. Add `--context` to point the reviewer at the plan or anything else worth flagging:
+
+```bash
+faber review --context "implements the plan at .plans/<feature>/PLAN.md; check for gaps against the requirements"
+```
+
+The findings tell you whether the slices hold together, whether anything was missed, and whether the code reads well as a whole. Skim the diff yourself too -- you're the one signing off.
 
 Run the tests that are relevant to what changed. For small projects that might mean the full suite. For large codebases, focus on the tests that cover the areas that were touched. The full integration test happens in CI later, but you should be confident the code works before you get there.
 
