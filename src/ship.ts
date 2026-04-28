@@ -34,6 +34,14 @@ export async function runShip(
     throw new Error(`Branch \`${target}\` does not exist locally.`)
   }
 
+  const globalConfigPath = join(homedir(), ".faber", "faber.json")
+  const projectConfigPath = join(repoRoot, ".faber", "faber.json")
+  const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
+
+  if (cleanroomEnabled(loadedConfig)) {
+    throw new Error("faber ship requires cleanroom mode disabled (the gh CLI is needed to open the pull request).")
+  }
+
   const defaultBranch = findDefaultBranch(repoRoot)
   if (!defaultBranch) {
     throw new Error("Could not determine the default branch (no origin/HEAD and no local main or master).")
@@ -45,14 +53,6 @@ export async function runShip(
   const ahead = await commitsAhead(repoRoot, target, defaultBranch)
   if (ahead === 0) {
     throw new Error(`Branch \`${target}\` has no commits ahead of \`${defaultBranch}\`. Nothing to ship.`)
-  }
-
-  const globalConfigPath = join(homedir(), ".faber", "faber.json")
-  const projectConfigPath = join(repoRoot, ".faber", "faber.json")
-  const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
-
-  if (cleanroomEnabled(loadedConfig)) {
-    throw new Error("faber ship requires cleanroom mode disabled (the gh CLI is needed to open the pull request).")
   }
 
   const prompt = [
