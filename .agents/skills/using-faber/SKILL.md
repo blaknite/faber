@@ -51,11 +51,34 @@ faber watch <taskId>
 
 Exits immediately if the task is already in a terminal state (`ready`, `done`, `failed`, or `stopped`). Useful in scripts that dispatch a task and need to wait before continuing.
 
-## Listing tasks
+## Reviewing a task
 
 ```bash
-faber list
+faber review --background
 ```
+
+Options:
+- `--task <id>`: specify a task to review
+- `--branch <name>`: specify a branch to review
+- `--pull-request <num-or-url>`: specify a PR to review
+- `--context`: pass information to the reviewer (scope out of bounds, follow-up direction, what was addressed previously)
+- `--model`: reviewer tier (`fast` for trivial changes, `deep` for complex work)
+
+`--background` is the mode agents use. Without it, the command runs in the foreground for humans (spinner, rendered findings, auto-complete). That mode is not suitable for agents.
+
+`--background` prints the review task ID and exits immediately. The caller is responsible for watching, reading, and closing the review task. Background mode does not auto-complete the review task.
+
+Four-call pattern:
+```bash
+REVIEW_ID=$(faber review --background --task taskId)
+faber watch $REVIEW_ID
+faber read $REVIEW_ID
+faber done $REVIEW_ID
+```
+
+The findings are the final assistant message in the review task log, identifiable by the `Review Findings` heading. Everything before that heading in `faber read` output is tool calls and earlier messages. Locate the heading and read from there.
+
+Load `reviewing-faber-tasks` for the full review->fix loop pattern.
 
 Prints a table of all tasks with their ID, status, elapsed time, and prompt. Filter by status:
 
