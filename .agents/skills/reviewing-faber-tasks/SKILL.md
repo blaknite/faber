@@ -64,7 +64,7 @@ Pick one of four paths based on the review findings.
 
 **The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Be specific about which findings to address and which to ignore.
 
-**The task should be discarded entirely:** delete it with `faber delete --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
+**The task should be discarded entirely:** delete it with `faber delete <taskId> --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
 
 ## Step 3: The review->fix loop
 
