@@ -104,6 +104,7 @@ export function spawnAgent(
             bash: {
               "*": "deny",
               "git *": "allow",
+              "faber *": "allow",
             },
             cleanroom_exec: "allow",
           } : {}),
