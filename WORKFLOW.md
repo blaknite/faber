@@ -12,6 +12,61 @@ Shaping forces you to think before anyone writes code, and that thinking prevent
 
 Get shaping and planning right and execution is predictable.
 
+## The flow at a glance
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant OC as opencode
+    participant Plan as PLAN.md
+    participant Deliver as faber deliver
+    participant Execute as faber execute
+    participant Run as faber run (parallel)
+    participant Review as faber review
+    participant Ship as faber ship
+    participant GH as GitHub
+
+    User->>OC: rough idea
+    OC->>OC: clarify intent, investigate codebase
+    OC->>Plan: write PLAN.md
+    OC-->>User: plan ready
+    User->>OC: deliver it
+
+    OC->>Deliver: faber deliver <plan-path>
+
+    Deliver->>Execute: faber execute --background
+    Execute->>Execute: break plan into tasks
+
+    loop for each round of independent tasks
+        Execute->>Run: faber run (parallel)
+        Run->>Run: implement in isolated worktrees
+        Run-->>Execute: ready (commits on branch)
+        Execute->>Review: faber review --background
+        Review-->>Execute: findings (clean)
+        Execute->>Execute: faber merge
+    end
+
+    Execute-->>Deliver: ready (all tasks merged)
+
+    Deliver->>Review: faber review --background --task <execId>
+    Review->>Review: assess diff against plan
+    Review-->>Deliver: findings (clean)
+    Deliver->>Deliver: faber merge <execId>
+
+    Deliver->>Ship: faber ship --background
+    Ship->>Ship: push branch
+    Ship->>GH: gh pr create
+    GH-->>Ship: PR URL
+    Ship->>GH: watch CI checks
+    GH-->>Ship: checks green
+    Ship-->>Deliver: ready (PR URL)
+
+    Deliver-->>OC: PR URL
+    OC-->>User: PR URL
+```
+
+The diagram shows the happy path. The `loop` block is where the executor fans out into parallel sub-tasks; each one goes through its own review->fix loop before being merged. Real runs often iterate a review->continue loop on individual tasks too, which is omitted here for clarity.
+
 ## You: Shape the work (`shaping-work`)
 
 This is a conversation between you and an agent. Start with a rough idea. An issue, a feature request, a problem that needs solving. The goal is to move from "we should do this" to "here's exactly what we're building and why."
