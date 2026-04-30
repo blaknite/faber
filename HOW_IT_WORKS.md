@@ -91,7 +91,11 @@ Key bindings:
 
 `AgentLog` renders a full-screen view of a single task's output, streaming in real time from the task's `.jsonl` file via `fs.watch` (falling back to 500ms polling).
 
-Each line of the JSONL file is a JSON event from opencode. The log view normalises these into display rows:
+Each line of the JSONL file is a typed event envelope: `{ type, timestamp, data }`. The `type` field is either `"prompt"` (the message sent to the agent) or `"opencode"` (a raw opencode output event). `timestamp` is always a unix-ms integer. `data` is the event-specific payload.
+
+The `src/lib/events.ts` module is the only place that reads or writes these files — `appendEvent`, `truncateEvents`, and `readEvents` are the sole entry points. Legacy lines written by older versions of Faber (flat JSON without the envelope) are transparently wrapped on read, so already-finished tasks remain readable.
+
+The log view normalises events into display rows:
 
 - Text output is markdown-rendered with word wrapping
 - Tool calls show a colored icon, tool name, and a concise summary (e.g. the shell command for Bash, the file path for Read, a truncated syntax-highlighted diff for Edit)
@@ -106,10 +110,17 @@ The log view uses sticky scroll by default: it follows new output as it arrives.
 .faber/
   state.json              # all task records
   state.json.lock/        # lockfile directory (proper-lockfile)
-  tasks/<taskId>.jsonl    # raw JSON-lines output for each agent
+  tasks/<taskId>.jsonl    # typed event log for each agent (one envelope per line)
   failures.log            # append-only failure event log
 .worktrees/
   <task-slug>/            # isolated git checkout for each task
+```
+
+Each line in a `.jsonl` file looks like:
+
+```json
+{"type":"opencode","timestamp":1714000000000,"data":{"type":"text","part":{"text":"Hello"}}}
+{"type":"prompt","timestamp":1714000000001,"data":{"prompt":"Fix the bug","model":"anthropic/claude-sonnet-4-6"}}
 ```
 
 ## Technology stack
