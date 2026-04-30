@@ -68,6 +68,8 @@ export function readState(repoRoot: string): State {
       if ((task as any).filterText !== undefined && task.summaryText === undefined) {
         task.summaryText = (task as any).filterText
       }
+      // Normalise legacy "unknown" status to "failed"
+      if ((task.status as string) === "unknown") task.status = "failed"
     }
     return state
   } catch {
@@ -181,7 +183,7 @@ export function reconcileRunningTasks(repoRoot: string): void {
       if (task.status === "running" && task.pid !== null) {
         const alive = isPidAlive(task.pid)
         if (!alive) {
-          task.status = "unknown"
+          task.status = "failed"
           task.completedAt = new Date().toISOString()
           task.exitCode = null
           task.pid = null

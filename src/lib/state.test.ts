@@ -104,6 +104,26 @@ describe("readState / writeState", () => {
     const state = readState(tmpRoot)
     expect(state).toEqual({ tasks: [] })
   })
+
+  it("normalises legacy 'unknown' status to 'failed' on read", () => {
+    const raw = JSON.stringify({
+      tasks: [{ ...makeTask({ id: "legacy-unknown" }), status: "unknown" }],
+    })
+    writeFileSync(join(tmpRoot, ".faber", "state.json"), raw)
+    const state = readState(tmpRoot)
+    expect(state.tasks[0]!.status).toBe("failed")
+  })
+
+  it("normalised 'unknown' stays 'failed' after a round-trip write", () => {
+    const raw = JSON.stringify({
+      tasks: [{ ...makeTask({ id: "legacy-unknown" }), status: "unknown" }],
+    })
+    writeFileSync(join(tmpRoot, ".faber", "state.json"), raw)
+    const first = readState(tmpRoot)
+    writeState(tmpRoot, first)
+    const second = readState(tmpRoot)
+    expect(second.tasks[0]!.status).toBe("failed")
+  })
 })
 
 describe("taskOutputPath", () => {
@@ -226,7 +246,7 @@ describe("findRepoRoot", () => {
 describe("reconcileRunningTasks", () => {
   beforeEach(() => ensureFaberDir(tmpRoot))
 
-  it("marks tasks with dead PIDs as unknown", () => {
+  it("marks tasks with dead PIDs as failed", () => {
     // PID 1 always exists (init), so use a surely-dead PID instead.
     // We pick a very high PID that is very unlikely to be running.
     // A cleaner approach is to spawn a process, capture its PID, let it exit, then check.
@@ -250,7 +270,7 @@ describe("reconcileRunningTasks", () => {
       const dead = tasks.find((t) => t.id === "bbb-dead")!
 
       expect(alive.status).toBe("running")
-      expect(dead.status).toBe("unknown")
+      expect(dead.status).toBe("failed")
       expect(dead.pid).toBeNull()
       expect(dead.completedAt).not.toBeNull()
     } finally {

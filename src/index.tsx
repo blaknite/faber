@@ -8,7 +8,6 @@ import { acquireLock, ensureFaberDir, findTask, readState, reconcileRunningTasks
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
-import { finishTask } from "./lib/finishTask.js"
 import { doneTask } from "./lib/doneTask.js"
 import { deleteTask } from "./lib/deleteTask.js"
 import { createAndDispatchTask } from "./lib/dispatch.js"
@@ -22,6 +21,7 @@ import type { AgentConfig } from "./lib/config.js"
 import { runReview } from "./review.js"
 import { runExecute } from "./execute.js"
 import { runShip } from "./ship.js"
+import { runSpawn } from "./spawn.js"
 import type { ReviewMode } from "./lib/reviewTarget.js"
 
 // Single exit point for the process. Everything routes through here so it's
@@ -471,24 +471,32 @@ Safe to run multiple times.`)
     return
   }
 
-  // faber finish <taskId> <exitCode>
-  // Called via command chaining after opencode exits, passing the real exit code via $?.
-  // This is the single place where task exit status is written to state.
-  if (command === "finish") {
+  // faber spawn <taskId> -- <command...>
+  // Internal subcommand: runs the child process, writes its output to the task
+  // JSONL file, and updates task state when the child exits. Not shown in help.
+  if (command === "spawn") {
     const taskId = positional[1]
-    const exitCode = positional[2] !== undefined ? parseInt(positional[2], 10) : 0
     if (!taskId) {
-      console.error("Usage: faber finish <taskId> <exitCode>")
+      process.stderr.write("Usage: faber spawn <taskId> -- <command...>\n")
       exit(1)
     }
-    const dirArg = parseDirFlag(args)
-    const repoRoot = dirArg ?? findRepoRoot(process.cwd())
-    if (!repoRoot) {
-      console.error("Could not find faber state file from current directory")
-      exit(exitCode)
+    const dashDash = args.indexOf("--")
+    if (dashDash === -1) {
+      process.stderr.write("faber spawn: missing -- separator\n")
+      exit(1)
     }
-    await finishTask(repoRoot, taskId, exitCode)
-    exit(exitCode)
+    const childCommand = args.slice(dashDash + 1)
+    if (childCommand.length === 0) {
+      process.stderr.write("faber spawn: no command after --\n")
+      exit(1)
+    }
+    const repoRoot = findRepoRoot(process.cwd())
+    if (!repoRoot) {
+      process.stderr.write("faber spawn: could not find faber state file from current directory\n")
+      exit(1)
+    }
+    const spawnExitCode = await runSpawn(repoRoot, taskId, childCommand)
+    exit(spawnExitCode)
   }
 
   // faber continue <taskId> ["<prompt>"] [--dir <repo>]

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs"
-import { taskOutputPath } from "./state.js"
+import { readEvents } from "./events.js"
+import type { Event } from "./events.js"
 export interface ToolStatePart {
   input?: Record<string, unknown>
   output?: string
@@ -387,76 +387,73 @@ export function parseToolEntry(event: LogEvent): LogEntry | null {
   }
 }
 
-export function parseEvent(event: LogEvent): LogEntry[] {
-  switch (event.type) {
-    case "prompt": {
-      const text = event.prompt?.trim()
-      if (!text) return []
-      return [{ kind: "prompt", timestamp: event.timestamp, text, model: event.model }]
-    }
-
-    case "text": {
-      const text = event.part?.text?.trim()
-      if (!text) return []
-      return [{ kind: "text", timestamp: event.timestamp, text }]
-    }
-
-    case "tool_use": {
-      const entry = parseToolEntry(event)
-      if (!entry) return []
-      return [entry]
-    }
-
-    case "step_finish": {
-      const modelId = typeof event.modelID === "string" ? event.modelID : undefined
-      return [{
-        kind: "step_finish",
-        timestamp: event.timestamp,
-        modelId,
-      }]
-    }
-
-    case "reasoning": {
-      const text = event.part?.text?.trim()
-      if (!text) return []
-      return [{
-        kind: "reasoning",
-        timestamp: event.timestamp,
-        reasoningText: text,
-      }]
-    }
-
-    case "error": {
-      return [{
-        kind: "error",
-        timestamp: event.timestamp,
-        ...parseErrorDetails(event),
-      }]
-    }
-
-    default:
-      return []
+export function parseEvent(event: Event): LogEntry[] {
+  if (event.type === "prompt") {
+    const text = typeof event.data.prompt === "string" ? event.data.prompt.trim() : ""
+    if (!text) return []
+    const model = typeof event.data.model === "string" ? event.data.model : undefined
+    return [{ kind: "prompt", timestamp: event.timestamp, text, model }]
   }
+
+  if (event.type === "opencode") {
+    const inner = event.data as LogEvent
+
+    switch (inner.type) {
+      case "text": {
+        const text = inner.part?.text?.trim()
+        if (!text) return []
+        return [{ kind: "text", timestamp: event.timestamp, text }]
+      }
+
+      case "tool_use": {
+        const entry = parseToolEntry(inner)
+        if (!entry) return []
+        entry.timestamp = event.timestamp
+        return [entry]
+      }
+
+      case "step_finish": {
+        const modelId = typeof inner.modelID === "string" ? inner.modelID : undefined
+        return [{
+          kind: "step_finish",
+          timestamp: event.timestamp,
+          modelId,
+        }]
+      }
+
+      case "reasoning": {
+        const text = inner.part?.text?.trim()
+        if (!text) return []
+        return [{
+          kind: "reasoning",
+          timestamp: event.timestamp,
+          reasoningText: text,
+        }]
+      }
+
+      case "error": {
+        return [{
+          kind: "error",
+          timestamp: event.timestamp,
+          ...parseErrorDetails(inner),
+        }]
+      }
+
+      default:
+        return []
+    }
+  }
+
+  return []
 }
 
 export function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
-  const path = taskOutputPath(repoRoot, taskId)
-  if (!existsSync(path)) return []
-  const raw = readFileSync(path, "utf8")
+  const events = readEvents(repoRoot, taskId)
   const entries: LogEntry[] = []
-  for (const line of raw.split("\n")) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-    try {
-      const event = JSON.parse(trimmed) as LogEvent
-      entries.push(...parseEvent(event))
-    } catch {
-      // skip unparseable lines
-    }
+  for (const event of events) {
+    entries.push(...parseEvent(event))
   }
 
-  // Annotate each step_finish with how long it took since the previous step_finish
-  // (or the very first event if it's the first step).
   let prevTimestamp = entries[0]?.timestamp ?? 0
   for (const entry of entries) {
     if (entry.kind === "step_finish") {
@@ -469,26 +466,15 @@ export function readLogEntries(repoRoot: string, taskId: string): LogEntry[] {
 }
 
 export function readLogStats(repoRoot: string, taskId: string): { totalTokens: number; totalCost: number } {
-  const path = taskOutputPath(repoRoot, taskId)
-  let raw: string
-  try {
-    raw = readFileSync(path, "utf8")
-  } catch {
-    return { totalTokens: 0, totalCost: 0 }
-  }
+  const events = readEvents(repoRoot, taskId)
   let totalTokens = 0
   let totalCost = 0
-  for (const line of raw.split("\n")) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-    try {
-      const event = JSON.parse(trimmed) as LogEvent
-      if (event.type === "step_finish" && event.part) {
-        totalTokens = event.part.tokens?.total ?? 0
-        totalCost += event.part.cost ?? 0
-      }
-    } catch {
-      // skip unparseable lines
+  for (const event of events) {
+    if (event.type !== "opencode") continue
+    const inner = event.data as LogEvent
+    if (inner.type === "step_finish" && inner.part) {
+      totalTokens = inner.part.tokens?.total ?? 0
+      totalCost += inner.part.cost ?? 0
     }
   }
   return { totalTokens, totalCost }

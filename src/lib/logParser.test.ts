@@ -9,6 +9,7 @@ import {
   parseToolEntry,
 } from "./logParser.js"
 import type { LogEvent } from "./logParser.js"
+import type { Event } from "./events.js"
 
 // --- normalizePath ---
 
@@ -77,8 +78,9 @@ describe("formatElapsed", () => {
 
 // --- parseEvent ---
 
-function makeEvent(overrides: Partial<LogEvent>): LogEvent {
-  return { type: "text", timestamp: 1000, ...overrides }
+function makeEvent(overrides: Partial<LogEvent>): Event {
+  const inner: LogEvent = { type: "text", timestamp: 1000, ...overrides }
+  return { type: "opencode", timestamp: inner.timestamp, data: inner as unknown as Record<string, unknown> }
 }
 
 describe("parseEvent", () => {
