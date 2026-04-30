@@ -22,8 +22,8 @@ The TUI itself is a React tree rendered to the terminal by `@opentui/react` (a R
 2. Faber generates a slug like `a3f2-resolve-issue-uic-002` and constructs the task record
 3. `git worktree add .worktrees/a3f2-... -b a3f2-...` creates an isolated checkout on a new branch
 4. Faber spawns the agent (see below) and stores the task as `status: "running"`
-5. The agent runs; its JSON output streams to `.faber/tasks/<taskId>.jsonl` via `tee`
-6. When the agent exits, `faber finish <taskId> $?` is called automatically, writing `status: "done"` or `"failed"` and the exit code to state
+5. The agent runs; `faber spawn` captures its stdout to `.faber/tasks/<taskId>.jsonl`
+6. When the agent exits, `faber spawn` writes the terminal task status directly to state
 7. The TUI polls `state.json` every two seconds and updates the display
 
 State transitions:
@@ -46,24 +46,19 @@ On startup: "running" with a dead PID ──────────────
 
 ## How agents are spawned
 
-`spawnAgent` in `agent.ts` builds a shell command along these lines:
+`spawnAgent` in `agent.ts` invokes `faber spawn` like this:
 
 ```sh
-set -o pipefail; opencode run --format json --model <model> '<prompt>' \
-  | tee -a ".faber/tasks/<taskId>.jsonl" \
-  ; faber finish <taskId> $?
+faber spawn <taskId> -- opencode run --format json --model <model> '<prompt>'
 ```
 
 A few things worth noting:
 
 - The prompt is automatically prefixed with `Load the skill \`working-in-faber\`` so the agent knows it is running inside a Faber worktree and follows the expected commit/wrap-up conventions.
-- `set -o pipefail` ensures `$?` reflects opencode's exit code, not `tee`'s.
-- `tee` captures the JSON output to disk while it is still streaming to Faber's stdout listener.
-- `faber finish` is appended with `;` (not `&&`) so it runs regardless of exit code.
-- The process is spawned with `detached: true` and `child.unref()`, so agents survive Faber closing. The `finish` command writes directly to `state.json`, so the final status is persisted even if Faber is not running when the agent completes.
+- `faber spawn` owns the agent lifecycle: it captures stdout line-by-line to the JSONL file, extracts the session ID from the stream, records the child PID in state, and writes the terminal task status when the child exits.
+- No `tee`, no `pipefail`, no separate finish step. The supervisor is the process; state and logs advance whether or not the dispatcher (TUI or `faber run`) is still alive.
+- The process is spawned with `detached: true` and `child.unref()`, so agents survive Faber closing. `faber spawn` writes directly to `state.json`, so the final status is persisted even if Faber is not running when the agent completes.
 - The `OPENCODE_CONFIG_CONTENT` environment variable injects a generated opencode config that grants read access to the whole repo root but restricts writes to just the agent's own worktree path.
-
-After spawning, Faber polls `pgrep -P <shellPid>` to find the actual opencode PID, and watches stdout for the first JSON line containing a `sessionID` field.
 
 ## The TUI
 
@@ -129,4 +124,3 @@ The log view uses sticky scroll by default: it follows new output as it arrives.
 1. `faber` / `faber start` `[--dir path]` - opens the interactive TUI
 2. `faber setup` `[--dir path]` - initialises `.faber/`, `.worktrees/`, and `.gitignore`
 3. `faber run "<prompt>"` `[--dir path] [--model model]` - headless task dispatch
-4. `faber finish <taskId> <exitCode>` - called automatically by each agent on exit to write final status
