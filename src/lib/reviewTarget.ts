@@ -99,7 +99,9 @@ async function resolvePullRequest(repoRoot: string, arg: string): Promise<Review
   const meta = JSON.parse(stdout) as { number: number; url: string; title: string; baseRefName: string; headRefName: string }
 
   const localRef = `refs/faber/pr-${meta.number}`
-  await execa("git", ["fetch", "origin", `pull/${meta.number}/head:${localRef}`], { cwd: repoRoot })
+  // Some GitHub repos do not resolve the shorthand `pull/<id>/head` fetch ref,
+  // but they do expose the fully-qualified remote ref.
+  await execa("git", ["fetch", "origin", `refs/pull/${meta.number}/head:${localRef}`], { cwd: repoRoot })
   // Prefer the synthetic ref when it exists, but some git environments only
   // update FETCH_HEAD for this fetch and do not materialise refs/faber/*.
   let prHeadSha: string

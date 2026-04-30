@@ -90,8 +90,26 @@ function addFetchHeadOnlyGitWrapper(binDir: string): void {
   writeFileSync(
     gitPath,
     `#!/bin/sh
+if [ "$1" = "fetch" ] && [ "$2" = "origin" ] && [ "$3" = "refs/pull/251/head:refs/faber/pr-251" ]; then
+  exec "${realGit}" fetch origin refs/pull/251/head
+fi
+
+exec "${realGit}" "$@"
+`,
+    { mode: 0o755 },
+  )
+}
+
+function addRequireQualifiedPullRefGitWrapper(binDir: string): void {
+  const realGit = execSync("which git", { encoding: "utf8" }).trim()
+  const gitPath = join(binDir, "git")
+
+  writeFileSync(
+    gitPath,
+    `#!/bin/sh
 if [ "$1" = "fetch" ] && [ "$2" = "origin" ] && [ "$3" = "pull/251/head:refs/faber/pr-251" ]; then
-  exec "${realGit}" fetch origin pull/251/head
+  echo "fatal: couldn't find remote ref pull/251/head" >&2
+  exit 128
 fi
 
 exec "${realGit}" "$@"
@@ -157,6 +175,25 @@ describe("resolveReviewTarget pull request mode", () => {
       const target = await resolveReviewTarget(clone, { kind: "pullRequest", arg: "251" })
 
       const wtPath = await createWorktree(clone, "review-pr-fetch-head", target.worktreeBase)
+      const wtSha = git(wtPath, "rev-parse HEAD").trim()
+      expect(wtSha).toBe(prHeadSha)
+    } finally {
+      process.env.PATH = originalPath
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("fetches the fully-qualified refs/pull PR ref when shorthand pull refs are unavailable", async () => {
+    const { root, clone, prHeadSha } = makePullRequestRepo()
+    const fakeBin = makeFakeGhBin(root)
+    addRequireQualifiedPullRefGitWrapper(fakeBin)
+    const originalPath = process.env.PATH ?? ""
+    process.env.PATH = `${fakeBin}${delimiter}${originalPath}`
+
+    try {
+      const target = await resolveReviewTarget(clone, { kind: "pullRequest", arg: "251" })
+
+      const wtPath = await createWorktree(clone, "review-pr-qualified-ref", target.worktreeBase)
       const wtSha = git(wtPath, "rev-parse HEAD").trim()
       expect(wtSha).toBe(prHeadSha)
     } finally {
