@@ -1,4 +1,6 @@
 import { execa, execaSync } from "execa"
+import { readFileSync } from "node:fs"
+import { isAbsolute, join } from "node:path"
 import { readCurrentBranch } from "./worktree.js"
 import { findDefaultBranch } from "./defaultBranch.js"
 import { readState, findTask } from "./state.js"
@@ -107,16 +109,35 @@ async function resolvePullRequest(repoRoot: string, arg: string): Promise<Review
   let prHeadSha: string
   try {
     const { stdout } = await execa("git", ["rev-parse", `${localRef}^{commit}`], { cwd: repoRoot })
-    prHeadSha = stdout
+    prHeadSha = stdout.trim()
   } catch {
-    const { stdout } = await execa("git", ["rev-parse", "FETCH_HEAD^{commit}"], { cwd: repoRoot })
-    prHeadSha = stdout
+    // Read FETCH_HEAD directly rather than via `git rev-parse FETCH_HEAD`. The
+    // fetch above just wrote it; another process could overwrite it before a
+    // second git invocation runs, and we'd silently check out the wrong commit.
+    prHeadSha = readFetchHeadSha(repoRoot)
   }
 
   return {
-    worktreeBase: prHeadSha.trim(),
+    worktreeBase: prHeadSha,
     reviewBase: meta.baseRefName,
     summary: `pull request #${meta.number}`,
     contextLine: `${meta.url}\n${meta.title}\n\nBase branch: ${meta.baseRefName}\nHead branch: ${meta.headRefName}`,
   }
+}
+
+// Parse the SHA from the first line of .git/FETCH_HEAD. The file format is
+// stable across Git versions: each line starts with the fetched SHA followed
+// by a tab. The first line is the ref we just fetched (subsequent lines, if
+// any, would be additional refs from the same fetch invocation).
+function readFetchHeadSha(repoRoot: string): string {
+  const { stdout: gitDirOut } = execaSync("git", ["rev-parse", "--git-dir"], { cwd: repoRoot })
+  const gitDir = gitDirOut.trim()
+  const fetchHeadPath = isAbsolute(gitDir) ? join(gitDir, "FETCH_HEAD") : join(repoRoot, gitDir, "FETCH_HEAD")
+  const contents = readFileSync(fetchHeadPath, "utf8")
+  const firstLine = contents.split("\n", 1)[0] ?? ""
+  const sha = firstLine.split("\t", 1)[0]?.trim() ?? ""
+  if (!/^[0-9a-f]{7,64}$/.test(sha)) {
+    throw new Error(`Could not parse FETCH_HEAD at ${fetchHeadPath}`)
+  }
+  return sha
 }
