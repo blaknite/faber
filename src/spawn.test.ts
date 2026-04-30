@@ -130,6 +130,26 @@ describe("runSpawn", () => {
     expect(updated.pid).toBeNull()
   })
 
+  it("nonexistent binary sets status to failed with exit code -1", async () => {
+    const task = makeTask()
+    addTask(tmpRoot, task)
+
+    const result = await runSpawn(tmpRoot, task.id, ["/nonexistent-binary"])
+
+    expect(result).toBe(-1)
+
+    const state = readState(tmpRoot)
+    const updated = state.tasks.find((t) => t.id === task.id)!
+    expect(updated.status).toBe("failed")
+    expect(updated.exitCode).toBe(-1)
+
+    const failuresLog = join(tmpRoot, ".faber", "failures.log")
+    expect(existsSync(failuresLog)).toBe(true)
+    const logContents = readFileSync(failuresLog, "utf8")
+    const entry = JSON.parse(logContents.trim().split("\n")[0]!)
+    expect(entry.taskId).toBe(task.id)
+  })
+
   it("sessionID emitted mid-stream is captured and both lines appear in JSONL", async () => {
     const task = makeTask()
     addTask(tmpRoot, task)

@@ -32,40 +32,45 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
   let sessionId: string | null = null
   let lineBuffer = ""
 
-  child.stdout.on("data", (chunk: Buffer) => {
-    const text = chunk.toString()
-    lineBuffer += text
+  if (child.stdout) {
+    child.stdout.on("data", (chunk: Buffer) => {
+      const text = chunk.toString()
+      lineBuffer += text
 
-    let newline: number
-    while ((newline = lineBuffer.indexOf("\n")) !== -1) {
-      const line = lineBuffer.slice(0, newline)
-      lineBuffer = lineBuffer.slice(newline + 1)
+      let newline: number
+      while ((newline = lineBuffer.indexOf("\n")) !== -1) {
+        const line = lineBuffer.slice(0, newline)
+        lineBuffer = lineBuffer.slice(newline + 1)
 
-      appendFileSync(outputFile, line + "\n")
+        appendFileSync(outputFile, line + "\n")
 
-      if (sessionId === null) {
-        try {
-          const event = JSON.parse(line) as { sessionID?: string }
-          if (event.sessionID) {
-            sessionId = event.sessionID
-            updateTask(repoRoot, taskId, { sessionId })
+        if (sessionId === null) {
+          try {
+            const event = JSON.parse(line) as { sessionID?: string }
+            if (event.sessionID) {
+              sessionId = event.sessionID
+              updateTask(repoRoot, taskId, { sessionId })
+            }
+          } catch {
+            // not valid JSON -- keep scanning
           }
-        } catch {
-          // not valid JSON -- keep scanning
         }
       }
-    }
-  })
+    })
 
-  child.stdout.on("end", () => {
-    if (lineBuffer.length > 0) {
-      appendFileSync(outputFile, lineBuffer + "\n")
-      lineBuffer = ""
-    }
-  })
+    child.stdout.on("end", () => {
+      if (lineBuffer.length > 0) {
+        appendFileSync(outputFile, lineBuffer + "\n")
+        lineBuffer = ""
+      }
+    })
+  }
 
-  child.stderr.resume()
-  child.stderr.unref()
+  if (child.stderr) {
+    child.stderr.resume()
+  }
+
+  let errored = false
 
   const exitCode = await new Promise<number>((resolve) => {
     child.on("close", (code) => {
@@ -73,11 +78,16 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
     })
 
     child.on("error", (err) => {
+      errored = true
       logTaskFailure(repoRoot, { taskId, callSite: "spawn", reason: "Child process failed to start", exitCode: -1, error: err.message })
       updateTask(repoRoot, taskId, { status: "failed", exitCode: -1, pid: null, completedAt: new Date().toISOString() })
       resolve(-1)
     })
   })
+
+  if (errored) {
+    return exitCode
+  }
 
   const freshState = readState(repoRoot)
   const freshTask = freshState.tasks.find((t) => t.id === taskId)
