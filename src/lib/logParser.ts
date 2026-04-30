@@ -356,23 +356,23 @@ export function parseEvent(event: Event): LogEntry[] {
 
   if (event.type === "opencode") {
     const inner = event.data as LogEvent
-    const logEvent: LogEvent = { ...inner, timestamp: event.timestamp }
 
-    switch (logEvent.type) {
+    switch (inner.type) {
       case "text": {
-        const text = logEvent.part?.text?.trim()
+        const text = inner.part?.text?.trim()
         if (!text) return []
         return [{ kind: "text", timestamp: event.timestamp, text }]
       }
 
       case "tool_use": {
-        const entry = parseToolEntry(logEvent)
+        const entry = parseToolEntry(inner)
         if (!entry) return []
-        return [{ ...entry, timestamp: event.timestamp }]
+        entry.timestamp = event.timestamp
+        return [entry]
       }
 
       case "step_finish": {
-        const modelId = typeof logEvent.modelID === "string" ? logEvent.modelID : undefined
+        const modelId = typeof inner.modelID === "string" ? inner.modelID : undefined
         return [{
           kind: "step_finish",
           timestamp: event.timestamp,
@@ -381,7 +381,7 @@ export function parseEvent(event: Event): LogEntry[] {
       }
 
       case "reasoning": {
-        const text = logEvent.part?.text?.trim()
+        const text = inner.part?.text?.trim()
         if (!text) return []
         return [{
           kind: "reasoning",
