@@ -227,33 +227,38 @@ describe("main", () => {
 
   describe("version flag", () => {
     let logLines: string[]
+    let logSpy: ReturnType<typeof spyOn>
 
     beforeEach(() => {
       logLines = []
-      spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+      logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
         logLines.push(args.map(String).join(" "))
       })
+    })
+
+    afterEach(() => {
+      logSpy.mockRestore()
     })
 
     it("faber --version exits 0 and logs the version string", async () => {
       process.argv = ["bun", "faber", "--version"]
       await expect(main()).rejects.toThrow()
       expect(exitCode).toBe(0)
-      expect(logLines.some((l) => l.length > 0)).toBe(true)
+      expect(logLines.some((l) => l === "dev")).toBe(true)
     })
 
     it("faber -v exits 0 and logs the version string", async () => {
       process.argv = ["bun", "faber", "-v"]
       await expect(main()).rejects.toThrow()
       expect(exitCode).toBe(0)
-      expect(logLines.some((l) => l.length > 0)).toBe(true)
+      expect(logLines.some((l) => l === "dev")).toBe(true)
     })
 
     it("faber version still exits 0 and logs the version string", async () => {
       process.argv = ["bun", "faber", "version"]
       await expect(main()).rejects.toThrow()
       expect(exitCode).toBe(0)
-      expect(logLines.some((l) => l.length > 0)).toBe(true)
+      expect(logLines.some((l) => l === "dev")).toBe(true)
     })
   })
 
