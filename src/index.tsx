@@ -453,8 +453,7 @@ Safe to run multiple times.`)
     }
   }
 
-  // faber version
-  if (command === "version") {
+  if (command === "version" || command === "--version" || command === "-v") {
     console.log(VERSION)
     exit(0)
   }
@@ -911,6 +910,14 @@ Safe to run multiple times.`)
   if (command && !command.startsWith("-")) {
     console.error(`Unknown command: "${command}". Run "faber --help" for usage.`)
     exit(1)
+  }
+
+  if (command && command.startsWith("-")) {
+    const KNOWN_TOP_LEVEL_FLAGS = new Set(["--dir", "--help", "-h", "--version", "-v"])
+    if (!KNOWN_TOP_LEVEL_FLAGS.has(command)) {
+      console.error(`Unknown option: "${command}". Run "faber --help" for usage.`)
+      exit(1)
+    }
   }
 
   // faber [--dir <repo>]

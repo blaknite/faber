@@ -209,6 +209,52 @@ describe("main", () => {
       await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
     })
+
+    it("faber --foo exits 1 with unknown option error and does not launch the TUI", async () => {
+      process.argv = ["bun", "faber", "--foo"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes('Unknown option: "--foo"'))).toBe(true)
+    })
+
+    it("faber --dir /nonexistent still exits 1 with directory-not-found error", async () => {
+      process.argv = ["bun", "faber", "--dir", "/nonexistent"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("Unknown option"))).toBe(false)
+    })
+  })
+
+  describe("version flag", () => {
+    let logLines: string[]
+
+    beforeEach(() => {
+      logLines = []
+      spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logLines.push(args.map(String).join(" "))
+      })
+    })
+
+    it("faber --version exits 0 and logs the version string", async () => {
+      process.argv = ["bun", "faber", "--version"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(0)
+      expect(logLines.some((l) => l.length > 0)).toBe(true)
+    })
+
+    it("faber -v exits 0 and logs the version string", async () => {
+      process.argv = ["bun", "faber", "-v"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(0)
+      expect(logLines.some((l) => l.length > 0)).toBe(true)
+    })
+
+    it("faber version still exits 0 and logs the version string", async () => {
+      process.argv = ["bun", "faber", "version"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(0)
+      expect(logLines.some((l) => l.length > 0)).toBe(true)
+    })
   })
 
   describe("execute", () => {
