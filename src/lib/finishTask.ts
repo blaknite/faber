@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { readState, updateTask, taskOutputPath } from "./state.js"
 import { worktreeHasCommits as defaultWorktreeHasCommits } from "./worktree.js"
 import { logTaskFailure } from "./failureLog.js"
+import { readLogEntries, summarizeErrorEntry } from "./logParser.js"
 
 // Read the task log and return the sessionID from the last log entry that has
 // one. Returns null if the log doesn't exist or contains no sessionID.
@@ -22,6 +23,17 @@ export function sessionIdFromLog(repoRoot: string, taskId: string): string | nul
   return sessionId
 }
 
+function lastFatalError(repoRoot: string, taskId: string): string | null {
+  const entries = readLogEntries(repoRoot, taskId)
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!
+    if (entry.kind === "error") {
+      return summarizeErrorEntry(entry)
+    }
+  }
+  return null
+}
+
 // Handle the end of an agent shell process. This is the single place where a
 // task's terminal state is written: ready, failed, or stopped (unchanged).
 //
@@ -37,6 +49,7 @@ export async function finishTask(
   exitCode: number,
   checkHasCommits: (root: string, slug: string, baseBranch?: string) => Promise<boolean> = defaultWorktreeHasCommits,
 ): Promise<void> {
+  const fatalError = lastFatalError(repoRoot, taskId)
   const currentState = readState(repoRoot)
   const currentTask = currentState.tasks.find((t) => t.id === taskId)
 
@@ -52,6 +65,16 @@ export async function finishTask(
       callSite: "finishTask",
       reason: "Process exited with non-zero exit code",
       exitCode,
+    })
+  }
+
+  if (fatalError) {
+    logTaskFailure(repoRoot, {
+      taskId,
+      callSite: "finishTask",
+      reason: "Agent logged a fatal error",
+      exitCode,
+      error: fatalError,
     })
   }
 
@@ -74,6 +97,20 @@ export async function finishTask(
   if (currentTask.status === "failed" || currentTask.status === "stopped") {
     try {
       updateTask(repoRoot, taskId, { exitCode, pid: null })
+    } catch (err) {
+      console.error("Failed to write task status:", (err as Error).message)
+    }
+    return
+  }
+
+  if (fatalError) {
+    try {
+      updateTask(repoRoot, taskId, {
+        status: "failed",
+        exitCode,
+        completedAt: new Date().toISOString(),
+        pid: null,
+      })
     } catch (err) {
       console.error("Failed to write task status:", (err as Error).message)
     }

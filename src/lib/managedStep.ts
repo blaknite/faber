@@ -1,18 +1,23 @@
 import { existsSync } from "node:fs"
 import { watch as fsWatch } from "node:fs"
 import { stateFilePath, readState } from "./state.js"
-import { readLogEntries } from "./logParser.js"
+import { lastVisibleLogMessage, readLogEntries, summarizeErrorEntry } from "./logParser.js"
 
 export const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+function truncateActivity(text: string): string {
+  const firstLine = text.split("\n")[0]!.trim()
+  return firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine
+}
 
 export function lastActivityLabel(repoRoot: string, taskId: string): string {
   const entries = readLogEntries(repoRoot, taskId)
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i]!
     if (entry.kind === "tool_use" && entry.title) return entry.title
+    if (entry.kind === "error") return truncateActivity(summarizeErrorEntry(entry))
     if (entry.kind === "text" && entry.text) {
-      const firstLine = entry.text.split("\n")[0]!.trim()
-      return firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine
+      return truncateActivity(entry.text)
     }
   }
   return "Starting..."
@@ -65,9 +70,5 @@ export async function waitForTask(repoRoot: string, taskId: string): Promise<str
 }
 
 export function lastAgentMessage(repoRoot: string, taskId: string): string | null {
-  const entries = readLogEntries(repoRoot, taskId)
-  const last = [...entries].reverse().find((e) => e.kind === "text")
-  const text = last?.text ?? null
-  if (!text) return null
-  return text
+  return lastVisibleLogMessage(readLogEntries(repoRoot, taskId))
 }

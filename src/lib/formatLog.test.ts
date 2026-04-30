@@ -29,6 +29,15 @@ function reasoning(t: string): LogEntry {
   return { kind: "reasoning", timestamp: 5000, reasoningText: t }
 }
 
+function error(message: string): LogEntry {
+  return {
+    kind: "error",
+    timestamp: 6000,
+    errorName: "UnknownError",
+    errorMessage: message,
+  }
+}
+
 // --- prompt entries ---
 
 describe("formatLog - prompt entries", () => {
@@ -56,6 +65,14 @@ describe("formatLog - text entries", () => {
   it("renders no output section when there are only prompt entries", () => {
     const out = formatLog([prompt("Do something")])
     expect(out).not.toContain("# Output")
+  })
+})
+
+describe("formatLog - error entries", () => {
+  it("renders error entries under # Output", () => {
+    const out = formatLog([error("Model not found: anthropic/claude-sonnet-4-6.")])
+    expect(out).toContain("# Output")
+    expect(out).toContain("! UnknownError: Model not found: anthropic/claude-sonnet-4-6.")
   })
 })
 
@@ -138,6 +155,7 @@ describe("formatLog - JSON output", () => {
     const entries: LogEntry[] = [
       prompt("Prompt"),
       text("Text"),
+      error("Model not found"),
       tool({ icon: "$", title: "cmd" }),
       stepFinish(),
       reasoning("thinking"),
@@ -147,6 +165,7 @@ describe("formatLog - JSON output", () => {
     const kinds = parsed.map((e) => e.kind)
     expect(kinds).toContain("prompt")
     expect(kinds).toContain("text")
+    expect(kinds).toContain("error")
     expect(kinds).toContain("tool_use")
     expect(kinds).toContain("step_finish")
     expect(kinds).toContain("reasoning")

@@ -123,6 +123,28 @@ describe("finishTask", () => {
     expect(updated.exitCode).toBe(1)
   })
 
+  it("marks the task failed when the log contains a fatal error event", async () => {
+    const task = makeTask()
+    addTask(tmpRoot, task)
+    writeLogLine(tmpRoot, task.id, {
+      type: "error",
+      timestamp: 1,
+      error: {
+        name: "UnknownError",
+        data: { message: "Model not found: anthropic/claude-sonnet-4-6." },
+      },
+    })
+
+    await finishTask(tmpRoot, task.id, 0, noCommits)
+
+    const state = readState(tmpRoot)
+    const updated = state.tasks.find((t) => t.id === task.id)!
+    expect(updated.status).toBe("failed")
+    expect(updated.exitCode).toBe(0)
+    expect(updated.pid).toBeNull()
+    expect(updated.completedAt).toBeTruthy()
+  })
+
   it("records hasCommits as true when the stub says so", async () => {
     const task = makeTask()
     addTask(tmpRoot, task)
@@ -189,6 +211,29 @@ describe("finishTask", () => {
 
     const logPath = join(tmpRoot, ".faber", "failures.log")
     expect(existsSync(logPath)).toBe(false)
+  })
+
+  it("writes a failure log entry when the task log contains a fatal error event", async () => {
+    const task = makeTask()
+    addTask(tmpRoot, task)
+    writeLogLine(tmpRoot, task.id, {
+      type: "error",
+      timestamp: 1,
+      error: {
+        name: "UnknownError",
+        data: { message: "Model not found: anthropic/claude-sonnet-4-6." },
+      },
+    })
+
+    await finishTask(tmpRoot, task.id, 0, noCommits)
+
+    const logPath = join(tmpRoot, ".faber", "failures.log")
+    expect(existsSync(logPath)).toBe(true)
+    const lines = readFileSync(logPath, "utf8").trim().split("\n")
+    const entry = JSON.parse(lines[0]!)
+    expect(entry.taskId).toBe(task.id)
+    expect(entry.reason).toContain("fatal error")
+    expect(entry.error).toContain("Model not found")
   })
 
   it("recovers sessionId from the log when it is missing on the task", async () => {

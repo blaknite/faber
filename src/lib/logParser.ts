@@ -34,9 +34,16 @@ export interface LogEvent {
     cost?: number
   }
   modelID?: string
+  error?: {
+    name?: string
+    message?: string
+    data?: {
+      message?: string
+    }
+  }
 }
 
-export type LogEntryKind = "text" | "tool_use" | "step_finish" | "reasoning" | "prompt"
+export type LogEntryKind = "text" | "tool_use" | "step_finish" | "reasoning" | "prompt" | "error"
 
 export interface LogEntry {
   kind: LogEntryKind
@@ -55,12 +62,46 @@ export interface LogEntry {
   blockContent?: string
   blockKind?: "text" | "diff"
   status?: string
+  // tool_use entries and fatal error entries
+  errorName?: string
   errorMessage?: string
   // step_finish entries
   modelId?: string
   elapsedMs?: number
   // reasoning entries
   reasoningText?: string
+}
+
+function parseErrorDetails(event: LogEvent): Pick<LogEntry, "errorName" | "errorMessage"> {
+  const errorName = typeof event.error?.name === "string" && event.error.name.trim()
+    ? event.error.name.trim()
+    : undefined
+  const errorMessage = typeof event.error?.data?.message === "string" && event.error.data.message.trim()
+    ? event.error.data.message.trim()
+    : typeof event.error?.message === "string" && event.error.message.trim()
+      ? event.error.message.trim()
+      : undefined
+  return { errorName, errorMessage }
+}
+
+export function summarizeErrorEntry(entry: Pick<LogEntry, "errorName" | "errorMessage">): string {
+  const errorName = entry.errorName?.trim()
+  const errorMessage = entry.errorMessage?.trim()
+  if (errorName && errorMessage) {
+    return errorMessage.toLowerCase().startsWith(`${errorName.toLowerCase()}:`)
+      ? errorMessage
+      : `${errorName}: ${errorMessage}`
+  }
+  return errorMessage || errorName || "Unknown error"
+}
+
+export function lastVisibleLogMessage(entries: LogEntry[]): string | null {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!
+    if (entry.kind === "error") return summarizeErrorEntry(entry)
+    if (entry.kind === "text" && entry.text) return entry.text
+  }
+  return null
 }
 
 // Extract the text content of a single top-level XML tag by name using
@@ -382,6 +423,14 @@ export function parseEvent(event: LogEvent): LogEntry[] {
         kind: "reasoning",
         timestamp: event.timestamp,
         reasoningText: text,
+      }]
+    }
+
+    case "error": {
+      return [{
+        kind: "error",
+        timestamp: event.timestamp,
+        ...parseErrorDetails(event),
       }]
     }
 
