@@ -1,4 +1,4 @@
-export type TaskStatus = "running" | "done" | "ready" | "failed" | "stopped" | "unknown"
+export type TaskStatus = "running" | "done" | "ready" | "failed" | "stopped"
 
 export type FilterMode = "active" | "all"
 

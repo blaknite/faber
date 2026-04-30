@@ -7,7 +7,6 @@ export const STATUS_COLOR: Record<TaskStatus, string> = {
   ready: "#ff9900",
   failed: "#cc3333",
   stopped: "#888888",
-  unknown: "#888888",
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -16,7 +15,6 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   ready: "Ready",
   failed: "Failed",
   stopped: "Stopped",
-  unknown: "Unknown",
 }
 
 export const STATUS_SYMBOL: Record<TaskStatus, string> = {
@@ -25,5 +23,4 @@ export const STATUS_SYMBOL: Record<TaskStatus, string> = {
   ready: "!",
   failed: "✗",
   stopped: "■",
-  unknown: "?",
 }
