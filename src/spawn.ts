@@ -71,6 +71,12 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
     child.on("close", (code) => {
       resolve(code ?? 1)
     })
+
+    child.on("error", (err) => {
+      logTaskFailure(repoRoot, { taskId, callSite: "spawn", reason: "Child process failed to start", exitCode: -1, error: err.message })
+      updateTask(repoRoot, taskId, { status: "failed", exitCode: -1, pid: null, completedAt: new Date().toISOString() })
+      resolve(-1)
+    })
   })
 
   const freshState = readState(repoRoot)
