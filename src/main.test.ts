@@ -8,12 +8,10 @@ mock.module("./lib/agent.js", () => ({
   DEFAULT_RESUME_PROMPT: "The task was interrupted. Please continue where you left off.",
 }))
 
-mock.module("./execute.js", () => ({
-  runExecute: mock(async () => {}),
-}))
-
-mock.module("./ship.js", () => ({
-  runShip: mock(async () => {}),
+mock.module("./lib/managedStep.js", () => ({
+  startProgressSpinner: mock(() => mock(() => {})),
+  waitForTask: mock(async () => "ready"),
+  lastAgentMessage: mock(() => null),
 }))
 
 mock.module("./lib/dispatch.js", () => ({
