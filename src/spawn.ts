@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process"
-import { appendFileSync } from "node:fs"
-import { readState, updateTask, taskOutputPath } from "./lib/state.js"
+import { readState, updateTask } from "./lib/state.js"
+import { appendEvent } from "./lib/events.js"
 import { worktreeHasCommits } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 
@@ -17,8 +17,6 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
     process.stderr.write(`faber spawn: task "${taskId}" not found\n`)
     return 1
   }
-
-  const outputFile = taskOutputPath(repoRoot, taskId)
 
   const child = spawn(command[0]!, command.slice(1), {
     cwd: `${repoRoot}/${task.worktree}`,
@@ -42,17 +40,20 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
         const line = lineBuffer.slice(0, newline)
         lineBuffer = lineBuffer.slice(newline + 1)
 
-        appendFileSync(outputFile, line + "\n")
+        let parsed: Record<string, unknown> | undefined
+        try { parsed = JSON.parse(line) as Record<string, unknown> } catch { /* skip */ }
+        if (parsed === undefined) continue
+
+        appendEvent(repoRoot, taskId, {
+          type: "opencode",
+          timestamp: typeof parsed.timestamp === "number" ? parsed.timestamp : Date.now(),
+          data: parsed,
+        })
 
         if (sessionId === null) {
-          try {
-            const event = JSON.parse(line) as { sessionID?: string }
-            if (event.sessionID) {
-              sessionId = event.sessionID
-              updateTask(repoRoot, taskId, { sessionId })
-            }
-          } catch {
-            // not valid JSON -- keep scanning
+          if (parsed.sessionID && typeof parsed.sessionID === "string") {
+            sessionId = parsed.sessionID
+            updateTask(repoRoot, taskId, { sessionId })
           }
         }
       }
@@ -60,7 +61,15 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
 
     child.stdout.on("end", () => {
       if (lineBuffer.length > 0) {
-        appendFileSync(outputFile, lineBuffer + "\n")
+        let parsed: Record<string, unknown> | undefined
+        try { parsed = JSON.parse(lineBuffer) as Record<string, unknown> } catch { /* skip */ }
+        if (parsed !== undefined) {
+          appendEvent(repoRoot, taskId, {
+            type: "opencode",
+            timestamp: typeof parsed.timestamp === "number" ? parsed.timestamp : Date.now(),
+            data: parsed,
+          })
+        }
         lineBuffer = ""
       }
     })

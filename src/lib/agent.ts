@@ -1,10 +1,9 @@
 import { spawn } from "node:child_process"
-import { writeFileSync, appendFileSync } from "node:fs"
 import { execaSync } from "execa"
 import type { Task } from "../types.js"
-import { taskOutputPath } from "./state.js"
 import type { AgentConfig } from "./config.js"
 import { cleanroomEnabled } from "./config.js"
+import { appendEvent, truncateEvents } from "./events.js"
 
 export const DEFAULT_RESUME_PROMPT = "The task was interrupted. Please continue where you left off."
 
@@ -32,8 +31,6 @@ export function spawnAgent(
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
-  const outputFile = taskOutputPath(repoRoot, task.id)
-
   const agentPrompt = resumeSessionId
     ? (resumePrompt ?? DEFAULT_RESUME_PROMPT)
     : `Load the skill \`working-in-faber\`\n\n${task.prompt}\n\nBase branch: ${task.baseBranch}`
@@ -42,17 +39,12 @@ export function spawnAgent(
     ? (resumePrompt ?? DEFAULT_RESUME_PROMPT)
     : task.prompt
 
-  const promptEvent = JSON.stringify({
+  if (!resumeSessionId) truncateEvents(repoRoot, task.id)
+  appendEvent(repoRoot, task.id, {
     type: "prompt",
     timestamp: Date.now(),
-    prompt: logPrompt,
-    model: task.model,
+    data: { prompt: logPrompt, model: task.model },
   })
-  if (resumeSessionId) {
-    appendFileSync(outputFile, promptEvent + "\n")
-  } else {
-    writeFileSync(outputFile, promptEvent + "\n")
-  }
 
   const opencodeArgv = [opencodebin, "run", "--format", "json", "--model", task.model, agentPrompt]
   if (resumeSessionId) {
