@@ -5,6 +5,10 @@ import { worktreeHasCommits } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 import { readLogEntries, summarizeErrorEntry } from "./lib/logParser.js"
 
+// Scan the task log for a terminal error event. Related to
+// `lastVisibleLogMessage` in logParser.ts, which does the same backwards walk
+// but also returns text entries; this only cares about errors so it can decide
+// whether to mark the task as failed.
 function lastFatalError(repoRoot: string, taskId: string): string | null {
   const entries = readLogEntries(repoRoot, taskId)
   for (let i = entries.length - 1; i >= 0; i--) {
