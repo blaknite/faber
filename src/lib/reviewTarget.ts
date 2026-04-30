@@ -100,9 +100,19 @@ async function resolvePullRequest(repoRoot: string, arg: string): Promise<Review
 
   const localRef = `refs/faber/pr-${meta.number}`
   await execa("git", ["fetch", "origin", `pull/${meta.number}/head:${localRef}`], { cwd: repoRoot })
+  // Prefer the synthetic ref when it exists, but some git environments only
+  // update FETCH_HEAD for this fetch and do not materialise refs/faber/*.
+  let prHeadSha: string
+  try {
+    const { stdout } = await execa("git", ["rev-parse", `${localRef}^{commit}`], { cwd: repoRoot })
+    prHeadSha = stdout
+  } catch {
+    const { stdout } = await execa("git", ["rev-parse", "FETCH_HEAD^{commit}"], { cwd: repoRoot })
+    prHeadSha = stdout
+  }
 
   return {
-    worktreeBase: localRef,
+    worktreeBase: prHeadSha.trim(),
     reviewBase: meta.baseRefName,
     summary: `pull request #${meta.number}`,
     contextLine: `${meta.url}\n${meta.title}\n\nBase branch: ${meta.baseRefName}\nHead branch: ${meta.headRefName}`,
