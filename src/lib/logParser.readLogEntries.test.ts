@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { readLogEntries } from "./logParser.js"
+import { appendEvent } from "./events.js"
 import { ensureFaberDir, taskOutputPath } from "./state.js"
 
 let tmpRoot: string
@@ -22,6 +23,10 @@ function writeLog(taskId: string, lines: string[]) {
   writeFileSync(path, lines.join("\n") + "\n")
 }
 
+function appendOpencode(taskId: string, data: Record<string, unknown>, timestamp = 1000) {
+  appendEvent(tmpRoot, taskId, { type: "opencode", timestamp, data })
+}
+
 describe("readLogEntries", () => {
   it("returns an empty array when the log file does not exist", () => {
     const entries = readLogEntries(tmpRoot, "nonexistent-task")
@@ -35,9 +40,7 @@ describe("readLogEntries", () => {
   })
 
   it("parses text events from JSONL", () => {
-    writeLog("text-task", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Hello" } }),
-    ])
+    appendOpencode("text-task", { type: "text", timestamp: 1000, part: { text: "Hello" } }, 1000)
     const entries = readLogEntries(tmpRoot, "text-task")
     expect(entries).toHaveLength(1)
     expect(entries[0]!.kind).toBe("text")
@@ -45,11 +48,9 @@ describe("readLogEntries", () => {
   })
 
   it("parses multiple events from JSONL", () => {
-    writeLog("multi-task", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "First" } }),
-      JSON.stringify({ type: "text", timestamp: 2000, part: { text: "Second" } }),
-      JSON.stringify({ type: "tool_use", timestamp: 3000, part: { tool: "bash", state: { input: { command: "ls" }, status: "completed" } } }),
-    ])
+    appendOpencode("multi-task", { type: "text", timestamp: 1000, part: { text: "First" } }, 1000)
+    appendOpencode("multi-task", { type: "text", timestamp: 2000, part: { text: "Second" } }, 2000)
+    appendOpencode("multi-task", { type: "tool_use", timestamp: 3000, part: { tool: "bash", state: { input: { command: "ls" }, status: "completed" } } }, 3000)
     const entries = readLogEntries(tmpRoot, "multi-task")
     expect(entries).toHaveLength(3)
     expect(entries[0]!.kind).toBe("text")
@@ -58,23 +59,18 @@ describe("readLogEntries", () => {
   })
 
   it("skips blank lines", () => {
-    writeLog("blank-lines", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Hello" } }),
-      "",
-      "  ",
-      JSON.stringify({ type: "text", timestamp: 2000, part: { text: "World" } }),
-    ])
+    appendOpencode("blank-lines", { type: "text", timestamp: 1000, part: { text: "Hello" } }, 1000)
+    appendOpencode("blank-lines", { type: "text", timestamp: 2000, part: { text: "World" } }, 2000)
     const entries = readLogEntries(tmpRoot, "blank-lines")
     expect(entries).toHaveLength(2)
   })
 
   it("skips lines with invalid JSON", () => {
-    writeLog("bad-json", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Good" } }),
-      "this is not json",
-      "{broken",
-      JSON.stringify({ type: "text", timestamp: 2000, part: { text: "Also good" } }),
-    ])
+    appendOpencode("bad-json", { type: "text", timestamp: 1000, part: { text: "Good" } }, 1000)
+    const path = taskOutputPath(tmpRoot, "bad-json")
+    appendFileSync(path, "this is not json\n")
+    appendFileSync(path, "{broken\n")
+    appendOpencode("bad-json", { type: "text", timestamp: 2000, part: { text: "Also good" } }, 2000)
     const entries = readLogEntries(tmpRoot, "bad-json")
     expect(entries).toHaveLength(2)
     expect(entries[0]!.text).toBe("Good")
@@ -82,32 +78,26 @@ describe("readLogEntries", () => {
   })
 
   it("skips events with unknown types", () => {
-    writeLog("unknown-type", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Known" } }),
-      JSON.stringify({ type: "something_weird", timestamp: 2000 }),
-    ])
+    appendOpencode("unknown-type", { type: "text", timestamp: 1000, part: { text: "Known" } }, 1000)
+    appendOpencode("unknown-type", { type: "something_weird", timestamp: 2000 }, 2000)
     const entries = readLogEntries(tmpRoot, "unknown-type")
     expect(entries).toHaveLength(1)
     expect(entries[0]!.text).toBe("Known")
   })
 
   it("annotates step_finish entries with elapsed time since the previous step", () => {
-    writeLog("step-timing", [
-      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Start" } }),
-      JSON.stringify({ type: "step_finish", timestamp: 4000, modelID: "anthropic/claude-sonnet-4-6" }),
-      JSON.stringify({ type: "text", timestamp: 5000, part: { text: "More work" } }),
-      JSON.stringify({ type: "step_finish", timestamp: 8000, modelID: "anthropic/claude-sonnet-4-6" }),
-    ])
+    appendOpencode("step-timing", { type: "text", timestamp: 1000, part: { text: "Start" } }, 1000)
+    appendOpencode("step-timing", { type: "step_finish", timestamp: 4000, modelID: "anthropic/claude-sonnet-4-6" }, 4000)
+    appendOpencode("step-timing", { type: "text", timestamp: 5000, part: { text: "More work" } }, 5000)
+    appendOpencode("step-timing", { type: "step_finish", timestamp: 8000, modelID: "anthropic/claude-sonnet-4-6" }, 8000)
     const entries = readLogEntries(tmpRoot, "step-timing")
     const steps = entries.filter((e) => e.kind === "step_finish")
     expect(steps).toHaveLength(2)
-    // First step: elapsed from the first event (1000) to 4000 = 3000ms
     expect(steps[0]!.elapsedMs).toBe(3000)
-    // Second step: elapsed from the first step (4000) to 8000 = 4000ms
     expect(steps[1]!.elapsedMs).toBe(4000)
   })
 
-  it("parses prompt events", () => {
+  it("parses prompt events (legacy flat format)", () => {
     writeLog("prompt-task", [
       JSON.stringify({ type: "prompt", timestamp: 500, prompt: "Fix the bug", model: "anthropic/claude-sonnet-4-6" }),
     ])
@@ -118,10 +108,31 @@ describe("readLogEntries", () => {
     expect(entries[0]!.model).toBe("anthropic/claude-sonnet-4-6")
   })
 
-  it("parses reasoning events", () => {
-    writeLog("reasoning-task", [
-      JSON.stringify({ type: "reasoning", timestamp: 1000, part: { text: "Let me think..." } }),
+  it("parses prompt events (new envelope format)", () => {
+    appendEvent(tmpRoot, "prompt-envelope", {
+      type: "prompt",
+      timestamp: 500,
+      data: { prompt: "Fix the bug", model: "anthropic/claude-sonnet-4-6" },
+    })
+    const entries = readLogEntries(tmpRoot, "prompt-envelope")
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.kind).toBe("prompt")
+    expect(entries[0]!.text).toBe("Fix the bug")
+    expect(entries[0]!.model).toBe("anthropic/claude-sonnet-4-6")
+  })
+
+  it("reads legacy opencode-shaped lines (raw event objects without envelope)", () => {
+    writeLog("legacy-oc", [
+      JSON.stringify({ type: "text", timestamp: 1000, part: { text: "Legacy text" } }),
     ])
+    const entries = readLogEntries(tmpRoot, "legacy-oc")
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.kind).toBe("text")
+    expect(entries[0]!.text).toBe("Legacy text")
+  })
+
+  it("parses reasoning events", () => {
+    appendOpencode("reasoning-task", { type: "reasoning", timestamp: 1000, part: { text: "Let me think..." } }, 1000)
     const entries = readLogEntries(tmpRoot, "reasoning-task")
     expect(entries).toHaveLength(1)
     expect(entries[0]!.kind).toBe("reasoning")
@@ -129,15 +140,17 @@ describe("readLogEntries", () => {
   })
 
   it("handles a realistic mixed log", () => {
-    writeLog("realistic-task", [
-      JSON.stringify({ type: "prompt", timestamp: 100, prompt: "Add tests", model: "anthropic/claude-sonnet-4-6" }),
-      JSON.stringify({ type: "text", timestamp: 200, part: { text: "I'll add tests." } }),
-      JSON.stringify({ type: "tool_use", timestamp: 300, part: { tool: "read", state: { input: { filePath: "/src/lib/state.ts" }, status: "completed" } } }),
-      JSON.stringify({ type: "tool_use", timestamp: 400, part: { tool: "write", state: { input: { filePath: "/src/lib/state.test.ts", content: "test code" }, status: "completed" } } }),
-      JSON.stringify({ type: "tool_use", timestamp: 500, part: { tool: "bash", state: { input: { command: "bun test" }, status: "completed", output: "3 pass\n0 fail" } } }),
-      JSON.stringify({ type: "step_finish", timestamp: 600, modelID: "anthropic/claude-sonnet-4-6" }),
-      JSON.stringify({ type: "text", timestamp: 700, part: { text: "All tests pass." } }),
-    ])
+    appendEvent(tmpRoot, "realistic-task", {
+      type: "prompt",
+      timestamp: 100,
+      data: { prompt: "Add tests", model: "anthropic/claude-sonnet-4-6" },
+    })
+    appendOpencode("realistic-task", { type: "text", timestamp: 200, part: { text: "I'll add tests." } }, 200)
+    appendOpencode("realistic-task", { type: "tool_use", timestamp: 300, part: { tool: "read", state: { input: { filePath: "/src/lib/state.ts" }, status: "completed" } } }, 300)
+    appendOpencode("realistic-task", { type: "tool_use", timestamp: 400, part: { tool: "write", state: { input: { filePath: "/src/lib/state.test.ts", content: "test code" }, status: "completed" } } }, 400)
+    appendOpencode("realistic-task", { type: "tool_use", timestamp: 500, part: { tool: "bash", state: { input: { command: "bun test" }, status: "completed", output: "3 pass\n0 fail" } } }, 500)
+    appendOpencode("realistic-task", { type: "step_finish", timestamp: 600, modelID: "anthropic/claude-sonnet-4-6" }, 600)
+    appendOpencode("realistic-task", { type: "text", timestamp: 700, part: { text: "All tests pass." } }, 700)
     const entries = readLogEntries(tmpRoot, "realistic-task")
     expect(entries).toHaveLength(7)
     expect(entries.map((e) => e.kind)).toEqual([

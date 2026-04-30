@@ -69,6 +69,10 @@ describe("runSpawn", () => {
     expect(existsSync(outputPath)).toBe(true)
     const contents = readFileSync(outputPath, "utf8")
     expect(contents).toContain('"sessionID":"ses-abc"')
+    const envelope = JSON.parse(contents.trim())
+    expect(envelope).toHaveProperty("type")
+    expect(envelope).toHaveProperty("timestamp")
+    expect(envelope).toHaveProperty("data")
   })
 
   it("exit 1 sets status to failed", async () => {
@@ -167,5 +171,11 @@ describe("runSpawn", () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('"sessionID":"ses-xyz"')
     expect(lines[1]).toContain('"type":"text"')
+    for (const line of lines) {
+      const parsed = JSON.parse(line)
+      expect(parsed).toHaveProperty("type")
+      expect(parsed).toHaveProperty("timestamp")
+      expect(parsed).toHaveProperty("data")
+    }
   })
 })
