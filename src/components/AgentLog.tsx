@@ -11,6 +11,7 @@ import {
   readLogStats,
   formatElapsed,
   formatElapsedMs,
+  summarizeErrorEntry,
 } from "../lib/logParser.js"
 import type { LogEntry } from "../lib/logParser.js"
 import { TIERS, DEFAULT_TIER } from "../types.js"
@@ -304,6 +305,27 @@ function ReasoningRow({ entry }: { entry: LogEntry }) {
   )
 }
 
+function ErrorRow({ entry }: { entry: LogEntry }) {
+  const title = entry.errorName?.trim() || "Error"
+  const message = entry.errorMessage?.trim()
+  const summary = summarizeErrorEntry(entry)
+
+  return (
+    <box style={{ paddingBottom: 1 }}>
+      <box style={{ paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1, backgroundColor: "#1a1010" }}>
+        <box
+          border={["left"]}
+          borderColor="#cc3333"
+          style={{ paddingLeft: 1, paddingRight: 1, flexDirection: "column" }}
+        >
+          <text fg="#ff6666">{message ? `! ${title}` : `! ${summary}`}</text>
+          {message ? <BlockContent content={message} unlimited /> : null}
+        </box>
+      </box>
+    </box>
+  )
+}
+
 function LogRow({ entry, index, entries, model, taskStatus, loadedConfig }: { entry: LogEntry; index: number; entries: LogEntry[]; model: Task["model"]; taskStatus: Task["status"]; loadedConfig: AgentConfig }) {
   if (entry.kind === "prompt") {
     const resolvedModel = (entry.model as Task["model"]) ?? model
@@ -311,6 +333,7 @@ function LogRow({ entry, index, entries, model, taskStatus, loadedConfig }: { en
     return <PromptLogRow entry={entry} tier={tier} />
   }
   if (entry.kind === "tool_use") return <ToolRow entry={entry} />
+  if (entry.kind === "error") return <ErrorRow entry={entry} />
   if (entry.kind === "step_finish") {
     if (shouldShowStepFinish(entries, index, taskStatus === "running")) {
       const elapsed = sumRoundElapsed(entries, index)

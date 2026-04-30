@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   formatElapsed,
   formatElapsedMs,
+  lastVisibleLogMessage,
   normalizePath,
   parseEvent,
   parseReadOutput,
@@ -139,6 +140,38 @@ describe("parseEvent", () => {
     it("returns empty array for blank reasoning text", () => {
       const entries = parseEvent(makeEvent({ type: "reasoning", part: { text: "" } }))
       expect(entries).toHaveLength(0)
+    })
+  })
+
+  describe("error events", () => {
+    it("parses fatal error events", () => {
+      const entries = parseEvent(makeEvent({
+        type: "error",
+        error: {
+          name: "UnknownError",
+          data: { message: "Model not found: anthropic/claude-sonnet-4-6." },
+        },
+      } as Partial<LogEvent>))
+
+      expect(entries).toHaveLength(1)
+      expect(entries[0]!.kind).toBe("error")
+      expect(entries[0]!.errorName).toBe("UnknownError")
+      expect(entries[0]!.errorMessage).toBe("Model not found: anthropic/claude-sonnet-4-6.")
+    })
+  })
+
+  describe("lastVisibleLogMessage", () => {
+    it("falls back to the most recent fatal error when there is no text reply", () => {
+      const message = lastVisibleLogMessage([
+        {
+          kind: "error",
+          timestamp: 1000,
+          errorName: "UnknownError",
+          errorMessage: "Model not found: anthropic/claude-sonnet-4-6.",
+        },
+      ])
+
+      expect(message).toBe("UnknownError: Model not found: anthropic/claude-sonnet-4-6.")
     })
   })
 

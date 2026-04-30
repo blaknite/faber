@@ -1,3 +1,4 @@
+import { summarizeErrorEntry } from "./logParser.js"
 import type { LogEntry } from "./logParser.js"
 
 export interface FormatOptions {
@@ -31,6 +32,10 @@ function formatToolEntry(entry: LogEntry, full: boolean): string {
   return parts.join("\n")
 }
 
+function formatErrorEntry(entry: LogEntry): string {
+  return `  ! ${summarizeErrorEntry(entry)}`
+}
+
 // Render a LogEntry[] as plain text. By default (full=false) tool calls are
 // summarised as one-liners and step_finish/reasoning entries are omitted.
 // With full=true the block content (bash output, file contents, diffs) is
@@ -60,6 +65,11 @@ export function formatLog(entries: LogEntry[], options: FormatOptions = {}): str
 
     if (entry.kind === "text") {
       outputLines.push(entry.text ?? "")
+      continue
+    }
+
+    if (entry.kind === "error") {
+      outputLines.push(formatErrorEntry(entry))
       continue
     }
 

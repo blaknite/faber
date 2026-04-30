@@ -154,6 +154,39 @@ describe("runSpawn", () => {
     expect(entry.taskId).toBe(task.id)
   })
 
+  it("fatal error event in log marks task failed even when exit code is 0", async () => {
+    const task = makeTask()
+    addTask(tmpRoot, task)
+
+    const errorEvent = JSON.stringify({
+      type: "error",
+      timestamp: 1,
+      error: {
+        name: "UnknownError",
+        data: { message: "Model not found: anthropic/claude-sonnet-4-6." },
+      },
+    })
+    const script = `printf '%s\\n' '${errorEvent}'; exit 0`
+    const result = await runSpawn(tmpRoot, task.id, ["sh", "-c", script])
+
+    expect(result).toBe(0)
+
+    const state = readState(tmpRoot)
+    const updated = state.tasks.find((t) => t.id === task.id)!
+    expect(updated.status).toBe("failed")
+    expect(updated.exitCode).toBe(0)
+    expect(updated.pid).toBeNull()
+    expect(updated.completedAt).not.toBeNull()
+
+    const failureLogPath = join(tmpRoot, ".faber", "failures.log")
+    expect(existsSync(failureLogPath)).toBe(true)
+    const logContents = readFileSync(failureLogPath, "utf8")
+    const entry = JSON.parse(logContents.trim().split("\n")[0]!)
+    expect(entry.taskId).toBe(task.id)
+    expect(entry.reason).toContain("fatal error")
+    expect(entry.error).toContain("Model not found")
+  })
+
   it("sessionID emitted mid-stream is captured and both lines appear in JSONL", async () => {
     const task = makeTask()
     addTask(tmpRoot, task)

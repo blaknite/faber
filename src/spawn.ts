@@ -3,6 +3,22 @@ import { readState, updateTask } from "./lib/state.js"
 import { appendEvent } from "./lib/events.js"
 import { worktreeHasCommits } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
+import { readLogEntries, summarizeErrorEntry } from "./lib/logParser.js"
+
+// Scan the task log for a terminal error event. Related to
+// `lastVisibleLogMessage` in logParser.ts, which does the same backwards walk
+// but also returns text entries; this only cares about errors so it can decide
+// whether to mark the task as failed.
+function lastFatalError(repoRoot: string, taskId: string): string | null {
+  const entries = readLogEntries(repoRoot, taskId)
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]!
+    if (entry.kind === "error") {
+      return summarizeErrorEntry(entry)
+    }
+  }
+  return null
+}
 
 export async function runSpawn(repoRoot: string, taskId: string, command: string[]): Promise<number> {
   if (command.length === 0) {
@@ -106,9 +122,27 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
   }
 
   const now = new Date().toISOString()
+  const fatalError = lastFatalError(repoRoot, taskId)
+
+  if (fatalError) {
+    logTaskFailure(repoRoot, {
+      taskId,
+      callSite: "spawn",
+      reason: "Agent logged a fatal error",
+      exitCode,
+      error: fatalError,
+    })
+  }
 
   if (freshTask.status === "stopped" || freshTask.status === "failed") {
     updateTask(repoRoot, taskId, { exitCode, pid: null, completedAt: now })
+  } else if (fatalError) {
+    updateTask(repoRoot, taskId, {
+      status: "failed",
+      exitCode,
+      pid: null,
+      completedAt: now,
+    })
   } else if (exitCode === 0) {
     const hasCommits = await worktreeHasCommits(repoRoot, taskId, task.baseBranch)
     updateTask(repoRoot, taskId, {
