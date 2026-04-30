@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { STATUS_COLOR, STATUS_LABEL, STATUS_SYMBOL } from "./status.js"
 import type { TaskStatus } from "../types.js"
 
-const ALL_STATUSES: TaskStatus[] = ["running", "done", "ready", "failed", "stopped", "unknown"]
+const ALL_STATUSES: TaskStatus[] = ["running", "done", "ready", "failed", "stopped"]
 
 describe("STATUS_COLOR", () => {
   it("has an entry for every TaskStatus", () => {
@@ -61,8 +61,7 @@ describe("STATUS_SYMBOL", () => {
   })
 
   it("uses distinct symbols for terminal statuses", () => {
-    // done, ready, failed, stopped, unknown should all have different symbols
-    const terminalStatuses: TaskStatus[] = ["done", "ready", "failed", "stopped", "unknown"]
+    const terminalStatuses: TaskStatus[] = ["done", "ready", "failed", "stopped"]
     const symbols = terminalStatuses.map((s) => STATUS_SYMBOL[s])
     const unique = new Set(symbols)
     expect(unique.size).toBe(terminalStatuses.length)

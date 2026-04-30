@@ -65,7 +65,7 @@ describe("watchTask", () => {
   })
 
   describe("task already in terminal state", () => {
-    for (const status of ["ready", "done", "failed", "stopped", "unknown"] as const) {
+    for (const status of ["ready", "done", "failed", "stopped"] as const) {
       it(`returns immediately when task is already ${status}`, async () => {
         writeState(tmpRoot, { tasks: [makeTask({ status })] })
 

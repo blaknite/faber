@@ -39,10 +39,10 @@ State transitions:
 
 "done" or "failed" ──── r key (resume) ──────────────────> "running"
 
-On startup: "running" with a dead PID ───────────────────> "unknown"
+On startup: "running" with a dead PID ───────────────────> "failed"
 ```
 
-The `"unknown"` state is set at startup by `reconcileRunningTasks`: any task still marked `"running"` whose PID is no longer alive gets marked `"unknown"`. This catches agents that died while Faber was closed.
+`reconcileRunningTasks` runs at startup and marks any task still `"running"` whose PID is no longer alive as `"failed"`. This catches agents that died while Faber was closed.
 
 ## How agents are spawned
 
