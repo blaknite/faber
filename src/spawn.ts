@@ -5,6 +5,11 @@ import { worktreeHasCommits } from "./lib/worktree.js"
 import { logTaskFailure } from "./lib/failureLog.js"
 
 export async function runSpawn(repoRoot: string, taskId: string, command: string[]): Promise<number> {
+  if (command.length === 0) {
+    process.stderr.write("faber spawn: command must not be empty\n")
+    return 1
+  }
+
   const state = readState(repoRoot)
   const task = state.tasks.find((t) => t.id === taskId)
 
@@ -49,6 +54,13 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
           // not valid JSON -- keep scanning
         }
       }
+    }
+  })
+
+  child.stdout.on("end", () => {
+    if (lineBuffer.length > 0) {
+      appendFileSync(outputFile, lineBuffer + "\n")
+      lineBuffer = ""
     }
   })
 

@@ -26,9 +26,9 @@ export function spawnAgent(
   if (!opencodebin) throw new Error("opencode not found in PATH")
 
   const script = process.argv[1]
-  const faberCmd = script?.startsWith("/") && !script.startsWith("/$bunfs/")
-    ? `${process.execPath} ${script}`
-    : process.execPath
+  const faberParts = script?.startsWith("/") && !script.startsWith("/$bunfs/")
+    ? [process.execPath, script]
+    : [process.execPath]
 
   const worktreePath = `${repoRoot}/${task.worktree}`
 
@@ -59,7 +59,7 @@ export function spawnAgent(
     opencodeArgv.push("-s", resumeSessionId, "--fork")
   }
 
-  const shellCmd = `${faberCmd} spawn ${task.id} -- ${shellQuote(opencodeArgv)}`
+  const shellCmd = `${faberParts.map((p) => shellQuote([p])).join(" ")} spawn ${task.id} -- ${shellQuote(opencodeArgv)}`
 
   const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,
