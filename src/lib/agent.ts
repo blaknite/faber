@@ -59,7 +59,7 @@ export function spawnAgent(
     opencodeArgv.push("-s", resumeSessionId, "--fork")
   }
 
-  const shellCmd = `${faberParts.map((p) => shellQuote([p])).join(" ")} spawn ${task.id} -- ${shellQuote(opencodeArgv)}`
+  const shellCmd = `${shellQuote(faberParts)} spawn ${task.id} -- ${shellQuote(opencodeArgv)}`
 
   const child = spawn("sh", ["-c", shellCmd], {
     cwd: worktreePath,

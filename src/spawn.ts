@@ -65,7 +65,7 @@ export async function runSpawn(repoRoot: string, taskId: string, command: string
   })
 
   child.stderr.resume()
-  ;(child.stderr as any).unref()
+  child.stderr.unref()
 
   const exitCode = await new Promise<number>((resolve) => {
     child.on("close", (code) => {
