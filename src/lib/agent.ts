@@ -73,6 +73,7 @@ export function spawnAgent(
               "*": "deny",
               "git *": "allow",
               "faber *": "allow",
+              "gh *": "allow",
             },
             cleanroom_exec: "allow",
           } : {}),
