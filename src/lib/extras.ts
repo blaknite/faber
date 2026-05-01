@@ -205,7 +205,7 @@ export function mergeAgentsIntoOpencodeConfig(
   }
 
   const errors: ParseError[] = []
-  const parsed = parse(text, errors, { allowTrailingCommas: true, disallowComments: false })
+  const parsed = parse(text, errors, { allowTrailingComma: true, disallowComments: false })
 
   if (errors.length > 0) {
     return { text, added, updated, skipped, malformed: true }
@@ -293,7 +293,7 @@ async function installOpencode(version: string, homeDirOverride: string = homedi
 
   const errors: ParseError[] = []
   const parsedConfig = existingText !== null
-    ? parse(existingText, errors, { allowTrailingCommas: true, disallowComments: false })
+    ? parse(existingText, errors, { allowTrailingComma: true, disallowComments: false })
     : { agent: {} }
 
   if (existingText !== null && errors.length > 0) {
