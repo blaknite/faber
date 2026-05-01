@@ -8,6 +8,7 @@ import {
   FABER_AGENTS,
   globalSkillsDir,
   installExtras,
+  mergeAgentsIntoOpencodeConfig,
   readExtrasVersion,
   writeExtrasVersion,
 } from "./extras.js"
@@ -247,4 +248,121 @@ describe("installExtras", () => {
   // require either HTTP mocking (e.g. undici MockAgent) or a stdin mock -- both
   // are feasible but out of scope for this initial pass. The dev-mode guard
   // above confirms the function is reachable and that the early-exit branch works.
+})
+
+// ------------------------------------------------------------------
+// mergeAgentsIntoOpencodeConfig
+// ------------------------------------------------------------------
+
+const sampleAgent = {
+  description: "Test agent",
+  model: "anthropic/claude-test",
+  color: "#123456",
+  mode: "primary",
+  permission: { question: "allow" },
+}
+
+describe("mergeAgentsIntoOpencodeConfig", () => {
+  it("creates a fresh config when input text is null", () => {
+    const result = mergeAgentsIntoOpencodeConfig(null, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toEqual(["myAgent"])
+    expect(result.updated).toEqual([])
+    expect(result.skipped).toEqual([])
+    const parsed = JSON.parse(result.text)
+    expect(parsed.$schema).toBe("https://opencode.ai/config.json")
+    expect(parsed.agent.myAgent).toEqual(sampleAgent)
+  })
+
+  it("parses JSONC with // line comments and applies an agent without losing the comment", () => {
+    const text = `{
+  // this is a line comment
+  "$schema": "https://opencode.ai/config.json"
+}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toContain("myAgent")
+    expect(result.text).toContain("// this is a line comment")
+    expect(result.text).toContain('"myAgent"')
+  })
+
+  it("parses JSONC with /* */ block comments and preserves them", () => {
+    const text = `{
+  /* block comment */
+  "$schema": "https://opencode.ai/config.json"
+}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toContain("myAgent")
+    expect(result.text).toContain("/* block comment */")
+  })
+
+  it("parses JSONC with trailing commas", () => {
+    const text = `{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "existing": { "description": "old", },
+  },
+}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toContain("myAgent")
+  })
+
+  it("adds a new agent to a config that has no agent key", () => {
+    const text = `{"$schema": "https://opencode.ai/config.json"}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toContain("myAgent")
+    expect(result.text).toContain('"myAgent"')
+  })
+
+  it("adds a new agent to a config that has agent: {}", () => {
+    const text = `{"$schema": "https://opencode.ai/config.json", "agent": {}}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toContain("myAgent")
+    expect(result.text).toContain('"myAgent"')
+  })
+
+  it("leaves an agent untouched when its definition already matches", () => {
+    const text = JSON.stringify({
+      "$schema": "https://opencode.ai/config.json",
+      agent: { myAgent: sampleAgent },
+    }, null, 2)
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.added).toEqual([])
+    expect(result.updated).toEqual([])
+  })
+
+  it("updates an agent when its definition differs from what's in agentsToWrite", () => {
+    const existingAgent = { ...sampleAgent, description: "old description" }
+    const text = JSON.stringify({
+      "$schema": "https://opencode.ai/config.json",
+      agent: { myAgent: existingAgent },
+    }, null, 2)
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.updated).toContain("myAgent")
+    expect(result.added).toEqual([])
+  })
+
+  it("returns malformed: true when the input has a real syntax error", () => {
+    const text = `{"$schema": "https://opencode.ai/config.json", "unterminated`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(true)
+    expect(result.added).toEqual([])
+    expect(result.updated).toEqual([])
+  })
+
+  it("preserves 2-space indentation when adding agents", () => {
+    const text = `{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {}
+}`
+    const result = mergeAgentsIntoOpencodeConfig(text, { myAgent: sampleAgent })
+    expect(result.malformed).toBe(false)
+    expect(result.text).toContain('  "agent"')
+  })
 })

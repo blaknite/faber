@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { applyEdits, modify, parse, type ParseError } from "jsonc-parser"
 
 const GITHUB_REPO = "blaknite/faber"
 const RAW_BASE = "https://raw.githubusercontent.com"
@@ -164,9 +165,82 @@ async function installSkillsFromGitHub(version: string, destDir: string): Promis
   }
 }
 
+export type MergeAgentsResult = {
+  text: string
+  added: string[]
+  updated: string[]
+  skipped: string[]
+  malformed: boolean
+}
+
+// Pure helper: merges agentsToWrite into the JSONC text of opencode.json.
+// Pass null for text to create a fresh config from scratch.
+// Agents that need conflict resolution should already be resolved by the caller --
+// pass the resolved set as agentsToWrite. The skipped list is populated by the caller
+// before invoking this helper for anything that was declined at the prompt.
+export function mergeAgentsIntoOpencodeConfig(
+  text: string | null,
+  agentsToWrite: Record<string, object>
+): MergeAgentsResult {
+  const added: string[] = []
+  const updated: string[] = []
+  const skipped: string[] = []
+
+  if (text === null) {
+    const config: Record<string, any> = {
+      "$schema": "https://opencode.ai/config.json",
+      agent: {},
+    }
+    for (const [name, agentDef] of Object.entries(agentsToWrite)) {
+      config.agent[name] = agentDef
+      added.push(name)
+    }
+    return {
+      text: JSON.stringify(config, null, 2) + "\n",
+      added,
+      updated,
+      skipped,
+      malformed: false,
+    }
+  }
+
+  const errors: ParseError[] = []
+  const parsed = parse(text, errors, { allowTrailingCommas: true, disallowComments: false })
+
+  if (errors.length > 0) {
+    return { text, added, updated, skipped, malformed: true }
+  }
+
+  let currentText = text
+
+  if (!parsed.agent || typeof parsed.agent !== "object") {
+    const edits = modify(currentText, ["agent"], {}, { formattingOptions: { tabSize: 2, insertSpaces: true } })
+    currentText = applyEdits(currentText, edits)
+  }
+
+  const existingAgents = parsed.agent && typeof parsed.agent === "object" ? parsed.agent : {}
+
+  for (const [name, agentDef] of Object.entries(agentsToWrite)) {
+    const existing = existingAgents[name]
+    if (!existing) {
+      const edits = modify(currentText, ["agent", name], agentDef, { formattingOptions: { tabSize: 2, insertSpaces: true } })
+      currentText = applyEdits(currentText, edits)
+      added.push(name)
+    } else if (JSON.stringify(existing) === JSON.stringify(agentDef)) {
+      // already up to date
+    } else {
+      const edits = modify(currentText, ["agent", name], agentDef, { formattingOptions: { tabSize: 2, insertSpaces: true } })
+      currentText = applyEdits(currentText, edits)
+      updated.push(name)
+    }
+  }
+
+  return { text: currentText, added, updated, skipped, malformed: false }
+}
+
 // Install opencode slash commands and agent config together as a single prompted group.
-async function installOpencode(version: string): Promise<void> {
-  const opencodeDir = join(homedir(), ".opencode")
+async function installOpencode(version: string, homeDirOverride: string = homedir()): Promise<void> {
+  const opencodeDir = join(homeDirOverride, ".opencode")
   const commandsDir = join(opencodeDir, "commands")
   const configFile = join(opencodeDir, "opencode.json")
 
@@ -198,7 +272,7 @@ async function installOpencode(version: string): Promise<void> {
       const existing = readFileSync(destFile, "utf8")
       if (existing === content) continue
 
-      console.log(`\nConflict: ${destFile.replace(homedir(), "~")} already exists and differs from the v${version} version.`)
+      console.log(`\nConflict: ${destFile.replace(homeDirOverride, "~")} already exists and differs from the v${version} version.`)
       const overwrite = await confirm("Overwrite?")
       if (!overwrite) {
         console.log(`Skipped ${commandName}.md.`)
@@ -211,44 +285,54 @@ async function installOpencode(version: string): Promise<void> {
   }
 
   // Merge agent definitions into ~/.opencode/opencode.json
-  let config: Record<string, any> = { "$schema": "https://opencode.ai/config.json" }
-  if (existsSync(configFile)) {
-    try {
-      config = JSON.parse(readFileSync(configFile, "utf8"))
-    } catch {
-      // If the file is malformed, start fresh but warn
-      console.error(`Warning: ~/.opencode/opencode.json is not valid JSON. Skipping agent config merge.`)
-      return
-    }
+  const existingText = existsSync(configFile) ? readFileSync(configFile, "utf8") : null
+
+  // Resolve conflicts interactively before calling the pure helper
+  const agentsToWrite: Record<string, object> = {}
+  const skippedAgents: string[] = []
+
+  const errors: ParseError[] = []
+  const parsedConfig = existingText !== null
+    ? parse(existingText, errors, { allowTrailingCommas: true, disallowComments: false })
+    : { agent: {} }
+
+  if (existingText !== null && errors.length > 0) {
+    console.error(`Warning: ~/.opencode/opencode.json is not valid JSON. Skipping agent config merge.`)
+    return
   }
 
-  if (!config.agent || typeof config.agent !== "object") {
-    config.agent = {}
-  }
+  const existingAgents = parsedConfig.agent && typeof parsedConfig.agent === "object" ? parsedConfig.agent : {}
 
   for (const [name, agentDef] of Object.entries(FABER_AGENTS)) {
-    const existing = config.agent[name]
-
-    if (!existing) {
-      config.agent[name] = agentDef
-      console.log(`Added agent: ${name}`)
-    } else if (JSON.stringify(existing) === JSON.stringify(agentDef)) {
-      // Already up to date, skip silently
+    const existing = existingAgents[name]
+    if (!existing || JSON.stringify(existing) === JSON.stringify(agentDef)) {
+      agentsToWrite[name] = agentDef
     } else {
       const overwrite = await confirm(
         `Agent '${name}' already exists in ~/.opencode/opencode.json with different settings. Overwrite?`
       )
       if (overwrite) {
-        config.agent[name] = agentDef
-        console.log(`Updated agent: ${name}`)
+        agentsToWrite[name] = agentDef
       } else {
-        console.log(`Skipped agent: ${name}`)
+        skippedAgents.push(name)
       }
     }
   }
 
+  const result = mergeAgentsIntoOpencodeConfig(existingText, agentsToWrite)
+
+  for (const name of result.added) {
+    console.log(`Added agent: ${name}`)
+  }
+  for (const name of result.updated) {
+    console.log(`Updated agent: ${name}`)
+  }
+  for (const name of skippedAgents) {
+    console.log(`Skipped agent: ${name}`)
+  }
+
   mkdirSync(opencodeDir, { recursive: true })
-  writeFileSync(configFile, JSON.stringify(config, null, 2) + "\n", "utf8")
+  writeFileSync(configFile, result.text, "utf8")
 }
 
 // Read the extras version marker from <baseDir>/.faber/extras-version.
