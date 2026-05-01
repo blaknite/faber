@@ -163,16 +163,16 @@ Every finding must start with a short intent label ("Nit:", "Minor:", "Thought:"
 
 <comment text>
 
-```
-  replacement code here
+```suggestion
+replacement line
 ```
 
-## 2. `src/bar.ts:15`
+## 2. `src/bar.ts:15-18`
 
 <comment text>
 
-```
-  conceptual example here
+```suggestion
+replacement block
 ```
 ````
 
@@ -184,7 +184,7 @@ Every finding must start with a short intent label ("Nit:", "Minor:", "Thought:"
 - Don't invent findings to pad the output. A clean review is allowed to be two sentences long.
 - Don't suggest refactors that aren't related to the change's intent. Stay in scope.
 - Don't caveat every finding with "I might be wrong but..." The tier framing handles uncertainty. Trust it.
-- Don't try to post to GitHub. There is no review to submit. The final message is the artefact.
+- By default, the final message is the artefact and you do not post to GitHub. When the prompt explicitly directs you to submit the review, follow the Submitting section below — don't post in any other circumstance.
 
 # Kind Feedback
 
@@ -296,3 +296,119 @@ The author needs to know how much weight to give your feedback. Most of the time
 - Watch for people who don't speak up in meetings — find ways to give them a voice
 - Let people express themselves in whatever format works for them
 - Kindness is not "meet me halfway" — it's meeting people where *they* are
+
+---
+
+## Submitting
+
+Follow this section only when the prompt explicitly directs you to submit the review to GitHub. In all other circumstances, the final message is the artefact and you do not post.
+
+### 1. Map every comment to a valid target line
+
+The draft's `path:line` references are approximate. For each comment, find the exact line GitHub will accept.
+
+Use faber's helper once per comment:
+
+```
+faber agent comment-targets <pr-number> <path> <line>
+```
+
+Output is plain text — `<line>: <content>` for every right-side line within ±5 of `<line>` that's inside a changed hunk:
+
+```
+38: function compute(input) {
+39:   const x = input * 2
+40:   return x
+41: }
+42: const foo = compute(input)
+```
+
+Read the output. Pick the line whose content matches what the comment is really about — based on the comment's intent, not numerical proximity to the draft's line number.
+
+Recovery for empty output:
+
+- **No output.** Either the file isn't changed by this PR, or every line in [draft - 5, draft + 5] was a removed line. Try `--all`:
+
+  ```
+  faber agent comment-targets <pr-number> <path> --all
+  ```
+
+  This lists every targetable line in `<path>`. If still no output, the file either isn't changed by this PR or only has deletions (which GitHub doesn't accept as comment targets). Drop the comment in either case.
+
+Three outcomes:
+
+- **Match at the draft's line.** Keep the comment as-is.
+- **Match on a different line.** Update the comment's line to the matched line.
+- **No content matches anywhere in the file's changed lines.** The comment is about unchanged code, not changes in this PR. Drop the comment.
+
+Note in the submission report any comments that were dropped or moved, with the original location and the reason.
+
+`<pr-number>` is the PR number. The subcommand uses `gh` to resolve the PR's repo from the current working directory's git remote, so the agent must be running inside the worktree (it always is during a faber task).
+
+### 2. Build the payload
+
+Collect the surviving comments with their `path`/`line` (and `start_line` only when the comment covers a multi-line range). Use `side: "RIGHT"` — `line` is the line number in the new file.
+
+Comment bodies preserve their intent labels and any ` ```suggestion ``` ` fences from the draft.
+
+### 3. Submit as a single batched review
+
+Always pass the payload via `--input -` (stdin) rather than `-f` field flags. `-f` converts numbers to strings and the API rejects integer fields like `line` with 422.
+
+Pipe directly into `gh` using a heredoc:
+
+```
+gh api repos/<owner>/<repo>/pulls/<number>/reviews --method POST --input - <<'PAYLOAD'
+{
+  "event": "COMMENT",
+  "body": "<the summary text from the review>",
+  "comments": [
+    {
+      "path": "src/foo.ts",
+      "line": 42,
+      "side": "RIGHT",
+      "body": "Blocking: <comment text>\n\n```suggestion\nreplacement line\n```"
+    }
+  ]
+}
+PAYLOAD
+```
+
+This is a single `gh` invocation. The cleanroom allow-list permits `gh *`.
+
+**Event selection:**
+- Any `Blocking:` or `Important:` finding → `REQUEST_CHANGES`
+- Otherwise → `COMMENT`
+- Never `APPROVE`. Approval is a human decision.
+
+If the API returns non-2xx, produce a `# Review Submission Failed` final message including the error body and the comments it tried to post, so the user can retry manually. Don't auto-retry.
+
+The response includes `html_url`. Use that in the submission report.
+
+### 4. Write the submission report
+
+The submission report is the final message when `--post` was set. It replaces the `# Review Findings` artefact:
+
+```
+# Review Posted
+
+<one-line summary: number of comments + event type>
+
+<URL of the submitted review>
+
+## Summary
+
+<the body that was posted as the review summary>
+
+## Comments
+
+### 1. `path/to/file.ts:42` — Blocking
+
+<the comment body, as posted>
+
+### 2. `path/to/file.ts:60-63` — Nit
+
+<the comment body, as posted>
+```
+
+If the review had no inline findings, the report shows the summary and "0 inline comments". Note any comments that were dropped or moved during line mapping.
