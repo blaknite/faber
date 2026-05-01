@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { execSync } from "node:child_process"
 import {
   acquireLock,
   addTask,
   ensureFaberDir,
+  findProjectRoot,
   findRepoRoot,
   findTask,
   readState,
@@ -332,6 +334,49 @@ describe("findTask", () => {
       makeTask({ id: "a3b1-add-tests" }),
     ]
     expect(() => findTask(tasks, "a3")).toThrow('Multiple tasks match "a3": a3f2-fix-login, a3b1-add-tests')
+  })
+})
+
+describe("findProjectRoot", () => {
+  it("returns the path itself when .git is a directory", () => {
+    mkdirSync(join(tmpRoot, '.git'))
+    expect(findProjectRoot(tmpRoot)).toBe(tmpRoot)
+  })
+
+  it("returns the parent when called on a subdirectory of a project", () => {
+    mkdirSync(join(tmpRoot, '.git'))
+    const subDir = join(tmpRoot, 'src', 'lib')
+    mkdirSync(subDir, { recursive: true })
+    expect(findProjectRoot(subDir)).toBe(tmpRoot)
+  })
+
+  it("returns the main checkout when called on a linked worktree path", () => {
+    const mainRepo = join(tmpRoot, 'main-repo')
+    mkdirSync(mainRepo, { recursive: true })
+    execSync('git init main-repo', { cwd: tmpRoot })
+    execSync('git commit --allow-empty -m "init"', { cwd: mainRepo, env: { ...process.env, GIT_AUTHOR_NAME: 'test', GIT_AUTHOR_EMAIL: 'test@test.com', GIT_COMMITTER_NAME: 'test', GIT_COMMITTER_EMAIL: 'test@test.com' } })
+    execSync('git worktree add ../linked-wt -b throwaway', { cwd: mainRepo })
+    const linkedWt = join(tmpRoot, 'linked-wt')
+    expect(findProjectRoot(linkedWt)).toBe(mainRepo)
+  })
+
+  it("returns null when no .git directory exists up the tree", () => {
+    const isolated = join('/private/tmp', `no-git-${Date.now()}`)
+    mkdirSync(isolated, { recursive: true })
+    try {
+      const result = findProjectRoot(isolated)
+      expect(result).toBeNull()
+    } finally {
+      rmSync(isolated, { recursive: true, force: true })
+    }
+  })
+
+  it("does not return a directory whose .git is a regular file", () => {
+    writeFileSync(join(tmpRoot, '.git'), 'gitdir: /some/other/path\n')
+    const subDir = join(tmpRoot, 'subdir')
+    mkdirSync(subDir)
+    const result = findProjectRoot(subDir)
+    expect(result).not.toBe(tmpRoot)
   })
 })
 

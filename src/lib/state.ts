@@ -224,6 +224,23 @@ export function findRepoRoot(startDir: string): string | null {
   }
 }
 
+// Walk up from `startDir` looking for a directory whose `.git` entry is itself a
+// directory (i.e. a main git checkout, not a linked worktree). Linked worktrees
+// and submodules have `.git` as a regular file, so the walk continues past them.
+export function findProjectRoot(startDir: string): string | null {
+  let dir = startDir
+  while (true) {
+    try {
+      if (statSync(join(dir, '.git')).isDirectory()) return dir
+    } catch {
+      // .git doesn't exist at this level; keep walking.
+    }
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
+}
+
 function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0)
