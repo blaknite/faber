@@ -277,6 +277,36 @@ describe("main", () => {
     })
   })
 
+  describe("review --post", () => {
+    it("--post without --pull-request exits 1 with error message", async () => {
+      process.argv = ["bun", "faber", "review", "--post"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--post requires --pull-request"))).toBe(true)
+    })
+
+    it("--post with --branch exits 1 with error message", async () => {
+      process.argv = ["bun", "faber", "review", "--branch", "foo", "--post"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--post requires --pull-request"))).toBe(true)
+    })
+
+    it("--post with --task exits 1 with error message", async () => {
+      process.argv = ["bun", "faber", "review", "--task", "abc123", "--post"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--post requires --pull-request"))).toBe(true)
+    })
+
+    it("--post with --pull-request and --background exits 1 with error", async () => {
+      process.argv = ["bun", "faber", "review", "--pull-request", "123", "--post", "--background"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--post is incompatible with --background"))).toBe(true)
+    })
+  })
+
   describe("ship", () => {
     it("exits 1 with an error when --branch has no argument", async () => {
       process.argv = ["bun", "faber", "ship", "--branch"]

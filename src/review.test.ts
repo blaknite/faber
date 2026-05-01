@@ -391,6 +391,48 @@ describe("runReview", () => {
     })
   })
 
+  describe("post flag", () => {
+    it("post=true includes submission directive in dispatched prompt", async () => {
+      git("checkout -b feature-x")
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, undefined, true)
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).toContain("submit the review to GitHub")
+      expect(callOpts.prompt).toContain("Submitting section")
+    })
+
+    it("post=false does not include submission directive", async () => {
+      git("checkout -b feature-x")
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, undefined, false)
+      } catch {
+        // expected
+      }
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).not.toContain("submit the review to GitHub")
+    })
+
+    it("post=true prints 'To follow up on this review' footer (not 'Review complete')", async () => {
+      git("checkout -b feature-x")
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+      try {
+        await runReview(tmpRoot, { kind: "current" }, undefined, undefined, false, undefined, true)
+      } catch {
+        // expected
+      }
+      const output = written.join("")
+      expect(output).toContain("To follow up on this review")
+      expect(output).not.toContain("Review complete")
+    })
+  })
+
   describe("auto-completion", () => {
     function seedReviewTask(root: string, status: Task["status"]): Task {
       ensureFaberDir(root)
