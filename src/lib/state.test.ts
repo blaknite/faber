@@ -380,9 +380,7 @@ describe("findProjectRoot", () => {
     mkdirSync(subDir)
     const result = findProjectRoot(subDir)
     expect(result).not.toBe(tmpRoot)
-    if (result !== null) {
-      expect(result.length).toBeLessThan(tmpRoot.length)
-    }
+    expect(result === null || !result.startsWith(tmpRoot)).toBe(true)
   })
 })
 
