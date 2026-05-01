@@ -61,7 +61,7 @@ async function runCommentTargets(args: string[]): Promise<void> {
     const arg = args[i]!
     if (arg === "--window") {
       const next = args[i + 1]
-      if (next === undefined || next.startsWith("-")) {
+      if (next === undefined) {
         process.stderr.write("faber agent comment-targets: --window requires a value\n\n")
         process.stderr.write(COMMENT_TARGETS_HELP + "\n")
         exit(1)
@@ -70,8 +70,6 @@ async function runCommentTargets(args: string[]): Promise<void> {
       i += 2
     } else if (arg === "--all") {
       allFlag = true
-      i++
-    } else if (arg === "--help" || arg === "-h") {
       i++
     } else if (arg.startsWith("-")) {
       process.stderr.write(`faber agent comment-targets: unknown flag "${arg}"\n\n`)
