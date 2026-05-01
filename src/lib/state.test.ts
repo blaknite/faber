@@ -355,8 +355,8 @@ describe("findProjectRoot", () => {
     mkdirSync(mainRepo, { recursive: true })
     execSync('git init main-repo', { cwd: tmpRoot })
     execSync('git commit --allow-empty -m "init"', { cwd: mainRepo, env: { ...process.env, GIT_AUTHOR_NAME: 'test', GIT_AUTHOR_EMAIL: 'test@test.com', GIT_COMMITTER_NAME: 'test', GIT_COMMITTER_EMAIL: 'test@test.com' } })
-    execSync('git worktree add ../linked-wt -b throwaway', { cwd: mainRepo })
-    const linkedWt = join(tmpRoot, 'linked-wt')
+    execSync('git worktree add .worktrees/linked-wt -b throwaway', { cwd: mainRepo })
+    const linkedWt = join(mainRepo, '.worktrees', 'linked-wt')
     expect(findProjectRoot(linkedWt)).toBe(mainRepo)
   })
 
