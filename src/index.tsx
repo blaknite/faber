@@ -22,6 +22,7 @@ import { runReview } from "./review.js"
 import { runExecute } from "./execute.js"
 import { runShip } from "./ship.js"
 import { runSpawn } from "./spawn.js"
+import { runAgentCommand } from "./agent.js"
 import type { ReviewMode } from "./lib/reviewTarget.js"
 
 // Single exit point for the process. Everything routes through here so it's
@@ -497,6 +498,11 @@ Safe to run multiple times.`)
     }
     const spawnExitCode = await runSpawn(repoRoot, taskId, childCommand)
     exit(spawnExitCode)
+  }
+
+  if (command === "agent") {
+    await runAgentCommand(args.slice(1))
+    return
   }
 
   // faber continue <taskId> ["<prompt>"] [--dir <repo>]
