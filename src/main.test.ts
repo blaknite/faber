@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { execSync } from "node:child_process"
 import { main, parseModelFlag, stripFlags } from "./index.js"
 
 // Mock out anything that would spawn real processes or touch the filesystem
@@ -319,6 +323,71 @@ describe("main", () => {
       process.argv = ["bun", "faber", "ship"]
       await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+  })
+
+  describe("--dir normalisation", () => {
+    let tmpRoot: string
+    let logLines: string[]
+    let logSpy: ReturnType<typeof spyOn>
+
+    beforeEach(() => {
+      tmpRoot = join(tmpdir(), `faber-dir-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      mkdirSync(tmpRoot, { recursive: true })
+      logLines = []
+      logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logLines.push(args.map(String).join(" "))
+      })
+    })
+
+    afterEach(() => {
+      logSpy.mockRestore()
+      rmSync(tmpRoot, { recursive: true, force: true })
+    })
+
+    it("faber list --dir <subdir> reads state from the project root", async () => {
+      const projDir = join(tmpRoot, "proj")
+      mkdirSync(projDir, { recursive: true })
+      execSync("git init proj", { cwd: tmpRoot })
+      execSync("git config user.email test@test.com", { cwd: projDir })
+      execSync("git config user.name Test", { cwd: projDir })
+
+      const faberDir = join(projDir, ".faber")
+      mkdirSync(faberDir, { recursive: true })
+      const task = {
+        id: "abc123-test-task",
+        prompt: "do the thing from subdir",
+        model: "anthropic/claude-sonnet-4-6",
+        status: "done",
+        pid: null,
+        worktree: ".worktrees/abc123-test-task",
+        sessionId: null,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        exitCode: 0,
+        hasCommits: false,
+        baseBranch: "main",
+      }
+      writeFileSync(join(faberDir, "state.json"), JSON.stringify({ tasks: [task] }))
+
+      const subDir = join(projDir, "some", "subdir")
+      mkdirSync(subDir, { recursive: true })
+
+      process.argv = ["bun", "faber", "list", "--dir", subDir]
+      await main()
+
+      expect(logLines.some((l) => l.includes("abc123-test-task"))).toBe(true)
+      expect(logLines.some((l) => l.includes("do the thing from subdir"))).toBe(true)
+    })
+
+    it("faber list --dir <path-with-no-git> prints error and exits 1", async () => {
+      const noGitDir = join(tmpRoot, "no-git")
+      mkdirSync(noGitDir, { recursive: true })
+
+      process.argv = ["bun", "faber", "list", "--dir", noGitDir]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes(`--dir ${noGitDir} is not inside a git project`))).toBe(true)
     })
   })
 })
