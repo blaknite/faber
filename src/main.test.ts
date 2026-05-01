@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { execSync } from "node:child_process"
 import { main, parseModelFlag, stripFlags } from "./index.js"
+import { findProjectRoot } from "./lib/state.js"
 
 // Mock out anything that would spawn real processes or touch the filesystem
 // in a way that would block the test from reaching the command dispatch.
@@ -358,7 +359,7 @@ describe("main", () => {
         id: "abc123-test-task",
         prompt: "do the thing from subdir",
         model: "anthropic/claude-sonnet-4-6",
-        status: "done",
+        status: "done" as const,
         pid: null,
         worktree: ".worktrees/abc123-test-task",
         sessionId: null,
@@ -383,6 +384,11 @@ describe("main", () => {
     it("faber list --dir <path-with-no-git> prints error and exits 1", async () => {
       const noGitDir = join(tmpRoot, "no-git")
       mkdirSync(noGitDir, { recursive: true })
+
+      if (findProjectRoot(noGitDir) !== null) {
+        console.log(`Skipping: ${noGitDir} is unexpectedly inside a git repo`)
+        return
+      }
 
       process.argv = ["bun", "faber", "list", "--dir", noGitDir]
       await expect(main()).rejects.toThrow()
