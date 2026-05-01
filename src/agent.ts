@@ -60,7 +60,13 @@ async function runCommentTargets(args: string[]): Promise<void> {
   while (i < args.length) {
     const arg = args[i]!
     if (arg === "--window") {
-      windowValue = args[i + 1] ?? null
+      const next = args[i + 1]
+      if (next === undefined || next.startsWith("-")) {
+        process.stderr.write("faber agent comment-targets: --window requires a value\n\n")
+        process.stderr.write(COMMENT_TARGETS_HELP + "\n")
+        exit(1)
+      }
+      windowValue = next
       i += 2
     } else if (arg === "--all") {
       allFlag = true
@@ -122,15 +128,15 @@ async function runCommentTargets(args: string[]): Promise<void> {
     }
   }
 
-  let window = 5
+  let windowSize = 5
   if (windowValue !== null) {
     if (lineArg === undefined) {
       process.stderr.write("faber agent comment-targets: --window is only valid with <line>\n\n")
       process.stderr.write(COMMENT_TARGETS_HELP + "\n")
       exit(1)
     }
-    window = parseInt(windowValue, 10)
-    if (isNaN(window) || String(window) !== windowValue || window <= 0) {
+    windowSize = parseInt(windowValue, 10)
+    if (isNaN(windowSize) || String(windowSize) !== windowValue || windowSize <= 0) {
       process.stderr.write(`faber agent comment-targets: --window must be a positive integer, got "${windowValue}"\n\n`)
       process.stderr.write(COMMENT_TARGETS_HELP + "\n")
       exit(1)
@@ -170,8 +176,8 @@ async function runCommentTargets(args: string[]): Promise<void> {
   if (allFlag) {
     targetLines = allLines.filter((l) => l.type !== "remove" && l.newLineNum !== undefined)
   } else {
-    const lo = lineNum! - window
-    const hi = lineNum! + window
+    const lo = lineNum! - windowSize
+    const hi = lineNum! + windowSize
     targetLines = allLines.filter(
       (l) => l.type !== "remove" && l.newLineNum !== undefined && l.newLineNum >= lo && l.newLineNum <= hi,
     )

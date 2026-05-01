@@ -394,6 +394,20 @@ index 0000001..0000002 100644
     }
   })
 
+  it("exits 1 when --window has no value", async () => {
+    const root = join(tmpdir(), `faber-agent-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    mkdirSync(root, { recursive: true })
+    try {
+      const binDir = makeFakeBin(root, SAMPLE_VIEW, SAMPLE_DIFF)
+      const result = await runFaber(["comment-targets", "42", "src/compute.ts", "40", "--window"], binDir)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toMatch(/--window/)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it("exits 1 when gh pr view fails", async () => {
     const root = join(tmpdir(), `faber-agent-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     mkdirSync(root, { recursive: true })
