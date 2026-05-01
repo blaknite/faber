@@ -4,7 +4,7 @@ import { resolve, join } from "node:path"
 import { homedir } from "node:os"
 import { existsSync, mkdirSync, readFileSync, writeFileSync, watch as fsWatch } from "node:fs"
 import { App } from "./App.js"
-import { acquireLock, ensureFaberDir, findTask, readState, reconcileRunningTasks, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
+import { acquireLock, ensureFaberDir, findTask, findProjectRoot, readState, reconcileRunningTasks, updateTask, findRepoRoot, taskOutputPath, stateFilePath } from "./lib/state.js"
 import { createWorktree, worktreeHasCommits, readCurrentBranch, getDiff, mergeBranch, removeWorktree } from "./lib/worktree.js"
 import { spawnAgent, DEFAULT_RESUME_PROMPT } from "./lib/agent.js"
 import { logTaskFailure } from "./lib/failureLog.js"
@@ -34,14 +34,20 @@ function exit(code: number): never {
 // Parse --dir <path> from an args array, returning the resolved path or null.
 // Exits with an error if the path is provided but does not exist.
 function parseDirFlag(args: string[]): string | null {
-  const i = args.indexOf("--dir")
+  const i = args.indexOf('--dir')
   if (i !== -1 && args[i + 1]) {
-    const dir = resolve(args[i + 1]!)
+    const raw = args[i + 1]!
+    const dir = resolve(raw)
     if (!existsSync(dir)) {
       console.error(`Directory does not exist: ${dir}`)
       exit(1)
     }
-    return dir
+    const projectRoot = findProjectRoot(dir)
+    if (!projectRoot) {
+      console.error(`--dir ${raw} is not inside a git project`)
+      exit(1)
+    }
+    return projectRoot
   }
   return null
 }
