@@ -87,6 +87,22 @@ afterEach(() => {
   rmSync(tmpRoot, { recursive: true, force: true })
 })
 
+describe("marked rendering with suggestion fences", () => {
+  it("does not throw when the agent message contains a suggestion code fence", async () => {
+    git("checkout -b feature-x")
+    lastAgentMessageMock.mockReturnValueOnce(
+      "# Review Findings\n\nLooks good overall.\n\n## 1. `src/foo.ts:10`\n\nBlocking: rename this.\n\n```suggestion\nbetter code here\n```\n",
+    )
+    const written: string[] = []
+    spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      written.push(String(chunk))
+      return true
+    })
+    await expect(runReview(tmpRoot, { kind: "current" })).resolves.toBeUndefined()
+    expect(written.some((chunk) => chunk.includes("better code here"))).toBe(true)
+  })
+})
+
 describe("trimToReviewFindings", () => {
   it("returns the full string when heading is absent", () => {
     const text = "Some preamble\n\nNo heading here."
