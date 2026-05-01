@@ -34,7 +34,7 @@ function exit(code: number): never {
 // Parse --dir <path> from an args array, returning the resolved path or null.
 // Exits with an error if the path is provided but does not exist.
 function parseDirFlag(args: string[]): string | null {
-  const i = args.indexOf('--dir')
+  const i = args.indexOf("--dir")
   if (i !== -1 && args[i + 1]) {
     const raw = args[i + 1]!
     const dir = resolve(raw)
