@@ -1,9 +1,8 @@
 import { describe, it, expect } from "bun:test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { join, delimiter } from "node:path"
 import { tmpdir } from "node:os"
 import { execa } from "execa"
-import { delimiter } from "node:path"
 
 const SAMPLE_DIFF = `diff --git a/src/compute.ts b/src/compute.ts
 index 0000001..0000002 100644
@@ -432,6 +431,20 @@ index 0000001..0000002 100644
 
       expect(result.exitCode).toBe(1)
       expect(result.stderr).toMatch(/unknown verb/)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("exits 1 for an unknown flag", async () => {
+    const root = join(tmpdir(), `faber-agent-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    mkdirSync(root, { recursive: true })
+    try {
+      const binDir = makeFakeBin(root, SAMPLE_VIEW, SAMPLE_DIFF)
+      const result = await runFaber(["comment-targets", "42", "src/compute.ts", "40", "--unknown-flag"], binDir)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toMatch(/unknown flag/)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

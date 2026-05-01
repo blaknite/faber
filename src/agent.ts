@@ -65,8 +65,12 @@ async function runCommentTargets(args: string[]): Promise<void> {
     } else if (arg === "--all") {
       allFlag = true
       i++
-    } else if (arg.startsWith("-")) {
+    } else if (arg === "--help" || arg === "-h") {
       i++
+    } else if (arg.startsWith("-")) {
+      process.stderr.write(`faber agent comment-targets: unknown flag "${arg}"\n\n`)
+      process.stderr.write(COMMENT_TARGETS_HELP + "\n")
+      exit(1)
     } else {
       positional.push(arg)
       i++
