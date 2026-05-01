@@ -179,6 +179,7 @@ Options:
   --pull-request <n> PR number or URL to review (only applies to the review command)
   --task <id>       Task to review (only applies to the review command)
   --context <text>  Extra context for the reviewer (only applies to the review command)
+  --post            Submit the review to GitHub as a PR review (only applies to the review command, requires --pull-request)
 
 Examples:
   faber
@@ -366,6 +367,8 @@ Options:
   --task <id>                 Review a faber task's branch against its base branch
   --context <text>            Extra context appended to the review prompt
   --model <label>             Model to use: smart (default), fast, or deep
+  --background                Dispatch and exit; do not wait for completion
+  --post                      Submit the review to GitHub (requires --pull-request)
   --dir <path>                Path to the git repo root (defaults to nearest repo from cwd)
 
 Examples:
@@ -373,6 +376,7 @@ Examples:
   faber review --branch feature/new-auth
   faber review --pull-request 123
   faber review --pull-request https://github.com/org/repo/pull/123
+  faber review --pull-request 123 --post
   faber review --task a3f2
   faber review --pull-request 123 --context "focus on the auth changes"
   faber review --model deep`)
@@ -604,6 +608,15 @@ Safe to run multiple times.`)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const { tier, explicitModel } = parseModelFlag(args)
     const background = args.includes("--background")
+    const post = args.includes("--post")
+    if (post && !pullRequest) {
+      console.error("--post requires --pull-request.")
+      exit(1)
+    }
+    if (post && background) {
+      console.error("--post is incompatible with --background.")
+      exit(1)
+    }
 
     const mode: ReviewMode =
       task ? { kind: "task", id: task } :
@@ -612,7 +625,7 @@ Safe to run multiple times.`)
       { kind: "current" }
 
     try {
-      await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined)
+      await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined, post)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)
