@@ -25,6 +25,7 @@ export async function runReview(
   explicitModel?: string,
   background: boolean = false,
   extraContext?: string,
+  post: boolean = false,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
     throw new Error(`Not a git repository: ${repoRoot}`)
@@ -47,6 +48,14 @@ export async function runReview(
   }
   if (extraContext && extraContext.trim()) {
     promptLines.push("", "## Additional context", "", extraContext)
+  }
+  if (post) {
+    promptLines.push(
+      "",
+      "When you finish reviewing, submit the review to GitHub.",
+      "Follow the Submitting section of the `reviewing-code-in-faber` skill.",
+      "Your final message must be the submission report described in that skill, not the review prose.",
+    )
   }
   const prompt = promptLines.join("\n")
 
@@ -88,7 +97,9 @@ export async function runReview(
     autoCompleted = true
   }
 
-  if (autoCompleted) {
+  if (post) {
+    process.stdout.write(`\nTo follow up on this review, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
+  } else if (autoCompleted) {
     process.stdout.write(`\nReview complete. To ask follow-up questions, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
   } else {
     process.stdout.write(`\nTo ask follow-up questions or request changes, run:\n\n  faber continue ${task.id.slice(0, 6)} "your instructions here"\n`)
