@@ -26,11 +26,21 @@ Stop after two unproductive iterations.
 
 ## Step 2: Review
 
-Once the executor has commits, run a final review against the plan:
+Once the executor has commits, run a final review, passing the plan's intent as context:
 
 ```bash
-faber review --background --task <executeTaskId> --context 'final review before shipping; the implementation should match the plan at <plan-path>' --name <slug>-review
+faber review --background --task <executeTaskId> --context 'final review before shipping. Intent of the change:
+
+Add CSV export to the metrics endpoint so operators can download data.
+
+Requirements:
+
+- GET /metrics/export returns a valid CSV file
+- Filename includes the current date
+- Empty result sets return a header row only, not a 404' --name <slug>-review
 ```
+
+Extract the Summary and Requirements sections from the PLAN.md and pass them as the context value. Do not include the Implementation section or reference the plan path — the reviewer should evaluate the change on its own merits as a solution to the stated intent.
 
 Follow `reviewing-faber-tasks` to drive the review->fix loop. Merge when clean.
 

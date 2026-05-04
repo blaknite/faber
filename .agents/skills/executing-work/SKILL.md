@@ -45,15 +45,24 @@ Dispatch the next round and repeat. Keep going until every piece of the plan has
 
 Do a proper review of the combined result before handing off to shipping. The per-task reviews in step 3 checked each slice individually; now you're seeing it as one change for the first time.
 
-Run a background review of the current branch to get a fresh read of the merged work against the base branch. Add `--context` to point the reviewer at the plan or anything else worth flagging:
+Run a background review of the current branch to get a fresh read of the merged work against the base branch. Pass the plan's intent as context — the Summary and the Requirements that this task covers:
 
 ```bash
-faber review --background --context 'implements the plan at .plans/<feature>/PLAN.md; check for gaps against the requirements'
+faber review --background --context 'Intent of the change:
+
+Add CSV export to the metrics endpoint so operators can download data.
+
+Requirements covered by this task:
+
+- GET /metrics/export returns a valid CSV file
+- Filename includes the current date'
 # Task <reviewTaskId> running  <- capture this ID, then:
 faber watch <reviewTaskId>
 faber read <reviewTaskId>
 faber done <reviewTaskId>
 ```
+
+Extract the Summary and the relevant Requirements from the PLAN.md and pass them inline. Do not include the Implementation section or reference the plan path — the reviewer should evaluate the change against the stated intent, not against a prescription for how to implement it.
 
 If the final review surfaces findings, dispatch targeted follow-up tasks via `faber run` and run them through their own review->fix loops (using `reviewing-faber-tasks`) before re-running the final review by repeating the four-call block above. Pass `--name <slug>` describing the fix so the follow-up task is identifiable.
 
