@@ -469,7 +469,7 @@ describe("main", () => {
       const logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
         logLines.push(args.map(String).join(" "))
       })
-      process.argv = ["bun", "faber", "review", "--background", "--name", "my-review"]
+      process.argv = ["bun", "faber", "review", "--background", "--branch", "my-review", "--name", "my-review"]
       await main().catch(() => {})
       logSpy.mockRestore()
       expect(logLines.some((l) => /^Task [0-9a-f]{6}-my-review running$/.test(l))).toBe(true)
