@@ -26,6 +26,7 @@ export async function runReview(
   background: boolean = false,
   extraContext?: string,
   post: boolean = false,
+  name?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
     throw new Error(`Not a git repository: ${repoRoot}`)
@@ -71,6 +72,7 @@ export async function runReview(
     callSite: "review.ts:runReview",
     loadedConfig,
     explicitModel,
+    name,
   })
 
   if (background) {

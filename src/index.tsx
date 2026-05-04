@@ -87,6 +87,23 @@ function parseTaskFlag(args: string[]): string | null {
   return null
 }
 
+export function parseNameFlag(args: string[]): string | null {
+  const i = args.indexOf("--name")
+  if (i === -1 || !args[i + 1]) return null
+  return args[i + 1]!
+}
+
+export function validateName(value: string): string | null {
+  const normalised = value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 40)
+    .replace(/-+$/, "")
+  return normalised || null
+}
+
 // Parse --context <text> from an args array. Returns the raw value (including
 // empty string) when --context is followed by a token, or null when the flag
 // is absent or has no following token.
@@ -107,7 +124,7 @@ function parseContextFlag(args: string[]): string | null {
 // The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
 // still work on the original args array before stripping.
 export function stripFlags(args: string[]): string[] {
-  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status", "--branch", "--pull-request", "--task", "--context"])
+  const VALUE_FLAGS = new Set(["--model", "--dir", "--base", "--status", "--branch", "--pull-request", "--task", "--context", "--name"])
   const result: string[] = []
   let i = 0
   while (i < args.length) {
@@ -181,6 +198,8 @@ Options:
                     Valid values: running, ready, done, failed, stopped, unknown
   --full            Include tool call block content (only applies to the read command)
   --json            Output raw JSON (only applies to the read command)
+  --name <slug>     Custom name for the task (applies to run, review, execute, ship)
+                    Lowercase letters, digits, and hyphens. Replaces the prompt-derived slug suffix.
   --branch <name>   Branch to review (only applies to the review command)
   --pull-request <n> PR number or URL to review (only applies to the review command)
   --task <id>       Task to review (only applies to the review command)
@@ -248,19 +267,21 @@ Examples:
   faber continue a3f2-fix-the-login-bug "do X instead"`)
         exit(0)
       case "run":
-        console.log(`Usage: faber run "<prompt>" [options]
+        console.log(`Usage: faber run "<prompt>" [--name <slug>] [options]
 
 Dispatch a task headlessly without the TUI. A new git worktree is created and
 an agent is spawned immediately. Use "faber watch <taskId>" to wait for it to
 finish, or "faber read <taskId>" to see its output.
 
 Options:
+  --name <slug>     Custom name for the task (lowercase letters, digits, hyphens)
   --model <label>   Model to use: smart (default), fast, or deep
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
   --base <branch>   Branch to create the worktree from (defaults to current branch)
 
 Examples:
   faber run "Fix the login bug"
+  faber run "Fix the login bug" --name fix-login
   faber run "Refactor the auth module" --model deep
   faber run "Add tests for the billing flow" --dir /path/to/repo`)
         exit(0)
@@ -361,13 +382,14 @@ Examples:
   faber delete a3f2-fix-the-login-bug --yes`)
         exit(0)
       case "review":
-        console.log(`Usage: faber review [options]
+        console.log(`Usage: faber review [--name <slug>] [options]
 
 Dispatch a code-review task. Reviews the current branch against the default
 branch by default. Pass --branch, --pull-request, or --task to review something
 else. Use --context to attach extra notes for the reviewer.
 
 Options:
+  --name <slug>               Custom name for the task (lowercase letters, digits, hyphens)
   --branch <name>             Review <name> against the default branch
   --pull-request <num-or-url> Review a pull request against its base branch
   --task <id>                 Review a faber task's branch against its base branch
@@ -388,7 +410,7 @@ Examples:
   faber review --model deep`)
         exit(0)
       case "execute":
-        console.log(`Usage: faber execute <plan-path> [options]
+        console.log(`Usage: faber execute <plan-path> [--name <slug>] [options]
 
 Execute a PLAN.md as a managed faber task. The agent loads the
 "executing-work" skill and implements the plan in a fresh worktree.
@@ -397,17 +419,19 @@ Arguments:
   <plan-path>       Path to the plan file (relative to cwd or absolute)
 
 Options:
+  --name <slug>     Custom name for the task (lowercase letters, digits, hyphens)
   --model <label>   Model to use: smart (default), fast, or deep
   --background      Dispatch and exit; do not wait for completion
   --dir <path>      Path to the git repo root (defaults to nearest repo from cwd)
 
 Examples:
   faber execute .plans/foo/PLAN.md
+  faber execute .plans/foo/PLAN.md --name implement-auth
   faber execute /tmp/plan.md --model deep
   faber execute .plans/foo/PLAN.md --background`)
         exit(0)
       case "ship":
-        console.log(`Usage: faber ship [options]
+        console.log(`Usage: faber ship [--name <slug>] [options]
 
 Ship the current branch: push it to origin, open a pull request, and pass
 CI. Runs in a sandbox worktree so the agent can work without disturbing
@@ -416,6 +440,7 @@ when the agent finishes -- inspect the result, then route the task with
 "faber done", "faber delete", or "faber continue".
 
 Options:
+  --name <slug>     Custom name for the task (lowercase letters, digits, hyphens)
   --branch <name>   Ship <name> instead of the current branch
   --model <label>   Model to use: smart (default), fast, or deep
   --background      Dispatch and exit; do not wait for completion
@@ -423,6 +448,7 @@ Options:
 
 Examples:
   faber ship
+  faber ship --name ship-feature-auth
   faber ship --branch feature/new-auth
   faber ship --background`)
         exit(0)
@@ -562,25 +588,35 @@ Safe to run multiple times.`)
     return
   }
 
-  // faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]
+  // faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>] [--name <slug>]
   if (command === "run") {
     const prompt = positional[1]
     if (!prompt) {
-      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>]')
+      console.error('Usage: faber run "<prompt>" [--dir <repo>] [--model <label>] [--base <branch>] [--name <slug>]')
       exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const { tier, explicitModel } = parseModelFlag(args)
     const baseBranch = parseBaseFlag(args) ?? undefined
+    const rawName = parseNameFlag(args)
+    if (args.includes("--name") && !rawName) {
+      console.error("--name requires an argument (slug).")
+      exit(1)
+    }
+    const taskName = rawName ? validateName(rawName) : undefined
+    if (rawName && !taskName) {
+      console.error("--name must contain at least one alphanumeric character.")
+      exit(1)
+    }
     const globalConfigPath = join(homedir(), '.faber', 'faber.json')
     const projectConfigPath = join(repoRoot, '.faber', 'faber.json')
     const loadedConfig = loadConfig(globalConfigPath, projectConfigPath)
-    await runHeadless(repoRoot, prompt, tier, baseBranch, loadedConfig, explicitModel)
+    await runHeadless(repoRoot, prompt, tier, baseBranch, loadedConfig, explicitModel, taskName)
     return
   }
 
-  // faber review [--branch <name>] [--pull-request <num-or-url>] [--task <id>] [--context <text>] [--model <label>] [--dir <repo>]
+  // faber review [--branch <name>] [--pull-request <num-or-url>] [--task <id>] [--context <text>] [--model <label>] [--dir <repo>] [--name <slug>]
   if (command === "review") {
     const branch = parseBranchFlag(args)
     const pullRequest = parsePullRequestFlag(args)
@@ -589,7 +625,7 @@ Safe to run multiple times.`)
 
     const modeCount = [branch, pullRequest, task].filter(Boolean).length
     if (modeCount > 1) {
-      console.error("Usage: faber review [--branch <name> | --pull-request <num-or-url> | --task <id>] [--context <text>]")
+      console.error("Usage: faber review [--branch <name> | --pull-request <num-or-url> | --task <id>] [--context <text>] [--name <slug>]")
       console.error("--branch, --pull-request, and --task cannot be used together")
       exit(1)
     }
@@ -607,6 +643,17 @@ Safe to run multiple times.`)
     }
     if (args.includes("--context") && (context === null || !context.trim())) {
       console.error("--context requires non-empty text")
+      exit(1)
+    }
+
+    const rawName = parseNameFlag(args)
+    if (args.includes("--name") && !rawName) {
+      console.error("--name requires an argument (slug).")
+      exit(1)
+    }
+    const taskName = rawName ? validateName(rawName) : undefined
+    if (rawName && !taskName) {
+      console.error("--name must contain at least one alphanumeric character.")
       exit(1)
     }
 
@@ -631,7 +678,7 @@ Safe to run multiple times.`)
       { kind: "current" }
 
     try {
-      await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined, post)
+      await runReview(repoRoot, mode, tier, explicitModel, background, context ?? undefined, post, taskName)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)
@@ -639,19 +686,29 @@ Safe to run multiple times.`)
     return
   }
 
-  // faber execute <plan-path> [--dir <repo>] [--model <label>] [--background]
+  // faber execute <plan-path> [--dir <repo>] [--model <label>] [--background] [--name <slug>]
   if (command === "execute") {
     const planPath = positional[1]
     if (!planPath) {
-      console.error("Usage: faber execute <plan-path> [--dir <repo>] [--model <label>] [--background]")
+      console.error("Usage: faber execute <plan-path> [--dir <repo>] [--model <label>] [--background] [--name <slug>]")
       exit(1)
     }
     const dirArg = parseDirFlag(args)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const { tier, explicitModel } = parseModelFlag(args)
     const background = args.includes("--background")
+    const rawName = parseNameFlag(args)
+    if (args.includes("--name") && !rawName) {
+      console.error("--name requires an argument (slug).")
+      exit(1)
+    }
+    const taskName = rawName ? validateName(rawName) : undefined
+    if (rawName && !taskName) {
+      console.error("--name must contain at least one alphanumeric character.")
+      exit(1)
+    }
     try {
-      await runExecute(repoRoot, planPath, tier, explicitModel, background)
+      await runExecute(repoRoot, planPath, tier, explicitModel, background, taskName)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)
@@ -659,7 +716,7 @@ Safe to run multiple times.`)
     return
   }
 
-  // faber ship [--branch <name>] [--dir <repo>] [--model <label>] [--background]
+  // faber ship [--branch <name>] [--dir <repo>] [--model <label>] [--background] [--name <slug>]
   if (command === "ship") {
     const branch = parseBranchFlag(args)
     if (args.includes("--branch") && !branch) {
@@ -670,8 +727,18 @@ Safe to run multiple times.`)
     const repoRoot = dirArg ?? findRepoRoot(process.cwd()) ?? resolve(process.cwd())
     const { tier, explicitModel } = parseModelFlag(args)
     const background = args.includes("--background")
+    const rawName = parseNameFlag(args)
+    if (args.includes("--name") && !rawName) {
+      console.error("--name requires an argument (slug).")
+      exit(1)
+    }
+    const taskName = rawName ? validateName(rawName) : undefined
+    if (rawName && !taskName) {
+      console.error("--name must contain at least one alphanumeric character.")
+      exit(1)
+    }
     try {
-      await runShip(repoRoot, branch, tier, explicitModel, background)
+      await runShip(repoRoot, branch, tier, explicitModel, background, taskName)
     } catch (err: any) {
       console.error(err.message ?? String(err))
       exit(1)
@@ -1010,7 +1077,7 @@ Safe to run multiple times.`)
   renderer.start()
 }
 
-export async function runHeadless(repoRoot: string, prompt: string, tier: Tier = DEFAULT_TIER, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string) {
+export async function runHeadless(repoRoot: string, prompt: string, tier: Tier = DEFAULT_TIER, baseBranch?: string, loadedConfig: AgentConfig = {}, explicitModel?: string, name?: string) {
   if (!existsSync(`${repoRoot}/.git`)) {
     console.error(`Not a git repository: ${repoRoot}`)
     exit(1)
@@ -1030,6 +1097,7 @@ export async function runHeadless(repoRoot: string, prompt: string, tier: Tier =
       callSite: "index.tsx:runHeadless",
       loadedConfig,
       explicitModel,
+      name,
     })
   } catch (err: any) {
     console.error(`Failed to create worktree: ${err.message}`)

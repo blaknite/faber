@@ -3,8 +3,9 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { execSync } from "node:child_process"
-import { main, parseModelFlag, stripFlags } from "./index.js"
+import { main, parseModelFlag, parseNameFlag, stripFlags, validateName } from "./index.js"
 import { findProjectRoot } from "./lib/state.js"
+import { createAndDispatchTask } from "./lib/dispatch.js"
 
 // Mock out anything that would spawn real processes or touch the filesystem
 // in a way that would block the test from reaching the command dispatch.
@@ -324,6 +325,154 @@ describe("main", () => {
       process.argv = ["bun", "faber", "ship"]
       await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
+    })
+  })
+
+  describe("parseNameFlag", () => {
+    it("returns the value after --name", () => {
+      expect(parseNameFlag(["run", "--name", "my-thing", "fix"])).toBe("my-thing")
+    })
+
+    it("returns null when --name is absent", () => {
+      expect(parseNameFlag(["run", "fix"])).toBeNull()
+    })
+
+    it("returns null when --name has no following argument", () => {
+      expect(parseNameFlag(["run", "fix", "--name"])).toBeNull()
+    })
+  })
+
+  describe("validateName", () => {
+    it("returns the lowercased slug for a simple value", () => {
+      expect(validateName("my-thing")).toBe("my-thing")
+    })
+
+    it("normalises mixed case and special chars", () => {
+      expect(validateName("Fix Login!")).toBe("fix-login")
+    })
+
+    it("collapses whitespace runs to a single hyphen", () => {
+      expect(validateName("wip   thing")).toBe("wip-thing")
+    })
+
+    it("truncates to 40 characters", () => {
+      expect(validateName("a".repeat(50))).toBe("a".repeat(40))
+    })
+
+    it("returns null for an all-special-chars value", () => {
+      expect(validateName("!!!")).toBeNull()
+    })
+
+    it("returns null for an empty string", () => {
+      expect(validateName("")).toBeNull()
+    })
+  })
+
+  describe("--name flag on faber run", () => {
+    it("produces a task id matching /^[0-9a-f]{6}-my-thing$/ when --name my-thing is passed", async () => {
+      const dispatch = createAndDispatchTask as ReturnType<typeof mock>
+      dispatch.mockImplementationOnce(async (opts: any) => {
+        const { generateSlug } = await import("./lib/slug.js")
+        const id = generateSlug(opts.prompt, opts.name)
+        return {
+          id,
+          prompt: opts.prompt,
+          model: "anthropic/claude-sonnet-4-6",
+          status: "done",
+          pid: null,
+          worktree: `.worktrees/${id}`,
+          sessionId: null,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          exitCode: 0,
+          hasCommits: false,
+          baseBranch: "main",
+        }
+      })
+      let logLines: string[] = []
+      const logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logLines.push(args.map(String).join(" "))
+      })
+      process.argv = ["bun", "faber", "run", "fix", "--name", "my-thing"]
+      await main().catch(() => {})
+      logSpy.mockRestore()
+      expect(logLines.some((l) => /^Task [0-9a-f]{6}-my-thing running$/.test(l))).toBe(true)
+    })
+
+    it("normalises --name 'Fix Login!' to fix-login in the task id", async () => {
+      const dispatch = createAndDispatchTask as ReturnType<typeof mock>
+      dispatch.mockImplementationOnce(async (opts: any) => {
+        const { generateSlug } = await import("./lib/slug.js")
+        const id = generateSlug(opts.prompt, opts.name)
+        return {
+          id,
+          prompt: opts.prompt,
+          model: "anthropic/claude-sonnet-4-6",
+          status: "done",
+          pid: null,
+          worktree: `.worktrees/${id}`,
+          sessionId: null,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          exitCode: 0,
+          hasCommits: false,
+          baseBranch: "main",
+        }
+      })
+      let logLines: string[] = []
+      const logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logLines.push(args.map(String).join(" "))
+      })
+      process.argv = ["bun", "faber", "run", "fix", "--name", "Fix Login!"]
+      await main().catch(() => {})
+      logSpy.mockRestore()
+      expect(logLines.some((l) => /^Task [0-9a-f]{6}-fix-login running$/.test(l))).toBe(true)
+    })
+
+    it("exits 1 with --name must contain at least one alphanumeric character. when --name '!!!' is passed", async () => {
+      process.argv = ["bun", "faber", "run", "fix", "--name", "!!!"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--name must contain at least one alphanumeric character."))).toBe(true)
+    })
+
+    it("exits 1 with --name requires an argument when --name has no value", async () => {
+      process.argv = ["bun", "faber", "run", "fix", "--name"]
+      await expect(main()).rejects.toThrow()
+      expect(exitCode).toBe(1)
+      expect(errorLines.some((l) => l.includes("--name requires an argument (slug)."))).toBe(true)
+    })
+  })
+
+  describe("--name flag on faber review", () => {
+    it("produces a task id matching /^[0-9a-f]{6}-my-review$/ when --name my-review --background is passed", async () => {
+      const dispatch = createAndDispatchTask as ReturnType<typeof mock>
+      dispatch.mockImplementationOnce(async (opts: any) => {
+        const { generateSlug } = await import("./lib/slug.js")
+        const id = generateSlug(opts.prompt, opts.name)
+        return {
+          id,
+          prompt: opts.prompt,
+          model: "anthropic/claude-sonnet-4-6",
+          status: "done",
+          pid: null,
+          worktree: `.worktrees/${id}`,
+          sessionId: null,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          exitCode: 0,
+          hasCommits: false,
+          baseBranch: "main",
+        }
+      })
+      let logLines: string[] = []
+      const logSpy = spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+        logLines.push(args.map(String).join(" "))
+      })
+      process.argv = ["bun", "faber", "review", "--background", "--name", "my-review"]
+      await main().catch(() => {})
+      logSpy.mockRestore()
+      expect(logLines.some((l) => /^Task [0-9a-f]{6}-my-review running$/.test(l))).toBe(true)
     })
   })
 

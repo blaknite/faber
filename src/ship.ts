@@ -19,6 +19,7 @@ export async function runShip(
   tier: Tier = DEFAULT_SHIP_TIER,
   explicitModel?: string,
   background: boolean = false,
+  name?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
     throw new Error(`Not a git repository: ${repoRoot}`)
@@ -75,6 +76,7 @@ export async function runShip(
     callSite: "ship.ts:runShip",
     loadedConfig,
     explicitModel,
+    name,
   })
 
   if (background) {

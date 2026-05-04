@@ -19,6 +19,7 @@ export async function runExecute(
   tier: Tier = DEFAULT_EXECUTE_TIER,
   explicitModel?: string,
   background: boolean = false,
+  name?: string,
 ): Promise<void> {
   if (!existsSync(`${repoRoot}/.git`)) {
     throw new Error(`Not a git repository: ${repoRoot}`)
@@ -56,6 +57,7 @@ export async function runExecute(
     callSite: "execute.ts:runExecute",
     loadedConfig,
     explicitModel,
+    name,
   })
 
   if (background) {
