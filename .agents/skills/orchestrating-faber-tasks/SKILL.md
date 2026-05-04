@@ -48,36 +48,38 @@ If a task fails the same way twice, the prompt is probably wrong. Rewrite it wit
 
 If a task keeps failing and the work can be done a different way, delete it and dispatch a replacement with a different framing.
 
+Pass `--name <slug>` for every task. Orchestration is much easier to follow when each task id reflects what it does.
+
 ## Example
 
 ```bash
 # Round 1: independent tasks, dispatch in parallel
-faber run "Add rate limiting middleware. Limit unauthenticated requests to 60/min." --base $(git branch --show-current)
-# Dispatching task: aa11-rate-limiting-middleware
+faber run "Add rate limiting middleware. Limit unauthenticated requests to 60/min." --base $(git branch --show-current) --name rate-limiting-middleware
+# Dispatching task: aa11bb-rate-limiting-middleware
 
-faber run "Add Redis client config. The rate limiter will use Redis as the store." --base $(git branch --show-current)
-# Dispatching task: bb22-redis-client-config
+faber run "Add Redis client config. The rate limiter will use Redis as the store." --base $(git branch --show-current) --name redis-client-config
+# Dispatching task: bb22cc-redis-client-config
 
 # Wait for both in parallel
-faber watch aa11-rate-limiting-middleware &
-faber watch bb22-redis-client-config &
+faber watch aa11bb-rate-limiting-middleware &
+faber watch bb22cc-redis-client-config &
 wait
 
 # Review and route each one (see reviewing-faber-tasks)
-# aa11 looks good -- merge it
-faber merge aa11-rate-limiting-middleware
+# aa11bb looks good -- merge it
+faber merge aa11bb-rate-limiting-middleware
 
-# bb22 missed something -- continue it
-faber continue bb22-redis-client-config "Add connection pooling config, the rate limiter needs it."
-faber watch bb22-redis-client-config
-faber merge bb22-redis-client-config
+# bb22cc missed something -- continue it
+faber continue bb22cc-redis-client-config "Add connection pooling config, the rate limiter needs it."
+faber watch bb22cc-redis-client-config
+faber merge bb22cc-redis-client-config
 
 # Round 2: depends on both being merged
-faber run "Wire the rate limiting middleware to the Redis client. Integration tests must pass." --base $(git branch --show-current)
-# Dispatching task: cc33-wire-rate-limiter-to-redis
+faber run "Wire the rate limiting middleware to the Redis client. Integration tests must pass." --base $(git branch --show-current) --name wire-rate-limiter-to-redis
+# Dispatching task: cc33dd-wire-rate-limiter-to-redis
 
-faber watch cc33-wire-rate-limiter-to-redis
-faber merge cc33-wire-rate-limiter-to-redis
+faber watch cc33dd-wire-rate-limiter-to-redis
+faber merge cc33dd-wire-rate-limiter-to-redis
 
 # Confirm nothing is left outstanding
 faber list

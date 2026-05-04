@@ -83,9 +83,10 @@ faber run "fix the login bug"
 faber run "fix the login bug" --dir /path/to/repo
 faber run "add tests for UserService" --model fast
 faber run "add rate limiting" --base my-feature-branch
+faber run "fix the login bug" --name fix-login-bug
 ```
 
-`--base` sets which branch the new worktree is created from and what the agent diffs against. Defaults to the current branch of the main checkout.
+`--base` sets which branch the new worktree is created from and what the agent diffs against. Defaults to the current branch of the main checkout. Pass `--name <slug>` to give the task a meaningful id instead of one derived from the prompt.
 
 ### List tasks
 
@@ -235,7 +236,7 @@ Say you have a spec for a new metrics export feature. Rather than tackling it yo
 ```bash
 faber run "Implement the metrics export feature described below.
 
-Break the work into independent sub-tasks and dispatch each one using faber run. Run parallel tasks in parallel -- don't wait for one to finish before starting another. Watch each task with faber watch, review the diff, then merge, continue, or discard based on what the agent produced. Repeat until everything from the spec is merged and nothing is outstanding.
+Break the work into independent sub-tasks and dispatch each one using faber run with --name set to a short description of what each sub-task does. Run parallel tasks in parallel -- don't wait for one to finish before starting another. Watch each task with faber watch, review the diff, then merge, continue, or discard based on what the agent produced. Repeat until everything from the spec is merged and nothing is outstanding.
 
 Spec:
 - Users can export their usage metrics from the settings page

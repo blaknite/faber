@@ -11,8 +11,10 @@ Load `reviewing-faber-tasks` for the review->fix loop and `reading-faber-logs` f
 
 ## Step 1: Execute
 
+Pass `--name <slug>` derived from the plan name so the execute task id is identifiable across the chain.
+
 ```bash
-faber execute <plan-path> --background
+faber execute <plan-path> --background --name <slug>
 faber watch <executeTaskId>
 ```
 
@@ -27,7 +29,7 @@ Stop after two unproductive iterations.
 Once the executor has commits, run a final review against the plan:
 
 ```bash
-faber review --background --task <executeTaskId> --context 'final review before shipping; the implementation should match the plan at <plan-path>'
+faber review --background --task <executeTaskId> --context 'final review before shipping; the implementation should match the plan at <plan-path>' --name <slug>-review
 ```
 
 Follow `reviewing-faber-tasks` to drive the review->fix loop. Merge when clean.
@@ -37,7 +39,7 @@ If the reviewer rejects the approach, it usually names the better one. Pass that
 ## Step 3: Ship
 
 ```bash
-faber ship --background
+faber ship --background --name <slug>-ship
 faber watch <shipTaskId>
 faber read <shipTaskId>
 ```

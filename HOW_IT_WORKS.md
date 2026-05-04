@@ -134,4 +134,4 @@ Each line in a `.jsonl` file looks like:
 
 1. `faber` / `faber start` `[--dir path]` - opens the interactive TUI
 2. `faber setup` `[--dir path]` - initialises `.faber/`, `.worktrees/`, and `.gitignore`
-3. `faber run "<prompt>"` `[--dir path] [--model model]` - headless task dispatch
+3. `faber run "<prompt>"` `[--dir path] [--model model] [--name slug]` - headless task dispatch

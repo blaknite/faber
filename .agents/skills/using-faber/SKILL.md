@@ -33,13 +33,23 @@ faber run "your prompt here" --base <branch>
 
 `--base` sets the branch the worktree is created from, and tells the agent where to diff from. Defaults to the current branch of the main checkout.
 
+To give the task a meaningful name:
+
+```bash
+faber run "your prompt here" --name <slug>
+```
+
+## Naming tasks
+
+Always pass `--name <slug>` with a short kebab-case description of the work (e.g. `fix-login-crash`, `add-csv-export`). The task id becomes `<6hex>-<slug>` instead of being derived from the prompt text, which keeps task lists readable and makes ids easy to refer back to. Use lowercase letters, digits, and hyphens; aim for 2-5 words.
+
 Valid model labels are `fast`, `smart`, and `deep`:
 
 - `fast`: mechanical or well-scoped tasks where the path is obvious. Reformatting, renaming, boilerplate, simple one-file fixes.
 - `smart`: the right default for most real work. Anything that requires understanding context across files, making judgment calls, or following a multi-step plan.
 - `deep`: tasks where getting it wrong is expensive or the problem is genuinely hard to frame. Architecture decisions, elusive bugs, competing constraints.
 
-`faber run` prints a task ID (e.g. `a3f2-fix-the-login-bug`). Capture it -- you'll need it for every other command.
+`faber run` prints a task ID (e.g. `a3f21b-fix-the-login-bug`). Capture it -- you'll need it for every other command.
 
 ## Watching a task
 
@@ -54,7 +64,7 @@ Exits immediately if the task is already in a terminal state (`ready`, `done`, `
 ## Reviewing a task
 
 ```bash
-faber review --background [--task <id>] [--branch <name>] [--pull-request <num-or-url>] [--context <text>] [--model <label>]
+faber review --background [--task <id>] [--branch <name>] [--pull-request <num-or-url>] [--context <text>] [--model <label>] [--name <slug>]
 ```
 
 `--background` is the mode agents use. Without it, the command runs in the foreground for humans -- spinner, rendered findings, auto-complete. That mode is not suitable for agents.
@@ -62,7 +72,7 @@ faber review --background [--task <id>] [--branch <name>] [--pull-request <num-o
 With `--background`, the command prints `Task <reviewTaskId> running` and exits immediately. The caller is responsible for watching, reading, and closing the review task. Background mode does not auto-complete the review task.
 
 ```bash
-faber review --background --task <taskId>
+faber review --background --task <taskId> --name <slug>
 # Task <reviewTaskId> running  <- capture this ID
 faber watch <reviewTaskId>
 faber read <reviewTaskId>

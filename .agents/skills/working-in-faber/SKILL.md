@@ -44,8 +44,10 @@ If your task involves orchestrating further work through Faber, always pass `--b
 
 Do not pass your base branch. Your base branch is where you came from; your current branch is where sub-tasks need to start.
 
+Pass `--name <slug>` so sub-tasks are identifiable in `faber list`.
+
 ```bash
-faber run "..." --base $(git branch --show-current)
+faber run "..." --base $(git branch --show-current) --name <slug>
 ```
 
 ## Reading other tasks

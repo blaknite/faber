@@ -21,6 +21,8 @@ A good prompt gives the agent enough to work independently. Three things matter:
 
 **What done looks like.** Describe the expected behaviour.
 
+Pass `--name <slug>` with a short description of the change so the task is easy to spot in `faber list`.
+
 Example:
 
 ```
@@ -46,11 +48,11 @@ User#avatar_url returns nil when no avatar is set, which breaks the
 profile template. Add a fallback to a default avatar URL.
 
 Visiting a profile without an avatar should show the default image
-instead of crashing." --base main
-# Dispatching task: a3f2-fix-avatar-crash
+instead of crashing." --base main --name fix-avatar-crash
+# Task a3f21b-fix-avatar-crash running
 
-faber watch a3f2-fix-avatar-crash
-# Task a3f2-fix-avatar-crash (status: ready)
+faber watch a3f21b-fix-avatar-crash
+# Task a3f21b-fix-avatar-crash (status: ready)
 
 # Now load reviewing-faber-tasks to assess and route the result
 ```

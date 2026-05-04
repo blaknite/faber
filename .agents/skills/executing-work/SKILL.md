@@ -55,7 +55,7 @@ faber read <reviewTaskId>
 faber done <reviewTaskId>
 ```
 
-If the final review surfaces findings, dispatch targeted follow-up tasks via `faber run` and run them through their own review->fix loops (using `reviewing-faber-tasks`) before re-running the final review by repeating the four-call block above.
+If the final review surfaces findings, dispatch targeted follow-up tasks via `faber run` and run them through their own review->fix loops (using `reviewing-faber-tasks`) before re-running the final review by repeating the four-call block above. Pass `--name <slug>` describing the fix so the follow-up task is identifiable.
 
 The findings tell you whether the slices hold together, whether anything was missed, and whether the code reads well as a whole. Skim the diff yourself too -- you're the one signing off.
 
