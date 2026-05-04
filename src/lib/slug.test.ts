@@ -57,4 +57,33 @@ describe("generateSlug", () => {
     // All stripped, nothing left after the prefix
     expect(slug).toMatch(/^[0-9a-f]{6}-?$/)
   })
+
+  it("uses name as suffix when provided", () => {
+    const slug = generateSlug("anything", "Fix Login!")
+    expect(slug).toMatch(/^[0-9a-f]{6}-fix-login$/)
+  })
+
+  it("collapses spaces in name to hyphens", () => {
+    const slug = generateSlug("anything", "wip   thing")
+    expect(slug).toMatch(/^[0-9a-f]{6}-wip-thing$/)
+  })
+
+  it("truncates a long name to 40 characters", () => {
+    const slug = generateSlug("anything", "a".repeat(50))
+    const slugPart = slug.slice(7)
+    expect(slugPart.length).toBeLessThanOrEqual(40)
+  })
+
+  it("generates a unique prefix each time when name is provided", () => {
+    const slugs = new Set(Array.from({ length: 20 }, () => generateSlug("anything", "same-name").slice(0, 6)))
+    expect(slugs.size).toBeGreaterThan(1)
+  })
+
+  it("throws when name contains only special characters", () => {
+    expect(() => generateSlug("anything", "!!!")).toThrow("--name must contain at least one alphanumeric character.")
+  })
+
+  it("throws when name is an empty string", () => {
+    expect(() => generateSlug("anything", "")).toThrow("--name must contain at least one alphanumeric character.")
+  })
 })

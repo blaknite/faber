@@ -12,6 +12,7 @@ import { modelForTier } from "./config.js"
 export interface DispatchOptions {
   repoRoot: string
   prompt: string
+  name?: string
   tier?: Tier
   baseBranch: string
   callSite?: string
@@ -28,13 +29,14 @@ export interface DispatchOptions {
 export async function createAndDispatchTask({
   repoRoot,
   prompt,
+  name,
   tier = DEFAULT_TIER,
   baseBranch,
   callSite = "dispatch",
   loadedConfig = {},
   explicitModel,
 }: DispatchOptions): Promise<Task> {
-  const slug = generateSlug(prompt)
+  const slug = generateSlug(prompt, name)
   const worktree = `.worktrees/${slug}`
 
   const resolvedModel = explicitModel ?? modelForTier(tier, loadedConfig)
