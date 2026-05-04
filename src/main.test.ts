@@ -156,6 +156,46 @@ describe("parseModelFlag", () => {
   })
 })
 
+describe("parseNameFlag", () => {
+  it("returns the value after --name", () => {
+    expect(parseNameFlag(["run", "--name", "my-thing", "fix"])).toBe("my-thing")
+  })
+
+  it("returns null when --name is absent", () => {
+    expect(parseNameFlag(["run", "fix"])).toBeNull()
+  })
+
+  it("returns null when --name has no following argument", () => {
+    expect(parseNameFlag(["run", "fix", "--name"])).toBeNull()
+  })
+})
+
+describe("validateName", () => {
+  it("returns the lowercased slug for a simple value", () => {
+    expect(validateName("my-thing")).toBe("my-thing")
+  })
+
+  it("normalises mixed case and special chars", () => {
+    expect(validateName("Fix Login!")).toBe("fix-login")
+  })
+
+  it("collapses whitespace runs to a single hyphen", () => {
+    expect(validateName("wip   thing")).toBe("wip-thing")
+  })
+
+  it("truncates to 40 characters", () => {
+    expect(validateName("a".repeat(50))).toBe("a".repeat(40))
+  })
+
+  it("returns null for an all-special-chars value", () => {
+    expect(validateName("!!!")).toBeNull()
+  })
+
+  it("returns null for an empty string", () => {
+    expect(validateName("")).toBeNull()
+  })
+})
+
 describe("main", () => {
   describe("unsupported command", () => {
     it("prints an error and exits 1 for an unknown command", async () => {
@@ -325,46 +365,6 @@ describe("main", () => {
       process.argv = ["bun", "faber", "ship"]
       await main().catch(() => {})
       expect(errorLines.some((l) => l.includes("Unknown command"))).toBe(false)
-    })
-  })
-
-  describe("parseNameFlag", () => {
-    it("returns the value after --name", () => {
-      expect(parseNameFlag(["run", "--name", "my-thing", "fix"])).toBe("my-thing")
-    })
-
-    it("returns null when --name is absent", () => {
-      expect(parseNameFlag(["run", "fix"])).toBeNull()
-    })
-
-    it("returns null when --name has no following argument", () => {
-      expect(parseNameFlag(["run", "fix", "--name"])).toBeNull()
-    })
-  })
-
-  describe("validateName", () => {
-    it("returns the lowercased slug for a simple value", () => {
-      expect(validateName("my-thing")).toBe("my-thing")
-    })
-
-    it("normalises mixed case and special chars", () => {
-      expect(validateName("Fix Login!")).toBe("fix-login")
-    })
-
-    it("collapses whitespace runs to a single hyphen", () => {
-      expect(validateName("wip   thing")).toBe("wip-thing")
-    })
-
-    it("truncates to 40 characters", () => {
-      expect(validateName("a".repeat(50))).toBe("a".repeat(40))
-    })
-
-    it("returns null for an all-special-chars value", () => {
-      expect(validateName("!!!")).toBeNull()
-    })
-
-    it("returns null for an empty string", () => {
-      expect(validateName("")).toBeNull()
     })
   })
 

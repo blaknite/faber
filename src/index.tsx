@@ -118,7 +118,7 @@ function parseContextFlag(args: string[]): string | null {
 // arithmetic (positional[1], positional[2], ...) without worrying about flags
 // appearing before positionals.
 //
-// Flags that consume a following value: --model, --dir, --base, --status, --branch, --pull-request, --task, --context
+// Flags that consume a following value: --model, --dir, --base, --status, --branch, --pull-request, --task, --context, --name
 // Boolean flags (no value): --full, --json, --yes, -h, --help
 //
 // The flag helpers (parseDirFlag, parseModelFlag, etc.) use indexOf so they
