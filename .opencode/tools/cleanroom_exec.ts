@@ -148,7 +148,7 @@ IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO N
     let userAborted = false
 
     const proc = Bun.spawn(
-      [cleanroomPath, "exec", "--include-local-changes", "--no-stdin", "--", "sh", "-c", args.command],
+      [cleanroomPath, "exec", "--copy-in", "--no-stdin", "--", "sh", "-c", args.command],
       {
         cwd,
         stdout: "pipe",
