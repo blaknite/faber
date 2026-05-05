@@ -182,6 +182,22 @@ When typing `@` in a prompt, faber opens an autocomplete showing both files and 
 | fast | `anthropic/claude-haiku-4-5` |
 | deep | `anthropic/claude-opus-4-6` |
 
+### Custom models
+
+To override the model for any tier, create `.faber/faber.json` in your repo (or `~/.faber/faber.json` for a global default):
+
+```json
+{
+  "models": {
+    "fast": "anthropic/claude-haiku-4-5",
+    "smart": "anthropic/claude-sonnet-4-6",
+    "deep": "anthropic/claude-opus-4-6"
+  }
+}
+```
+
+You only need to include the tiers you want to change. Project config takes precedence over global.
+
 ## Reviewing and merging agent work
 
 When an agent finishes with commits on its branch, the task is marked "ready to merge" and the pending count appears in the top bar. The typical flow from there:
