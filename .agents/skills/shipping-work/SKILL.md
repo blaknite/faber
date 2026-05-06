@@ -7,7 +7,7 @@ description: Takes working code on a branch and gets it to a green pull request.
 
 Take working code on a branch and get it in front of reviewers with a green build. This is a one-shot, autonomous process. Push the code, open the PR, make CI pass, and hand back a link.
 
-The input is a branch with committed code. The output is a pull request URL with passing checks.
+The input is a branch with committed code. The output is a pull request URL with required checks passing. The agent is not finished until the CI gate command exits 0, or it has exhausted its fix attempts and reported a stuck state.
 
 ## Step 1: Prepare the branch
 
@@ -90,29 +90,95 @@ EOF
 
 Open as draft if the project convention is to use drafts, otherwise as ready for review. Do not request reviewers unless the conversation specifies who should review.
 
-## Step 3: Pass CI
+## Step 3: Wait for CI
 
-Watch the build using whatever CI tooling is available in the environment. Check the PR's status checks via the GitHub CLI if no CI-specific tools are present:
+Done is defined by a single command's exit code. The PR is not shipped until that command returns 0.
+
+### Determine the gate
+
+First check whether the repo has required checks configured:
 
 ```bash
-gh pr checks <pr-number> --watch
+required_count=$(gh pr checks <pr> --required --json bucket --jq 'length' 2>/dev/null || echo 0)
 ```
 
-If the build passes, jump to step 5.
+If `required_count` is greater than 0, the gate is:
 
-If the build fails, move to step 4.
+```bash
+gh pr checks <pr> --required --watch --fail-fast
+```
 
-## Step 4: Debug and fix
+Otherwise there are no required checks configured. Fall back to:
 
-Use whatever CI debugging tools are available in the environment to diagnose the failure. If none are available, use the GitHub CLI to find the failed check and its logs.
+```bash
+gh pr checks <pr> --watch --fail-fast
+```
 
-For each failure:
-1. Determine if it's caused by the changes on this branch or is a pre-existing/flaky issue
-2. If caused by this branch: fix it, commit, push, and watch the build again
-3. If pre-existing or flaky: note it and retry the build
+Note which mode you used — it goes in the final report.
 
-Repeat until the build is green. If a failure persists after two fix attempts, stop and report the issue to the user with what you've tried and what you've learned.
+### Run the gate
 
-## Step 5: Done
+Run the gate command. It blocks until checks finish.
 
-Share the PR URL with the user. The PR has passing checks and is ready for human review.
+- If it exits 0, jump to Step 5.
+- If it exits non-zero, go to Step 4.
+
+## Step 4: Diagnose and fix
+
+The fix loop runs at most 3 times. Each push intended to fix CI counts as one attempt. Re-running the gate without a new commit does not count.
+
+For each iteration:
+
+**1. Identify which checks failed:**
+
+```bash
+gh pr checks <pr> --required --json name,bucket,link --jq '.[] | select(.bucket=="fail")'
+```
+
+Drop `--required` if you are running in fallback mode.
+
+**2. Fetch the logs for each failed check:**
+
+```bash
+gh run view --log-failed <run-id>
+```
+
+**3. Decide: real failure or flake?**
+
+Treat every failure as real unless you have direct evidence it is a flake. The only way to establish flake evidence is to re-run the same job without code changes and have it pass:
+
+```bash
+gh run rerun --failed <run-id>
+```
+
+Then re-run the gate. If it passes, you have flake evidence and this does not count as a fix attempt. If the retry fails too, treat it as a real failure and fix it.
+
+**4. For real failures:** fix the code, commit, push. This counts as one fix attempt. Then re-run the gate from Step 3.
+
+**After 3 fix attempts with the gate still non-zero**, stop. Do not make a fourth attempt. Go to Step 6.
+
+## Step 5: Done report
+
+The gate exited 0. CI is green. The agent's final message must contain:
+
+- The PR URL on its own line.
+- A line stating "CI is green" and which gate mode ran (`--required` or fallback).
+- A bulleted list of the checks that passed:
+
+```bash
+gh pr checks <pr> --json name,bucket --jq '.[] | select(.bucket=="pass") | .name'
+```
+
+## Step 6: Stuck report
+
+The gate is still non-zero after 3 fix attempts. The agent must not claim done. The agent's final message must contain:
+
+- The PR URL on its own line.
+- An explicit "CI is not green; human intervention needed" line.
+- A bulleted list of still-failing required checks, each with a one-line failure summary and the run link:
+
+```bash
+gh pr checks <pr> --required --json name,bucket,link --jq '.[] | select(.bucket=="fail")'
+```
+
+- A short "What I tried" section, one line per fix attempt.
