@@ -62,7 +62,7 @@ Pick one of four paths based on the review findings.
 
 **The task is ready but made no commits:** mark it done with `faber done`. This case is reached when `faber review --task` errors with `Task "<id>" has no commits to review.` -- the command errors before dispatching a review task, so there is nothing to `faber done` on the review side. Call `faber done <originalTaskId>` directly.
 
-**The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Be specific about which findings to address and which to ignore.
+**The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Write the prompt as a self-contained instruction -- the executing agent has not seen the review, so describe the change to make in its own terms.
 
 **The task should be discarded entirely:** delete it with `faber delete <taskId> --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
 
@@ -76,7 +76,16 @@ When a review surfaces findings that need addressing, the pattern is:
 faber continue <originalTaskId> '<directed feedback>'
 ```
 
-The prompt should cite specific findings by location (`path:line` from the review output) and state explicitly which findings to address and which to intentionally skip.
+The executing agent has no view into the review -- it only sees what you write here. Write the prompt as a fresh instruction: state what to change, where (using `path:line` references from the review, since those are real file locations the executor can resolve), and what done looks like. If you need to bound scope, do it positively ("limit changes to X; do not modify Y") rather than referencing the review ("skip finding 3" or "ignore the rest").
+
+Avoid these phrasings -- they assume the executor has seen the review and mean nothing to it:
+
+- "Review finding:" / "The review said..." / "Address findings 1, 3, 5..."
+- "Ignore finding 2" / "Don't fix the rest" / "Skip the others"
+- "Not material improvements" / "Out of scope per the review"
+- Any numbered or lettered reference pointing at an unseen list
+
+If you're intentionally leaving something unaddressed, record it for the next reviewer via `--context` (covered in step 3 below) -- that's the right audience for triage history, not the executor.
 
 **2. Wait for the fix:**
 
@@ -140,7 +149,7 @@ faber read r1v2-review-b7c1-add-rate-limiting
 # findings: admin users aren't skipped (src/middleware/rateLimit.ts:42)
 faber done r1v2-review-b7c1-add-rate-limiting
 
-faber continue b7c1-add-rate-limiting 'Review finding: admin users are not skipped by the rate limiter (src/middleware/rateLimit.ts:42). Fix the middleware and update the tests. The unrelated comment in src/config.ts is intentional -- ignore it.'
+faber continue b7c1-add-rate-limiting 'The rate limiter at src/middleware/rateLimit.ts:42 does not skip admin users. Update the middleware to exempt admin users from the limit and update the tests to cover this case. Limit changes to the rate limiter and its tests.'
 faber watch b7c1-add-rate-limiting
 
 faber review --background --task b7c1-add-rate-limiting --context 'addressed the admin-skip finding from the previous review; the src/config.ts comment was intentional and not addressed'
