@@ -20,15 +20,15 @@ faber review --background --task <originalTaskId>
 # Task <reviewTaskId> running  <- capture this ID
 ```
 
-Pass `--context` if you have anything the reviewer should know -- a constraint that emerged after dispatch, scope that's out of bounds, a follow-up direction:
+`faber review --task` rejects tasks that aren't `ready` and tasks with no commits. If the task has no commits, the command errors before dispatching a review task -- skip to Step 2's no-commits path.
+
+Pass `--context` if you have a quick steer for the reviewer -- a constraint that emerged after dispatch, scope that's out of bounds, a follow-up direction:
 
 ```bash
 faber review --background --task <originalTaskId> --context 'the auth changes are the focus; tests are deferred'
 ```
 
 For trivial mechanical changes you can pass `--model fast` to save tokens, but the default is right for almost everything.
-
-`faber review --task` rejects tasks that aren't `ready` and tasks with no commits. If the task has no commits, the command errors before it dispatches a review task -- skip straight to `faber done <originalTaskId>` in Step 2.
 
 **2. Wait for the review to finish:**
 
@@ -60,9 +60,9 @@ Pick one of four paths based on the review findings.
 
 **The work looks good and has commits:** merge it with `faber merge`. This rebases the task branch onto the current base branch HEAD, fast-forward merges it, and removes the worktree. Only merge when the review came back clean (or with findings you've judged not to be blockers).
 
-**The task is ready but made no commits:** mark it done with `faber done`. This case is reached when `faber review --task` errors with `Task "<id>" has no commits to review.` -- the command errors before dispatching a review task, so there is nothing to `faber done` on the review side. Call `faber done <originalTaskId>` directly.
+**The task is ready but made no commits:** call `faber done <originalTaskId>` directly. No review task was dispatched (Step 1 errored before dispatching it), so there is nothing to clean up on the review side.
 
-**The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Write the prompt as a self-contained instruction -- the executing agent has not seen the review, so describe the change to make in its own terms.
+**The work needs correction, is incomplete, or you're unsure about something:** send directed feedback with `faber continue <originalTaskId> '<feedback>'` and move to Step 3. Write the prompt as a self-contained instruction -- the executing agent has not seen the review, so describe the change to make in its own terms. Continue the *original* task, not the review task. (`faber continue <reviewTaskId>` is for asking the reviewer follow-up questions while the review task is still open -- a separate use case from the fix loop.)
 
 **The task should be discarded entirely:** delete it with `faber delete <taskId> --yes`. Use this when the work is wrong enough that continuing isn't worth it, or when the task is no longer needed. This is irreversible.
 
@@ -76,16 +76,7 @@ When a review surfaces findings that need addressing, the pattern is:
 faber continue <originalTaskId> '<directed feedback>'
 ```
 
-The executing agent has no view into the review -- it only sees what you write here. Write the prompt as a fresh instruction: state what to change, where (using `path:line` references from the review, since those are real file locations the executor can resolve), and what done looks like. If you need to bound scope, do it positively ("limit changes to X; do not modify Y") rather than referencing the review ("skip finding 3" or "ignore the rest").
-
-Avoid these phrasings -- they assume the executor has seen the review and mean nothing to it:
-
-- "Review finding:" / "The review said..." / "Address findings 1, 3, 5..."
-- "Ignore finding 2" / "Don't fix the rest" / "Skip the others"
-- "Not material improvements" / "Out of scope per the review"
-- Any numbered or lettered reference pointing at an unseen list
-
-If you're intentionally leaving something unaddressed, record it for the next reviewer via `--context` (covered in step 3 below) -- that's the right audience for triage history, not the executor.
+The executing agent has no view into the review -- only what you write here. State what to change, where (using `path:line` references from the review), and what done looks like. Bound scope positively: "limit changes to X". If you're intentionally leaving something unaddressed, record it for the next reviewer via `--context` (step 3 below).
 
 **2. Wait for the fix:**
 
@@ -93,19 +84,25 @@ If you're intentionally leaving something unaddressed, record it for the next re
 faber watch <originalTaskId>
 ```
 
-**3. Run a fresh review** using Step 1's four calls, passing `--context` to describe what was addressed in this iteration and what was intentionally skipped:
+**3. Run a fresh review** using Step 1's four calls. The new reviewer is a fresh task -- it has the diff and your `--context`, nothing else. Pass the intent of the change and any concrete out-of-scope items so the reviewer evaluates the diff on its own merits.
 
 ```bash
-faber review --background --task <originalTaskId> --context 'addressed findings 1-3 from the previous review; intentionally skipped finding 4 because it is out of scope'
+faber review --background --task <originalTaskId> --context 'Intent of the change:
+
+Cap unauthenticated traffic to 60 requests per minute, with admins exempt.
+
+Out of scope:
+
+- Per-user override limits
+- The legacy /login throttle
+- Anything in src/admin/'
 ```
 
-Each iteration dispatches a new review task. Old review tasks are closed and done -- do not `faber continue` a closed review task. Without `--context`, the reviewer may re-flag findings the agent intentionally ignored.
+Each iteration dispatches a new review task. Without `--context`, the reviewer may re-flag findings you've already decided to leave alone.
 
 **4. Route via Step 2** -- merge if clean, continue if there are new findings, delete if the approach is wrong.
 
 **When to stop looping:** stop after two unproductive iterations and surface the situation to the user. An iteration is unproductive if (a) the same finding comes back unfixed, or (b) each fix introduces a different problem -- meaning the task isn't converging. Don't loop indefinitely.
-
-> **Note:** Asking the reviewer follow-up questions is a separate use case. If you want to ask the reviewer to clarify something in its own findings before you decide how to route, `faber continue <reviewTaskId>` still works -- but only while the review task is still open. This is distinct from Step 3; don't conflate the two. In Step 3 you are always continuing the *original* task, not the review task.
 
 ### Conflict recovery
 
@@ -133,10 +130,9 @@ faber merge b7c1-add-rate-limiting
 ```
 
 ```bash
-# No commits -> faber done (no review task is dispatched)
+# No commits -> faber done
 faber review --background --task b7c1-add-rate-limiting
 # Error: Task "b7c1-add-rate-limiting" has no commits to review.
-# command errored before dispatching a review task -- no faber done needed on the review side
 faber done b7c1-add-rate-limiting
 ```
 
@@ -152,7 +148,13 @@ faber done r1v2-review-b7c1-add-rate-limiting
 faber continue b7c1-add-rate-limiting 'The rate limiter at src/middleware/rateLimit.ts:42 does not skip admin users. Update the middleware to exempt admin users from the limit and update the tests to cover this case. Limit changes to the rate limiter and its tests.'
 faber watch b7c1-add-rate-limiting
 
-faber review --background --task b7c1-add-rate-limiting --context 'addressed the admin-skip finding from the previous review; the src/config.ts comment was intentional and not addressed'
+faber review --background --task b7c1-add-rate-limiting --context 'Intent of the change:
+
+Cap unauthenticated traffic to 60 requests per minute, with admins exempt.
+
+Out of scope:
+
+- Per-user override limits'
 # Task r3v4-review-b7c1-add-rate-limiting running  <- capture this ID
 faber watch r3v4-review-b7c1-add-rate-limiting
 faber read r3v4-review-b7c1-add-rate-limiting
