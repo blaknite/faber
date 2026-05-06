@@ -90,7 +90,13 @@ Note what's been raised and what's been resolved. You'll dedupe against this whe
 
 ### 4. Understand the code
 
-Before looking for issues, work out what the code actually does and why it does it that way. Read the changed lines in context — what calls them, what they call, how they fit into the system around them. Pay particular attention to external inputs and systems the code interacts with: their full range of behaviour is rarely obvious from the call site. For each significant piece, ask what alternatives the author implicitly rejected and what constraints they were optimising for. The choice the code makes is information about the problem the author was trying to solve.
+Before looking for issues, work out what the code actually does and why it does it that way.
+
+Read the changed lines in context — what calls them, what they call, how they fit into the system around them.
+
+Pay particular attention to external inputs and systems the code interacts with: their full range of behaviour is rarely obvious from the call site. When the code uses something external — a command, an API, a library — look up what it actually does. Don't trust the calling code's assumptions.
+
+For each significant piece, ask what alternatives the author implicitly rejected and what constraints they were optimising for. The choice the code makes is information about the problem the author was trying to solve.
 
 ### 5. Review the code
 
