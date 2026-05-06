@@ -13,7 +13,7 @@ The review runs inside a faber task. You're already on a worktree checked out at
 
 ## Design principles
 
-1. **Understand the intent, then stress-test the execution.** Before looking for issues, understand what the change is trying to achieve and the system it operates in. Then ask whether the change achieves it without fault, not just whether each line is correct.
+1. **Default to skepticism.** Assume the change can fail in subtle, high-cost, or user-visible ways until the evidence says otherwise. Read to find where it falls over, not to confirm it works.
 2. **Read everything, comment where it counts.** Analyze the full diff thoroughly. Surface as much as the change requires. Nothing more.
 3. **Confidence determines visibility.** Only surface findings you can prove. Hold the rest back.
 4. **Respect attention.** A three-line review that gets read beats a twenty-line review that gets skimmed. If the change is clean, say so in a sentence or two and stop.
@@ -24,7 +24,7 @@ Classify every finding by how it was derived. The tier shapes how you frame the 
 
 ### Tier 1: Provably correct or incorrect
 
-Things you can demonstrate are wrong by explaining exactly why they fail. Dead code with zero call sites. Broken method signatures. Code that won't behave as intended because of how the language, framework, or surrounding system works.
+Things you can demonstrate are wrong by explaining exactly why they fail. Dead code with zero call sites. Broken method signatures. Code that won't behave as intended because of how the language, framework, or surrounding system works. Code that's wrong for an input or state it claims to handle.
 
 These are facts, not opinions. State them plainly.
 
@@ -92,30 +92,17 @@ Note what's been raised and what's been resolved. You'll dedupe against this in 
 
 Do a full read-through. Read surrounding code, not just the diff lines. Trace call sites. Check how similar things are done elsewhere in the codebase.
 
-Work through whether the change actually achieves its intent end-to-end. Don't just verify each block is locally correct. Ask whether the change works as a whole, given the system it operates in.
+Work out what each piece is supposed to do, then try to break it. Trace inputs and conditions through the code. If something only works on the happy path, that's a real weakness. Code that fails for an input or state it claims to support is a Tier 1 finding.
 
 Look for what's missing, not just what's wrong. If the codebase establishes a pattern (tests for each method, migrations paired with schema changes, docs updated alongside config), check whether the change follows it. Missing artifacts that the pattern calls for are Tier 2 findings.
 
+Also worth a look:
+
+- **Structure.** Does the code fit the codebase? Existing patterns and conventions, available abstractions, nesting that could be flattened with early returns.
+- **Performance.** Only flag if obviously problematic — O(n²) on unbounded data, N+1 queries, blocking I/O on hot paths.
+- **Behaviour changes.** If the change introduces one (especially unintentionally), raise it.
+
 This is where the most valuable findings come from. Don't shortcut it.
-
-#### What to Look For
-
-**Bugs** - Your primary focus.
-- Logic errors, off-by-one mistakes, incorrect conditionals
-- If-else guards: missing guards, incorrect branching, unreachable code paths
-- Edge cases: null/empty/undefined inputs, error conditions, race conditions
-- Security issues: injection, auth bypass, data exposure
-- Broken error handling that swallows failures, throws unexpectedly or returns error types that are not caught.
-
-**Structure** - Does the code fit the codebase?
-- Does it follow existing patterns and conventions?
-- Are there established abstractions it should use but doesn't?
-- Excessive nesting that could be flattened with early returns or extraction
-
-**Performance** - Only flag if obviously problematic.
-- O(n²) on unbounded data, N+1 queries, blocking I/O on hot paths
-
-**Behavior Changes** - If a behavioral change is introduced, raise it (especially if it's possibly unintentional).
 
 ### 5. Classify
 
