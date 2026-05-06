@@ -86,13 +86,15 @@ For PR reviews, read any existing review comments. The developer asked faber for
 gh api repos/<owner>/<repo>/pulls/<number>/comments --paginate
 ```
 
-Note what's been raised and what's been resolved. You'll dedupe against this in step 5.
+Note what's been raised and what's been resolved. You'll dedupe against this when you write the final message.
 
-### 4. Read the code
+### 4. Understand the code
 
-Do a full read-through. Read surrounding code, not just the diff lines. Trace call sites. Check how similar things are done elsewhere in the codebase.
+Before looking for issues, work out what the code actually does. Read the changed lines in context — what calls them, what they call, how they fit into the system around them. Pay particular attention to external inputs and systems the code interacts with: their full range of behaviour is rarely obvious from the call site.
 
-Work out what each piece is supposed to do, then try to break it. Trace inputs and conditions through the code. If something only works on the happy path, that's a real weakness. Code that fails for an input or state it claims to support is a Tier 1 finding.
+### 5. Review the code
+
+Now find where it fails. With the understanding you built in step 4, trace each thing the code claims to handle and look for where it falls over. If something only works on the happy path, that's a real weakness. Code that fails for an input or state it claims to support is a Tier 1 finding.
 
 Look for what's missing, not just what's wrong. If the codebase establishes a pattern (tests for each method, migrations paired with schema changes, docs updated alongside config), check whether the change follows it. Missing artifacts that the pattern calls for are Tier 2 findings.
 
@@ -104,7 +106,7 @@ Also worth a look:
 
 This is where the most valuable findings come from. Don't shortcut it.
 
-### 5. Classify
+### 6. Classify
 
 Go through every finding and assign a confidence tier:
 
@@ -114,7 +116,7 @@ Go through every finding and assign a confidence tier:
 
 If a finding is weaker than Tier 3 — a gut feeling you can't ground in anything — drop it.
 
-### 6. Write the final message
+### 7. Write the final message
 
 Refer to *Kind Feedback* for instructions on your communication style. Your audience is the developer who ran `faber review` — usually the author of the change — reading your message in a terminal.
 
