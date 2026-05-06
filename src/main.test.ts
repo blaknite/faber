@@ -150,6 +150,16 @@ describe("parseModelFlag", () => {
     expect(result.explicitModel).toBeUndefined()
   })
 
+  it("returns undefined tier when no --model flag is present", () => {
+    const result = parseModelFlag(["run", "do a thing"])
+    expect(result.tier).toBeUndefined()
+  })
+
+  it("returns undefined tier when a non-label model string is given", () => {
+    const result = parseModelFlag(["run", "--model", "google/gemini-2.5-pro", "do a thing"])
+    expect(result.tier).toBeUndefined()
+  })
+
   it("resolves known label to the correct tier", () => {
     const result = parseModelFlag(["run", "--model", "smart", "do a thing"])
     expect(result.tier).toBe("smart")

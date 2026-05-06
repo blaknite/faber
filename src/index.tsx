@@ -143,13 +143,13 @@ export function stripFlags(args: string[]): string[] {
   return result
 }
 
-export function parseModelFlag(args: string[]): { tier: Tier; explicitModel: string | undefined } {
+export function parseModelFlag(args: string[]): { tier: Tier | undefined; explicitModel: string | undefined } {
   const i = args.indexOf("--model")
-  if (i === -1 || !args[i + 1]) return { tier: DEFAULT_TIER, explicitModel: undefined }
+  if (i === -1 || !args[i + 1]) return { tier: undefined, explicitModel: undefined }
   const input = args[i + 1]!
   const resolvedTier = resolveTier(input)
   if (resolvedTier) return { tier: resolvedTier, explicitModel: undefined }
-  return { tier: DEFAULT_TIER, explicitModel: input }
+  return { tier: undefined, explicitModel: input }
 }
 
 // FABER_VERSION is injected at compile time via --define. When running from
