@@ -48,7 +48,7 @@ export function spawnAgent(
 
   const opencodeArgv = [opencodebin, "run", "--format", "json", "--model", task.model, agentPrompt]
   if (resumeSessionId) {
-    opencodeArgv.push("-s", resumeSessionId, "--fork")
+    opencodeArgv.push("-s", resumeSessionId)
   }
 
   const shellCmd = `${shellQuote(faberParts)} spawn ${task.id} -- ${shellQuote(opencodeArgv)}`
