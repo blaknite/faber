@@ -204,7 +204,7 @@ describe("runShip", () => {
       expect(callOpts.prompt).toContain("feature-prompt-test")
     })
 
-    it("tells the agent not to push its own branch", async () => {
+    it("tells the agent to push with the refspec form", async () => {
       makeFeatureBranch("feature-x")
       const written: string[] = []
       spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
@@ -215,7 +215,37 @@ describe("runShip", () => {
       await runShip(tmpRoot, "feature-x")
 
       const callOpts = dispatchMock.mock.calls[0]?.[0] as any
-      expect(callOpts.prompt).toContain("Do not push your current branch")
+      expect(callOpts.prompt).toContain("git push origin HEAD:feature-x")
+    })
+
+    it("tells the agent to dispatch fix tasks rather than editing inline", async () => {
+      makeFeatureBranch("feature-x")
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      await runShip(tmpRoot, "feature-x")
+
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).toContain("faber run --base")
+      expect(callOpts.prompt).toContain("faber merge")
+    })
+
+    it("does not contain the old checkout restriction or force-with-lease phrasing", async () => {
+      makeFeatureBranch("feature-x")
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      await runShip(tmpRoot, "feature-x")
+
+      const callOpts = dispatchMock.mock.calls[0]?.[0] as any
+      expect(callOpts.prompt).not.toContain("cannot `git checkout`")
+      expect(callOpts.prompt).not.toContain("--force-with-lease")
     })
 
     it("asks the agent to end with 'PR: <url>' for orchestrator parsing", async () => {
@@ -264,6 +294,37 @@ describe("runShip", () => {
       expect(output).toContain("faber continue")
       expect(output).toContain("faber done")
       expect(output).toContain("faber delete")
+    })
+
+    it("completion message contains faber merge with the short task id", async () => {
+      makeFeatureBranch("feature-x")
+      waitForTaskMock.mockImplementation(async () => "ready")
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      await runShip(tmpRoot, "feature-x")
+
+      const output = written.join("")
+      const shortId = fakeTask.id.slice(0, 6)
+      expect(output).toContain(`faber merge ${shortId}`)
+    })
+
+    it("completion message does not reference gh pr list --head", async () => {
+      makeFeatureBranch("feature-x")
+      waitForTaskMock.mockImplementation(async () => "ready")
+      const written: string[] = []
+      spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        written.push(String(chunk))
+        return true
+      })
+
+      await runShip(tmpRoot, "feature-x")
+
+      const output = written.join("")
+      expect(output).not.toContain("gh pr list --head")
     })
 
     it("does not transition task status after completing", async () => {

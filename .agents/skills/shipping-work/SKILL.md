@@ -16,7 +16,13 @@ Make sure the branch is ready to push:
 - The branch is rebased on the latest base branch to avoid unnecessary conflicts
 - No unrelated changes are staged
 
-Push the branch to the remote.
+Push the branch to the remote using the refspec form so you don't need to check out the target branch:
+
+```bash
+git push origin HEAD:<target>
+```
+
+If your slug branch is already at the same tip as `origin/<target>` (no new commits), you do not need to push before opening the PR — `gh pr create` will work against the existing remote tip.
 
 ## Step 2: Open the pull request
 
@@ -127,7 +133,7 @@ Run the gate command. It blocks until checks finish.
 
 The fix loop runs at most 3 times. Each push intended to fix CI counts as one attempt. Re-running the gate without a new commit does not count.
 
-For each iteration:
+Do not edit code in this worktree. For each iteration:
 
 **1. Identify which checks failed:**
 
@@ -153,7 +159,25 @@ gh run rerun --failed <run-id>
 
 Then re-run the gate. If it passes, you have flake evidence and this does not count as a fix attempt. If the retry fails too, treat it as a real failure and fix it.
 
-**4. For real failures:** fix the code, commit, push. This counts as one fix attempt. Then re-run the gate from Step 3.
+**4. For real failures:** dispatch a faber task to make the fix. This counts as one fix attempt.
+
+```bash
+faber run --base $(git branch --show-current) "Fix this CI failure on branch $(git branch --show-current): <concise description with file/line/error from the logs>"
+```
+
+The command blocks until the task completes. When it returns, fold its commits into your slug:
+
+```bash
+faber merge <fix-task-id>
+```
+
+Then push again with the refspec form and re-run the gate from Step 3:
+
+```bash
+git push origin HEAD:<target>
+```
+
+Dispatch fix tasks one at a time, not in parallel. If a fix task fails or is cancelled, surface the failure rather than dispatching another — go to Step 6.
 
 **After 3 fix attempts with the gate still non-zero**, stop. Do not make a fourth attempt. Go to Step 6.
 

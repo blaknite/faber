@@ -61,9 +61,25 @@ export async function runShip(
     "",
     "Load the skill `shipping-work`.",
     "",
-    `The target branch is \`${target}\`. Push that branch to \`origin\` and open the pull request for it. Do not push your current branch — you are running in a sandbox worktree and your current branch is throwaway.`,
+    `You are running in a worktree on a slug branch created from the tip of \`${target}\`. Your slug branch name is your working ref — you can get it at any time with \`git branch --show-current\`. Commit any new work to your slug branch as normal. To push it to the remote target branch, use the refspec form:`,
     "",
-    `You are running in a worktree, so you cannot \`git checkout ${target}\` (it may be checked out in the user's main checkout). Push it directly with \`git push origin ${target}\`. If the push is rejected because the remote has diverged, fetch and use \`git push --force-with-lease\`; do not rebase the target branch locally.`,
+    "    git push origin HEAD:" + target,
+    "",
+    `This pushes your slug's commits to \`origin/${target}\` without requiring you to check out \`${target}\` (which may be in use elsewhere). The user's local \`${target}\` is not affected; they will run \`faber merge\` to bring it up to date after the PR lands.`,
+    "",
+    `If your slug branch is already at the same tip as \`origin/${target}\` (no new commits), you do not need to push before opening the PR — \`gh pr create\` will work against the existing remote tip.`,
+    "",
+    "When CI fails, do not fix the code inline. Dispatch a faber task:",
+    "",
+    "    faber run --base $(git branch --show-current) \"Fix the following CI failure on branch $(git branch --show-current): <details>\"",
+    "",
+    "Wait for it to complete (the command blocks in the foreground), then fold its commits into your slug:",
+    "",
+    "    faber merge <fix-task-id>",
+    "",
+    "Then push again with the refspec form above. Dispatch fix tasks one at a time, not in parallel.",
+    "",
+    `If a push is rejected as non-fast-forward, stop. Something unexpected pushed to \`${target}\`; surface the error rather than rebasing. If a fix task fails, surface the failure rather than dispatching another.`,
     "",
     "End your final message with a line in the form `PR: <url>` so the URL can be parsed by an orchestrator. If the PR was not opened, end with `PR: none` and a short reason on the line above.",
   ].join("\n")
@@ -97,8 +113,10 @@ export async function runShip(
 
   const shortId = task.id.slice(0, 6)
   process.stdout.write(`\nTask ${shortId} ended in status: ${finalStatus}\n`)
-  process.stdout.write(`Verify the PR is up (check the message above or run \`gh pr list --head ${target}\`), then route the task:\n`)
+  process.stdout.write(`The agent pushed commits to \`${target}\` on origin and opened the PR (see message above).\n`)
+  process.stdout.write(`Next steps:\n`)
+  process.stdout.write(`  faber merge ${shortId}             # fast-forward your local \`${target}\` over the shipped commits\n`)
   process.stdout.write(`  faber continue ${shortId} "..."   # send follow-up instructions to the ship agent\n`)
-  process.stdout.write(`  faber done ${shortId}             # dismiss the task without removing the sandbox\n`)
-  process.stdout.write(`  faber delete ${shortId}           # remove the sandbox worktree, slug branch, and task\n`)
+  process.stdout.write(`  faber done ${shortId}             # dismiss the task without cleaning up\n`)
+  process.stdout.write(`  faber delete ${shortId}           # remove the worktree, slug branch, and task\n`)
 }
