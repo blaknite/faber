@@ -77,6 +77,18 @@ Risk level, migration notes, deployment considerations.
 Never leave blank. Be specific: can this be reverted cleanly? Are there feature flags? Migration concerns?
 ```
 
+### Use a semantic PR title
+
+The PR title must follow the conventional commits format: `type: description`. Valid types are `feat`, `fix`, `docs`, `style`, `refactor`, `test`, and `chore`. Derive the type from the commit summary gathered in Step 2 (`git log main..HEAD --oneline`). If multiple types appear, use the most common one, or `feat` if features are present.
+
+**Examples:**
+
+```
+feat: add OAuth2 login flow
+fix: handle null response from upstream
+chore: update dependencies
+```
+
 ### Submit the PR
 
 Verify `gh` is authenticated before spending time on the description:
